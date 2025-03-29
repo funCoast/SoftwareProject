@@ -1,2 +1,2 @@
 # SoftwareProject
-This is a software project for the course Software Engineering.(2025.3.29)
+This is a software project for the course Software Engineering called "灵犀智能体AI社区".(2025.3.29)
