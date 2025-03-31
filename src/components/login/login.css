@@ -1,0 +1,28 @@
+.row {
+  min-height: 15px;
+  width: 300px; 
+  margin: auto;
+}
+
+.input {
+  height: 30px;
+}
+.input.full {
+  width: 300px;
+  margin-bottom: 20px;
+}
+
+.tip {
+  font-size: 10px;
+  color: #000;
+}
+.tip.blue {
+  color: #07a5f5;
+}
+
+.login_bt {
+  height: 30px;
+  width: 300px;
+  margin: 30px auto 0;
+  border-radius: 10px;
+}
