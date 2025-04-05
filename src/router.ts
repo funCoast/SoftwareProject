@@ -10,92 +10,92 @@ import WorkflowCanvas from './components/workspace/WorkflowCanvas.vue';
 import AgentDevelopment from './components/workspace/AgentDevelopment.vue';
 import ResourceLibrary from './components/workspace/ResourceLibrary.vue';
 
-const authRequired = false
+const authRequired = true
 const routes = [
-  { 
-    path: '/login',
-    name: 'Login',
-    meta: {authReq: false},
-    component: Login 
-  },
-  {
-    path: '/',
-    name: 'Main',
-    redirect: '/home',
-    meta: {authReq: authRequired},
-    component: Main,
-    children: [
-      {
-        path: 'home',
-        name: 'Home',
-        component: Home
-      },
-      {
-        path: 'workspace',
-        name: 'Workspace',
-        redirect: '/workspace/agentDevelopment',
-        component: Workspace,
+    { 
+        path: '/login',
+        name: 'Login',
+        meta: {authReq: false},
+        component: Login 
+    },
+    {
+        path: '/',
+        name: 'Main',
+        redirect: '/home',
+        meta: {authReq: authRequired},
+        component: Main,
         children: [
-          {
-            path: 'agentDevelopment',
-            name: 'AgentDevelopment',
-            component: AgentDevelopment
-          },
-          {
-            path: 'resourceLibrary',
-            name: 'ResourceLibrary',
-            component: ResourceLibrary
-          }
+        {
+            path: 'home',
+            name: 'Home',
+            component: Home
+        },
+        {
+            path: 'workspace',
+            name: 'Workspace',
+            redirect: '/workspace/agentDevelopment',
+            component: Workspace,
+            children: [
+            {
+                path: 'agentDevelopment',
+                name: 'AgentDevelopment',
+                component: AgentDevelopment
+            },
+            {
+                path: 'resourceLibrary',
+                name: 'ResourceLibrary',
+                component: ResourceLibrary
+            }
+            ]
+        },
+        {
+            path: 'community',
+            name: 'Community',
+            component: Community
+        },
+        {
+            path: 'agentDetail',
+            name: 'AgentDetail',
+            component: AgentDetail
+        },
+        {
+            path: 'profile',
+            name: 'Profile',
+            component: Profile
+        }
         ]
-      },
-      {
-        path: 'community',
-        name: 'Community',
-        component: Community
-      },
-      {
-        path: 'agentDetail',
-        name: 'AgentDetail',
-        component: AgentDetail
-      },
-      {
-        path: 'profile',
-        name: 'Profile',
-        component: Profile
-      }
-    ]
-  },
-  {
-    path: '/workflowCanvas',
-    name: 'WorkflowCanvas',
-    meta: {authReq: authRequired},
-    component: WorkflowCanvas
-  }
+    },
+    {
+        path: '/workflowCanvas',
+        name: 'WorkflowCanvas',
+        meta: {authReq: authRequired},
+        component: WorkflowCanvas
+    }
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(),
-  routes,
+    history: createWebHashHistory(),
+    routes,
 });
 
 router.beforeEach((to, from, next) => {
-  console.log('from:');
-  console.log(from);
+    console.log('from:');
+    console.log(from);
 
-  console.log('to:');
-  console.log(to);
-  // 此路由是否需要登录
-  if (to.meta.authReq === true) {
-      // 检查是否登录
-      if (sessionStorage.getItem('token')) {
-          next();
-      } else {
-          alert("请登录！");
-          next({
-              name: 'Login',
-          })
-      }
-  } else next();
+    console.log('to:');
+    console.log(to);
+    // 此路由是否需要登录
+    if (to.meta.authReq === true) {
+        // 检查是否登录
+        if (sessionStorage.getItem('token')) {
+            next();
+        } else {
+            alert("请登录！");
+            next({
+                name: 'Login',
+            })
+        }
+    } else next();
 });
 
 export default router;

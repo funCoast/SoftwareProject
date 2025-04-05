@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Message, CircleCheckFilled} from '@element-plus/icons-vue';
+import axios from 'axios';
+import router from '../../router';
 import "./login.css"
 
 const email = ref('');
@@ -8,11 +10,44 @@ const code = ref('');
 
 function sendCode() {
   const reg =  /^([A-Za-z0-9_\.\-])+\@([A-Za-z0-9_\.\-])+\.([A-Za-z]{2,4})$/
-    if (!reg.test(email.value)) {
-      alert("请输入正确的邮箱")
-      return
+  if (!reg.test(email.value)) {
+    alert("请输入正确的邮箱")
+    return
+  }
+  console.log(email)
+  axios({
+    method: 'post',
+    url: '/api/user/sendCode',
+    data: {
+      email: email
     }
- }
+  }).then(function (response) {
+    if(response.data.code === 0) {
+      alert('验证码已发送')
+    }
+  })
+}
+
+function login() {
+  axios({
+    method: 'post',
+    url: '/api/user/login',
+    data: {
+      email: email,
+      code: code
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      // 将 token,character,name,uid 存入 sessionStorage
+      sessionStorage.setItem("token", response.data.token);
+      sessionStorage.setItem('uid', response.data.data.uid);
+      router.push('/customer/order');
+    } else {
+      // 账号密码错误
+      alert("验证码错误")
+    }
+  })
+}
 </script>
 
 <template>
@@ -29,7 +64,7 @@ function sendCode() {
       <el-text class="tip">账户</el-text>
   </el-row>
   <el-row class="row">
-    <el-button class="login_bt" type="primary">登录/注册</el-button>
+    <el-button class="login_bt" type="primary" :disabled="!email || !code" @click="login()">登录/注册</el-button>
   </el-row>
 </template>
 
