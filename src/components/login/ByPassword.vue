@@ -1,10 +1,33 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Message, Lock} from '@element-plus/icons-vue';
+import axios from 'axios';
+import router from '../../router';
 import "./login.css"
+
 
 const account = ref('');
 const password = ref('');
+
+function login() {
+  axios({
+    method: 'post',
+    url: '/api/user/loginByPassword',
+    data: {
+      account: account,
+      password: password 
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      // 将 token,character,name,uid 存入 sessionStorage
+      sessionStorage.setItem("token", response.data.token);
+      sessionStorage.setItem('uid', response.data.uid);
+      router.push('/home');
+    } else {
+      alert("账号或密码错误")
+    }
+  })
+}
 </script>
 
 <template>
@@ -20,7 +43,7 @@ const password = ref('');
       <el-text class="tip">进行注册</el-text>
   </el-row>
   <el-row class="row">
-    <el-button class="login_bt" type="primary">登录</el-button>
+    <el-button class="login_bt" type="primary" :disabled="!account || !password" @click="login()">登录</el-button>
   </el-row>
 </template>
 

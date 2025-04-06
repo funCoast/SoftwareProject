@@ -31,7 +31,7 @@ function sendCode() {
 function login() {
   axios({
     method: 'post',
-    url: '/api/user/login',
+    url: '/api/user/loginByCode',
     data: {
       email: email,
       code: code
@@ -40,10 +40,9 @@ function login() {
     if (response.data.code === 0) {
       // 将 token,character,name,uid 存入 sessionStorage
       sessionStorage.setItem("token", response.data.token);
-      sessionStorage.setItem('uid', response.data.data.uid);
-      router.push('/customer/order');
+      sessionStorage.setItem('uid', response.data.uid);
+      router.push('/home');
     } else {
-      // 账号密码错误
       alert("验证码错误")
     }
   })
