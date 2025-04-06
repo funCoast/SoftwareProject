@@ -14,32 +14,31 @@ function sendCode() {
     alert("请输入正确的邮箱")
     return
   }
-  console.log(email)
   axios({
     method: 'post',
-    url: '/api/user/sendCode',
+    url: 'user/sendCode', 
     data: {
-      email: email
+      email: email.value
     }
   }).then(function (response) {
-    if(response.data.code === 0) {
-      alert('验证码已发送')
-    }
+      if(response.data.code === 0) {
+        alert('验证码已发送')
+      }
   })
 }
 
 function login() {
   axios({
     method: 'post',
-    url: '/api/user/loginByCode',
+    url: 'user/loginByCode',
     data: {
-      email: email,
-      code: code
+      email: email.value,
+      code: code.value
     }
   }).then(function (response) {
     if (response.data.code === 0) {
       // 将 token,character,name,uid 存入 sessionStorage
-      sessionStorage.setItem("token", response.data.token);
+      sessionStorage.setItem('token', response.data.token);
       sessionStorage.setItem('uid', response.data.uid);
       router.push('/home');
     } else {

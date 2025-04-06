@@ -1,57 +1,17 @@
-<template>
-  <div class="app-container">
-    <!-- 侧边导航栏 -->
-    <div v-if="!isWorkflowCanvas" class="side-nav">
-      <!-- 用户信息区域 -->
-      <div class="user-section">
-        <div class="user-info">
-          <img 
-            :src="userAvatar" 
-            :alt="userName" 
-            class="avatar"
-            @click="handleProfileNavigation"
-          >
-          <span class="user-name">{{ userName }}</span>
-        </div>
-        <div class="message-icon">
-          <i class="fas fa-envelope"></i>
-          <span class="message-badge">3</span>
-        </div>
-      </div>
-      
-      <!-- 导航菜单 -->
-      <nav>
-        <ul>
-          <li 
-            v-for="item in navItems" 
-            :key="item.path"
-            :class="{ active: currentRoute === item.path }"
-            @click="handleNavigation(item.path)"
-          >
-            <img 
-              :src="item.icon" 
-              :alt="item.label"
-              class="nav-icon"
-            >
-            <span>{{ item.label }}</span>
-          </li>
-        </ul>
-      </nav>
-    </div>
-
-    <!-- 主要内容区域 -->
-    <div class="main-content" :class="{ 'full-width': isWorkflowCanvas }">
-      <router-view></router-view>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onBeforeMount } from 'vue'
 import router from '../router'
+import axios from 'axios'
 
-// 路由相关
-const route = router.currentRoute
+onBeforeMount(() => {
+  axios({
+    method: 'get',
+    url: 'user/getAvatar',
+    params: {
+      id: sessionStorage.getItem('uid')
+    }
+  })
+})
 
 // 响应式数据
 const userAvatar = ref<string>('https://picsum.photos/50/50?random=1')
@@ -84,11 +44,11 @@ const navItems = ref<NavItem[]>([
 ])
 
 // 计算属性
-const currentRoute = computed(() => route.value.path)
-const isWorkflowCanvas = computed(() => route.value.path === '/workspace/workflow')
+const cur = ref('/home')
 
 // 导航处理方法
 function handleNavigation(path: string) {
+  cur.value = path
   router.push(path)
 }
 
@@ -96,6 +56,54 @@ function handleProfileNavigation() {
   router.push('/profile')
 }
 </script>
+
+<template>
+  <div class="app-container">
+    <!-- 侧边导航栏 -->
+    <div class="side-nav">
+      <!-- 用户信息区域 -->
+      <div class="user-section">
+        <div class="user-info">
+          <img 
+            :src="userAvatar" 
+            :alt="userName" 
+            class="avatar"
+            @click="handleProfileNavigation"
+          >
+          <span class="user-name">{{ userName }}</span>
+        </div>
+        <div class="message-icon">
+          <i class="fas fa-envelope"></i>
+          <span class="message-badge">3</span>
+        </div>
+      </div>
+      
+      <!-- 导航菜单 -->
+      <nav>
+        <ul>
+          <li 
+            v-for="item in navItems" 
+            :key="item.path"
+            :class="{ active: cur === item.path }"
+            @click="handleNavigation(item.path)"
+          >
+            <img 
+              :src="item.icon" 
+              :alt="item.label"
+              class="nav-icon"
+            >
+            <span>{{ item.label }}</span>
+          </li>
+        </ul>
+      </nav>
+    </div>
+
+    <!-- 主要内容区域 -->
+    <div class="main-content">
+      <router-view></router-view>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 #app {
@@ -111,10 +119,10 @@ function handleProfileNavigation() {
 }
 
 .side-nav {
-  width: 240px;
-  background: #2c3e50;
+  width: 100px;
+  background: #0aaff5c8;
   color: white;
-  padding: 20px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -210,11 +218,11 @@ function handleProfileNavigation() {
 }
 
 .side-nav nav ul li:hover {
-  background-color: #34495e;
+  background-color: #028efad8;
 }
 
 .side-nav nav ul li.active {
-  background-color: #34495e;
+  background-color: #028efad8;
 }
 
 .side-nav nav ul li i {

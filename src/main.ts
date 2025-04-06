@@ -11,18 +11,17 @@ app.use(router)
 
 sessionStorage.clear()
 
-axios.defaults.baseURL = "/api"
+axios.defaults.baseURL = '/api/backend'
 
 // 每次请求都带上token
-axios.interceptors.request.use(
-    config => {
+axios.interceptors.request.use(function (config) {
+        console.log('url:', config.url);
         const token = sessionStorage.getItem('token')
         if (token) {
             config.headers.token = token
         }
         return config
-    },
-    error => {
+    }, function (error) {
         return Promise.reject(error)
     }
 )

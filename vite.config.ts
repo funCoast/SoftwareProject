@@ -21,10 +21,10 @@ export default defineConfig({
     open: true, //启动后是否自动打开浏览器
     proxy: {
       '/api': {
-          target: 'http://localhost:8080',
+          target: 'http://localhost:8000/',
           changeOrigin: true,
           rewrite:(path)=>path.replace(/^\/api/, '/'),
       }
-  }
+    }
   }
 })
