@@ -53,12 +53,12 @@ def send_code(request):
         email = request.data.get('email', None)
         # TODO 前端判断邮箱格式？
 
-        # TODO 每分钟只能发送一次,前端？
-        # if redis_client.exists(f'verification_code_{email}'):
-        #     return JsonResponse({
-        #         'code': -1,
-        #         'message': '验证码已发送，请稍后再试'
-        #     })
+        # TODO 每分钟只能发送一次，前端？
+        if redis_client.exists(f'verification_code_{email}'):
+            return JsonResponse({
+                'code': -1,
+                'message': '验证码已发送，请稍后再试'
+            })
 
         # TODO 生成验证码
         code = '123456'
@@ -89,3 +89,45 @@ def send_code(request):
             'message': str(e)
         })
 
+'''
+用户登录接口
+'''
+def user_login_by_code(request):
+    try:
+        email = request.POST.get('email', None)
+        code = request.POST.get('code', None)
+
+        # TODO 验证邮箱格式？
+
+        # TODO 验证验证码
+        stored_code = redis_client.get(f'verification_code_{email}')
+        if not stored_code or stored_code != code:
+            return JsonResponse({
+                'code': -1,
+                'message': '验证码不正确或已过期'
+            })
+
+        # 删除Redis中的验证码
+        redis_client.delete(f'verification_code_{email}')
+
+        # 生成登录token
+        token = str(uuid.uuid4())
+        user_id = 123  # 这里应该从数据库中获取实际的用户ID
+
+        # 将token存储到Redis中，设置过期时间为30分钟
+        redis_client.setex(f'token_{user_id}', 1800, token)
+
+        # TODO 返回成功响应json
+        return JsonResponse({
+            'code': 0,
+            'message': '登录成功',
+            'token': '',
+            'id': ''
+        })
+
+    except Exception as e:
+        # 捕获异常并返回错误信息
+        return JsonResponse({
+            'code': -1,
+            'message': str(e)
+        })
