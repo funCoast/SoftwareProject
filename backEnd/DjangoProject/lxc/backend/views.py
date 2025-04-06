@@ -160,13 +160,22 @@ def user_login_by_password(request):
         password = data.get('password', None)
 
         # 获取用户信息
-        try:
-            user = User.objects.get(email=account)
-        except User.DoesNotExist:
-            return JsonResponse({
-                'code': -1,
-                'message': '用户不存在'
-            })
+        if '@' in account and '.' in account:
+            try:
+                user = User.objects.get(email=account)
+            except User.DoesNotExist:
+                return JsonResponse({
+                    'code': -1,
+                    'message': '用户不存在'
+                })
+        else:
+            try:
+                user = User.objects.get(username=account)
+            except User.DoesNotExist:
+                return JsonResponse({
+                    'code': -1,
+                    'message': '用户不存在'
+                })
 
         # 验证密码
         if user.password != password:
