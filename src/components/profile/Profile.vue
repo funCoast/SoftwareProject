@@ -26,6 +26,15 @@
           </div>
         </div>
       </div>
+      <!-- 添加设置按钮 -->
+      <div class="profile-actions">
+        <button class="edit-profile-btn" @click="goToEditProfile">
+          <svg class="settings-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+          </svg>
+          <span>编辑资料</span>
+        </button>
+      </div>
     </div>
 
     <!-- 内容切换栏 -->
@@ -167,15 +176,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref} from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
 
+const router = useRouter()
 const currentTab = ref('works')
-const tabs = ref ([
+const tabs = ref([
   { id: 'works', name: '作品' },
   { id: 'likes', name: '喜欢' },
   { id: 'favorites', name: '收藏' }
 ])
-const userInfo = ref ({
+
+const userInfo = ref({
   name: 'AI开发者',
   account: 'ai_developer',
   avatar: 'https://picsum.photos/200/200?random=1',
@@ -185,6 +198,7 @@ const userInfo = ref ({
   likes: 1024
 })
 
+const uid = sessionStorage.getItem('uid')
 
 interface myWork {
   id: number
@@ -197,128 +211,257 @@ interface myWork {
   favorites: string
 }
 
-const myWorks = ref<myWork[]> ([
-  {
-    id: 1,
-    name: '智能对话助手',
-    category: '对话助手',
-    description: '基于大语言模型的智能对话系统，支持多轮对话和上下文理解',
-    image: 'https://picsum.photos/300/300?random=1',
-    usage: '2.3k',
-    likes: '1.2k',
-    favorites: '856'
-  },
-  {
-    id: 2,
-    name: '数据分析工具',
-    category: '数据分析',
-    description: '专业的数据分析工具，支持多种数据可视化和预测分析',
-    image: 'https://picsum.photos/300/300?random=2',
-    usage: '1.5k',
-    likes: '890',
-    favorites: '654'
-  },
-  {
-    id: 3,
-    name: '图像处理助手',
-    category: '图像处理',
-    description: '智能图像处理工具，支持多种图像编辑和优化功能',
-    image: 'https://picsum.photos/300/300?random=3',
-    usage: '980',
-    likes: '678',
-    favorites: '432'
-  }
-])
-
-interface work {
-  id: number
-  name: string
-  category: string
-  description: string
-  image: string
-  usage: string
-  likes: string
-  favorites: string
+interface work extends myWork {
   author: {
     name: string
     avatar: string
   }
 }
-const likes = ref<work[]> ([
-  {
-    id: 4,
-    name: '多语言翻译助手',
-    category: '对话助手',
-    description: '支持多种语言互译的智能助手，提供实时翻译和语言学习建议',
-    image: 'https://picsum.photos/300/300?random=4',
-    usage: '1.8k',
-    likes: '980',
-    favorites: '765',
-    author: {
-      name: '语言专家',
-      avatar: 'https://picsum.photos/50/50?random=4'
-    }
-  },
-  {
-    id: 5,
-    name: '代码审查助手',
-    category: '开发工具',
-    description: '智能代码审查工具，提供代码质量分析和优化建议',
-    image: 'https://picsum.photos/300/300?random=5',
-    usage: '950',
-    likes: '580',
-    favorites: '345',
-    author: {
-      name: '代码专家',
-      avatar: 'https://picsum.photos/50/50?random=5'
-    }
-  }
-])
 
-interface favorite {
-  id: number
-  name: string
-  category: string
-  description: string
-  image: string
-  usage: string
-  likes: string
-  favorites: string
-  author: {
-    name: string
-    avatar: string
+interface favorite extends work {}
+
+const myWorks = ref<myWork[]>([])
+const likes = ref<work[]>([])
+const favorites = ref<favorite[]>([])
+
+const loading = ref({
+  userInfo: false,
+  works: false,
+  likes: false,
+  favorites: false
+})
+
+const error = ref({
+  userInfo: '',
+  works: '',
+  likes: '',
+  favorites: ''
+})
+
+async function fetchUserInfo() {
+  if (!uid) {
+    console.error('用户未登录，无法获取用户信息')
+    return
+  }
+
+  loading.value.userInfo = true
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/api/user/fetchProfile',
+      params: { uid }
+    })
+    if (response.data.code === 0) {
+      userInfo.value = response.data.data
+    } else {
+      console.error('获取用户信息失败:', response.data.message)
+      error.value.userInfo = response.data.message || '获取用户信息失败'
+    }
+  } catch (err) {
+    console.error('获取用户信息错误:', err)
+    error.value.userInfo = '网络错误，请稍后重试'
+  } finally {
+    loading.value.userInfo = false
   }
 }
-const favorites = ref<favorite[]> ([
-  {
-    id: 6,
-    name: '语音合成助手',
-    category: '语音工具',
-    description: '高质量语音合成工具，支持多种音色和情感表达',
-    image: 'https://picsum.photos/300/300?random=6',
-    usage: '780',
-    likes: '520',
-    favorites: '234',
-    author: {
-      name: '语音专家',
-      avatar: 'https://picsum.photos/50/50?random=6'
+
+async function fetchWorks() {
+  if (!uid) return
+
+  loading.value.works = true
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/api/user/fetchWorks',
+      params: { uid }
+    })
+    if (response.data.code === 0) {
+      myWorks.value = response.data.data || []
+    } else {
+      console.error('获取作品列表失败:', response.data.message)
+      error.value.works = response.data.message || '获取作品列表失败'
+      myWorks.value = getDefaultWorks()
     }
-  },
-  {
-    id: 7,
-    name: '用户行为分析',
-    category: '数据分析',
-    description: '用户行为分析工具，提供用户画像和行为路径分析',
-    image: 'https://picsum.photos/300/300?random=7',
-    usage: '1.1k',
-    likes: '690',
-    favorites: '456',
-    author: {
-      name: '用户研究专家',
-      avatar: 'https://picsum.photos/50/50?random=7'
-    }
+  } catch (err) {
+    console.error('获取作品列表错误:', err)
+    error.value.works = '网络错误，请稍后重试'
+    myWorks.value = getDefaultWorks()
+  } finally {
+    loading.value.works = false
   }
-])
+}
+
+async function fetchLikes() {
+  if (!uid) return
+
+  loading.value.likes = true
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/api/user/fetchLikes',
+      params: { uid }
+    })
+    if (response.data.code === 0) {
+      likes.value = response.data.data || []
+    } else {
+      console.error('获取喜欢列表失败:', response.data.message)
+      error.value.likes = response.data.message || '获取喜欢列表失败'
+      likes.value = getDefaultLikes()
+    }
+  } catch (err) {
+    console.error('获取喜欢列表错误:', err)
+    error.value.likes = '网络错误，请稍后重试'
+    likes.value = getDefaultLikes()
+  } finally {
+    loading.value.likes = false
+  }
+}
+
+async function fetchFavorites() {
+  if (!uid) return
+
+  loading.value.favorites = true
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/api/user/fetchFavorites',
+      params: { uid }
+    })
+    if (response.data.code === 0) {
+      favorites.value = response.data.data || []
+    } else {
+      console.error('获取收藏列表失败:', response.data.message)
+      error.value.favorites = response.data.message || '获取收藏列表失败'
+      favorites.value = getDefaultFavorites()
+    }
+  } catch (err) {
+    console.error('获取收藏列表错误:', err)
+    error.value.favorites = '网络错误，请稍后重试'
+    favorites.value = getDefaultFavorites()
+  } finally {
+    loading.value.favorites = false
+  }
+}
+
+// 默认数据
+function getDefaultWorks(): myWork[] {
+  return [
+    {
+      id: 1,
+      name: '智能对话助手',
+      category: '对话助手',
+      description: '基于大语言模型的智能对话系统，支持多轮对话和上下文理解',
+      image: 'https://picsum.photos/300/300?random=1',
+      usage: '2.3k',
+      likes: '1.2k',
+      favorites: '856'
+    },
+    {
+      id: 2,
+      name: '数据分析工具',
+      category: '数据分析',
+      description: '专业的数据分析工具，支持多种数据可视化和预测分析',
+      image: 'https://picsum.photos/300/300?random=2',
+      usage: '1.5k',
+      likes: '890',
+      favorites: '654'
+    },
+    {
+      id: 3,
+      name: '图像处理助手',
+      category: '图像处理',
+      description: '智能图像处理工具，支持多种图像编辑和优化功能',
+      image: 'https://picsum.photos/300/300?random=3',
+      usage: '980',
+      likes: '678',
+      favorites: '432'
+    }
+  ]
+}
+
+function getDefaultLikes(): work[] {
+  return [
+    {
+      id: 4,
+      name: '多语言翻译助手',
+      category: '对话助手',
+      description: '支持多种语言互译的智能助手，提供实时翻译和语言学习建议',
+      image: 'https://picsum.photos/300/300?random=4',
+      usage: '1.8k',
+      likes: '980',
+      favorites: '765',
+      author: {
+        name: '语言专家',
+        avatar: 'https://picsum.photos/50/50?random=4'
+      }
+    },
+    {
+      id: 5,
+      name: '代码审查助手',
+      category: '开发工具',
+      description: '智能代码审查工具，提供代码质量分析和优化建议',
+      image: 'https://picsum.photos/300/300?random=5',
+      usage: '950',
+      likes: '580',
+      favorites: '345',
+      author: {
+        name: '代码专家',
+        avatar: 'https://picsum.photos/50/50?random=5'
+      }
+    }
+  ]
+}
+
+function getDefaultFavorites(): favorite[] {
+  return [
+    {
+      id: 6,
+      name: '语音合成助手',
+      category: '语音工具',
+      description: '高质量语音合成工具，支持多种音色和情感表达',
+      image: 'https://picsum.photos/300/300?random=6',
+      usage: '780',
+      likes: '520',
+      favorites: '234',
+      author: {
+        name: '语音专家',
+        avatar: 'https://picsum.photos/50/50?random=6'
+      }
+    },
+    {
+      id: 7,
+      name: '用户行为分析',
+      category: '数据分析',
+      description: '用户行为分析工具，提供用户画像和行为路径分析',
+      image: 'https://picsum.photos/300/300?random=7',
+      usage: '1.1k',
+      likes: '690',
+      favorites: '456',
+      author: {
+        name: '用户研究专家',
+        avatar: 'https://picsum.photos/50/50?random=7'
+      }
+    }
+  ]
+}
+
+onMounted(() => {
+  fetchUserInfo()
+  fetchWorks()
+  fetchLikes()
+  fetchFavorites()
+})
+
+function goToEditProfile() {
+  router.push({
+    path: '/editProfile',
+    query: {
+      name: userInfo.value.name,
+      avatar: userInfo.value.avatar,
+      description: userInfo.value.description
+    }
+  });
+}
 </script>
 
 <style scoped>
@@ -334,6 +477,7 @@ const favorites = ref<favorite[]> ([
   padding: 30px;
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
 }
 
 .profile-info {
@@ -365,7 +509,6 @@ const favorites = ref<favorite[]> ([
 }
 
 .user-name {
-  margin-left: -1000px;
   font-size: 28px;
   font-weight: bold;
   color: #2c3e50;
@@ -587,5 +730,35 @@ const favorites = ref<favorite[]> ([
 
 .stat-item svg.favorite-icon {
   color: #e74c3c;
+}
+
+/* 设置图标和按钮样式 */
+.profile-actions {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+}
+
+.edit-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #2c3e50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.edit-profile-btn:hover {
+  background: #1e2b38;
+}
+
+.settings-icon {
+  width: 18px;
+  height: 18px;
 }
 </style> 
