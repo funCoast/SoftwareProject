@@ -13,7 +13,8 @@ class User(models.Model):
     fans_count = models.PositiveIntegerField(default=0)
     following_count = models.PositiveIntegerField(default=0)
     registered_at = models.DateTimeField(auto_now_add=True)
-
+    avatar = models.URLField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
     def __str__(self):
         return self.username
 

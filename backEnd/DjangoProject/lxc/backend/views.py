@@ -181,3 +181,37 @@ def user_login_by_password(request):
             'code': -1,
             'message': "4" + str(e)
         })
+
+"""
+用户修改个人信息接口
+"""
+def user_update_profile(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        uid = data.get('uid')
+        name = data.get('name')
+        avatar = data.get('avatar')
+        description = data.get('description')
+        password = data.get('password')
+
+        if not uid:
+            return JsonResponse({"code": -1, "message": "缺少用户ID"})
+        if not name:
+            return JsonResponse({"code": -1, "message": "昵称不能为空"})
+
+        try:
+            user = User.objects.get(user_id=uid)
+            user.username = name
+            if avatar:
+                user.avatar = avatar
+            if description:
+                user.description = description
+            if password:
+                user.password = password
+            user.save()
+            return JsonResponse({"code": 0, "message": "修改成功"})
+        except User.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": str(e)})
