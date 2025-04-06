@@ -1,3 +1,6 @@
+import uuid
+
+from django.core.mail import EmailMessage
 from django.http import HttpResponse
 # user/views.py
 from django.http import JsonResponse
@@ -5,7 +8,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from .models import User
 import json
+# backend/views.py
+from django.conf import settings
+import redis
+from rest_framework.decorators import api_view
 
+# Redis 客户端配置
+redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
 
 def index(request):
     # request.method 请求方式，GET、POST，例如用request.GET.get("key")读取数据
@@ -34,3 +43,49 @@ def register(request):
         return JsonResponse({'success': True, 'user_id': user.user_id})
     else:
         return JsonResponse({'success': False, 'msg': '仅支持 POST 请求'})
+
+"""
+用户请求发送验证码
+"""
+@api_view(['POST'])
+def send_code(request):
+    try:
+        email = request.data.get('email', None)
+        # TODO 前端判断邮箱格式？
+
+        # TODO 每分钟只能发送一次,前端？
+        # if redis_client.exists(f'verification_code_{email}'):
+        #     return JsonResponse({
+        #         'code': -1,
+        #         'message': '验证码已发送，请稍后再试'
+        #     })
+
+        # TODO 生成验证码
+        code = '123456'
+
+        # 将验证码存储到 Redis 中，设置过期时间为 5 分钟
+        redis_client.setex(f'verification_code_{email}', 300, code)
+
+        # TODO 发送验证码到用户邮箱
+        # subject = '您的验证码'
+        # body = f'【灵犀AI社区】您的验证码是：{code}，请在5分钟内使用。'
+        # email_message = EmailMessage(
+        #     subject=subject,
+        #     body=body,
+        #     from_email=settings.DEFAULT_FROM_EMAIL,
+        #     to=[email]
+        # )
+        # email_message.send()
+
+        return JsonResponse({
+            'code': 0,
+            'message': f'已发送'
+        })
+
+    except Exception as e:
+        # 解析异常
+        return JsonResponse({
+            'code': -1,
+            'message': str(e)
+        })
+
