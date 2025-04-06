@@ -92,15 +92,15 @@ import axios from "axios";
 const router = useRouter();
 const route = useRoute();
 const fileInput = ref<HTMLInputElement | null>(null);
-const uid = sessionStorage.getItem('uid')
 
 // 表单数据
 const formData = reactive({
-  avatar: 'https://picsum.photos/200/200?random=1',
+  avatar: '',
   name: '',
   password: '',
   confirmPassword: '',
-  description: ''
+  description: '',
+  uid: null as number
 });
 
 // 密码验证错误信息
@@ -124,6 +124,7 @@ onMounted(() => {
   formData.name = route.query.name as string || '';
   formData.avatar = route.query.avatar as string || '';
   formData.description = route.query.description as string || '';
+  formData.uid = route.query.uid as number || null as number;
 });
 
 // 触发文件选择
@@ -159,11 +160,12 @@ function goBack() {
 // 保存个人资料
 function saveProfile() {
   if (!isFormValid.value) return;
+  console.log("avatar: ", formData.avatar)
   axios({
     method: 'post',
-    url: '/api/user/updateProfile',
+    url: '/user/updateProfile',
     data: {
-      uid: uid,
+      uid: formData.uid,
       name: formData.name,
       avatar: formData.avatar,
       description: formData.description,

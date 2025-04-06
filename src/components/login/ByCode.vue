@@ -39,7 +39,8 @@ function login() {
     if (response.data.code === 0) {
       // 将 token,character,name,uid 存入 sessionStorage
       sessionStorage.setItem('token', response.data.token);
-      sessionStorage.setItem('uid', response.data.uid);
+      sessionStorage.setItem('uid', response.data.id);
+      console.log(sessionStorage)
       router.push('/home');
     } else {
       alert("验证码错误")
