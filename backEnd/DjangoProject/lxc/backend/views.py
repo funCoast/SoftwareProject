@@ -131,3 +131,53 @@ def user_login_by_code(request):
             'code': -1,
             'message': str(e)
         })
+
+
+"""
+用户密码登录接口
+"""
+def user_login_by_password(request):
+
+    try:
+        data = json.loads(request.body)
+        account = data.get('account', None)
+        password = data.get('password', None)
+
+        # TODO 验证邮箱格式
+
+        # 获取用户信息
+        try:
+            user = User.objects.get(email=account)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'code': -1,
+                'message': f'用户不存在'
+            })
+
+        # 验证密码
+        if user.password != password:
+            return JsonResponse({
+                'code': -1,
+                'message': '2密码错误'
+            })
+
+        # 生成登录token
+        token = str(uuid.uuid4())
+        user_id = user.user_id
+
+        # 将token存储到Redis中，设置过期时间为30分钟
+        redis_client.setex(f'token_{user_id}', 1800, token)
+
+        # 返回成功响应
+        return JsonResponse({
+            'code': 0,
+            'message': '3登录成功',
+            'token': token,
+            'id': user_id
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'code': -1,
+            'message': "4" + str(e)
+        })
