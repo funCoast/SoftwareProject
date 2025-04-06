@@ -1,6 +1,10 @@
 import uuid
+import random
+from smtplib import SMTPException
 
-from django.core.mail import EmailMessage
+from django.core.exceptions import ValidationError
+from django.core.mail import EmailMessage, EmailMultiAlternatives
+from django.core.validators import validate_email
 from django.http import HttpResponse
 # user/views.py
 from django.http import JsonResponse
@@ -49,57 +53,56 @@ def register(request):
 """
 @api_view(['POST'])
 def send_code(request):
+    def generate_code(length=6):
+        chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnopqrstuvwxyz'  # 排除易混淆字符
+        return ''.join(random.choices(chars, k=length))
+
     try:
-        email = request.data.get('email', None)
-        # TODO 前端判断邮箱格式？
+        email = request.data.get('email')
 
-        # TODO 每分钟只能发送一次，前端？
-        if redis_client.exists(f'verification_code_{email}'):
-            return JsonResponse({
-                'code': -1,
-                'message': '验证码已发送，请稍后再试'
-            })
+        # 邮箱格式校验
+        validate_email(email)
 
-        # TODO 生成验证码
-        code = '123456'
+        # 请求频率控制
+        if redis_client.exists(f'code_cooldown_{email}'):
+            return JsonResponse({'code': -1, 'message': '请求过于频繁'}, status=429)
 
-        # 将验证码存储到 Redis 中，设置过期时间为 5 分钟
+        # 3. 生成6位混合验证码
+        code = generate_code(6)
+
+        # 4. 存储验证码（覆盖旧值）
         redis_client.setex(f'verification_code_{email}', 300, code)
+        redis_client.setex(f'code_cooldown_{email}', 30, '1')  # 冷却期
 
-        # TODO 发送验证码到用户邮箱
-        # subject = '您的验证码'
-        # body = f'【灵犀AI社区】您的验证码是：{code}，请在5分钟内使用。'
-        # email_message = EmailMessage(
-        #     subject=subject,
-        #     body=body,
-        #     from_email=settings.DEFAULT_FROM_EMAIL,
-        #     to=[email]
-        # )
-        # email_message.send()
+        # 5. 发送邮件（HTML+文本双版本）
+        subject = "灵犀AI社区安全验证码"
+        text_content = f"您的验证码是：{code}，5分钟内有效"
+        html_content = f"<p>验证码：<strong>{code}</strong></p>"
 
-        return JsonResponse({
-            'code': 0,
-            'message': f'已发送'
-        })
+        email = EmailMultiAlternatives(
+            subject, text_content, settings.DEFAULT_FROM_EMAIL, [email]
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
 
+        return JsonResponse({'code': 0, 'message': '验证码已发送'})
+
+    except ValidationError:
+        return JsonResponse({'code': -1, 'message': '邮箱格式无效'}, status=400)
+    except SMTPException as e:
+        return JsonResponse({'code': -1, 'message': '邮件服务暂不可用'}, status=503)
     except Exception as e:
-        # 解析异常
-        return JsonResponse({
-            'code': -1,
-            'message': str(e)
-        })
+        return JsonResponse({'code': -1, 'message': str(e)}, status=500)
 
 '''
-用户登录接口
+用户验证码登录接口
 '''
 def user_login_by_code(request):
     try:
-        email = request.POST.get('email', None)
-        code = request.POST.get('code', None)
-
-        # TODO 验证邮箱格式？
-
-        # TODO 验证验证码
+        data = json.loads(request.body)
+        email = data.get('email', None)
+        code = data.get('code', None)
+        print(email, code)
         stored_code = redis_client.get(f'verification_code_{email}')
         if not stored_code or stored_code != code:
             return JsonResponse({
@@ -110,19 +113,32 @@ def user_login_by_code(request):
         # 删除Redis中的验证码
         redis_client.delete(f'verification_code_{email}')
 
+        # 尝试获取用户信息
+        try:
+            user = User.objects.get(email=email)
+            user_id = user.user_id
+        except User.DoesNotExist:
+            # 用户不存在，创建新用户
+            username = email.split('@')[0]  # 使用邮箱前缀作为用户名
+            user = User.objects.create(
+                username=username,
+                email=email,
+                password='',  # 密码可以稍后设置或留空
+            )
+            user_id = user.user_id
+
         # 生成登录token
         token = str(uuid.uuid4())
-        user_id = 123  # 这里应该从数据库中获取实际的用户ID
 
         # 将token存储到Redis中，设置过期时间为30分钟
         redis_client.setex(f'token_{user_id}', 1800, token)
 
-        # TODO 返回成功响应json
+        # 返回成功响应json
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
-            'token': '',
-            'id': ''
+            'token': token,
+            'id': user_id
         })
 
     except Exception as e:
@@ -143,22 +159,20 @@ def user_login_by_password(request):
         account = data.get('account', None)
         password = data.get('password', None)
 
-        # TODO 验证邮箱格式
-
         # 获取用户信息
         try:
             user = User.objects.get(email=account)
         except User.DoesNotExist:
             return JsonResponse({
                 'code': -1,
-                'message': f'用户不存在'
+                'message': '用户不存在'
             })
 
         # 验证密码
         if user.password != password:
             return JsonResponse({
                 'code': -1,
-                'message': '2密码错误'
+                'message': '密码错误'
             })
 
         # 生成登录token
@@ -171,7 +185,7 @@ def user_login_by_password(request):
         # 返回成功响应
         return JsonResponse({
             'code': 0,
-            'message': '3登录成功',
+            'message': '登录成功',
             'token': token,
             'id': user_id
         })
@@ -179,7 +193,7 @@ def user_login_by_password(request):
     except Exception as e:
         return JsonResponse({
             'code': -1,
-            'message': "4" + str(e)
+            'message': str(e)
         })
 
 """

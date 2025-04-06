@@ -140,9 +140,9 @@ REDIS_PORT = 6379
 
 # Email 配置（QQ邮箱）
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.qq.com'
+EMAIL_HOST = 'smtp.163.com'
 EMAIL_PORT = 465
 EMAIL_USE_SSL = True
-EMAIL_HOST_USER = '3495497451@qq.com'
-EMAIL_HOST_PASSWORD = '1234'
+EMAIL_HOST_USER = 'lingxiaicommunity@163.com'
+EMAIL_HOST_PASSWORD = 'LLhCEat3U35rarST'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
