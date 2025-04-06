@@ -229,3 +229,32 @@ def user_update_profile(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
+
+def user_fetch_profile(request):
+    uid = request.GET.get('uid')
+    if not uid:
+        return JsonResponse({"code": -1, "message": "缺少参数 uid"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+
+        # 获取相关信息
+        data = {
+            "name": user.username,
+            "account": user.email,
+            "avatar": user.avatar if hasattr(user, 'avatar') else "",  # 避免字段不存在时报错
+            "description": user.description if hasattr(user, 'description') else "",
+            "following": user.following_count,
+            "followers": user.fans_count,
+        }
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "data": data
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": str(e)})
