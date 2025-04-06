@@ -10,7 +10,10 @@
         </div>
         <div class="message-icon">
           <i class="fas fa-envelope"></i>
-          <span class="message-badge">3</span>
+          <i @click="navigateTo('/message')">
+            <img src="https://api.iconify.design/material-symbols:chat.svg" alt="私信" class="nav-icon">
+            <span class="message-badge">114514</span>
+          </i>
         </div>
       </div>
       

@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import Home from './components/Home.vue'
 import Workspace from './components/Workspace.vue'
+import Message from './components/Message.vue'
 import Community from './components/Community.vue'
 import Profile from './components/Profile.vue'
 import WorkflowCanvas from './components/WorkflowCanvas.vue'
@@ -18,6 +19,11 @@ const routes = [
     path: '/workspace',
     name: 'workspace',
     component: Workspace
+  },
+  {
+    path: '/message',
+    name: 'message',
+    component: Message
   },
   {
     path: '/workspace/workflow',
