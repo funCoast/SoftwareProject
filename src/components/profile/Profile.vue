@@ -8,7 +8,7 @@
         </div>
         <div class="info-section">
           <div class="user-name">{{ userInfo.name }}</div>
-          <div class="user-account">@{{ userInfo.account }}</div>
+          <div class="user-account">{{ userInfo.account }}</div>
           <div class="user-description">{{ userInfo.description }}</div>
           <div class="user-stats">
             <div class="stat-item">
@@ -18,10 +18,6 @@
             <div class="stat-item">
               <span class="stat-value">{{ userInfo.followers }}</span>
               <span class="stat-label">粉丝</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ userInfo.likes }}</span>
-              <span class="stat-label">获赞</span>
             </div>
           </div>
         </div>
@@ -194,8 +190,7 @@ const userInfo = ref({
   avatar: 'https://picsum.photos/200/200?random=1',
   description: '专注于AI应用开发，致力于为用户提供优质的智能体服务。擅长对话系统、数据分析、图像处理等领域。',
   following: 128,
-  followers: 256,
-  likes: 1024
+  followers: 256
 })
 
 const uid = sessionStorage.getItem('uid')
@@ -239,6 +234,7 @@ const error = ref({
 })
 
 async function fetchUserInfo() {
+  console.log("sessionStorage", sessionStorage)
   if (!uid) {
     console.error('用户未登录，无法获取用户信息')
     return
@@ -248,11 +244,20 @@ async function fetchUserInfo() {
   try {
     const response = await axios({
       method: 'get',
-      url: '/api/user/fetchProfile',
+      url: '/user/fetchProfile',
       params: { uid }
     })
     if (response.data.code === 0) {
-      userInfo.value = response.data.data
+      const newData = response.data.data
+      for (const key in newData) {
+        if (
+            newData[key] !== null &&
+            newData[key] !== undefined &&
+            newData[key] !== ''
+        ) {
+          userInfo.value[key] = newData[key]
+        }
+      }
     } else {
       console.error('获取用户信息失败:', response.data.message)
       error.value.userInfo = response.data.message || '获取用户信息失败'
@@ -272,7 +277,7 @@ async function fetchWorks() {
   try {
     const response = await axios({
       method: 'get',
-      url: '/api/user/fetchWorks',
+      url: '/user/fetchWorks',
       params: { uid }
     })
     if (response.data.code === 0) {
@@ -298,7 +303,7 @@ async function fetchLikes() {
   try {
     const response = await axios({
       method: 'get',
-      url: '/api/user/fetchLikes',
+      url: '/user/fetchLikes',
       params: { uid }
     })
     if (response.data.code === 0) {
@@ -324,7 +329,7 @@ async function fetchFavorites() {
   try {
     const response = await axios({
       method: 'get',
-      url: '/api/user/fetchFavorites',
+      url: '/user/fetchFavorites',
       params: { uid }
     })
     if (response.data.code === 0) {
@@ -447,9 +452,9 @@ function getDefaultFavorites(): favorite[] {
 
 onMounted(() => {
   fetchUserInfo()
-  fetchWorks()
-  fetchLikes()
-  fetchFavorites()
+  //fetchWorks()
+  //fetchLikes()
+  //fetchFavorites()
 })
 
 function goToEditProfile() {
@@ -458,7 +463,8 @@ function goToEditProfile() {
     query: {
       name: userInfo.value.name,
       avatar: userInfo.value.avatar,
-      description: userInfo.value.description
+      description: userInfo.value.description,
+      uid: uid
     }
   });
 }
