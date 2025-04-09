@@ -35,5 +35,6 @@ def send_http_request(method, url, body=None, headers=None, retries=3, retry_int
 
 # 示例调用
 if __name__ == '__main__':
-    result = send_http_request("GET", "https://api.example.com/data", retries=2, retry_interval=1)
+    body = {"username":"testHttpNode","email":"1231414@test.com","password":"000000"}
+    result = send_http_request("POST", "http://127.0.0.1:8000/backend/register", body=body, retries=2, retry_interval=1)
     print(result)

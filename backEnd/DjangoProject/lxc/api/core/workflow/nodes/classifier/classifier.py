@@ -1,10 +1,14 @@
 # classifier_node.py
+import json
+
 import openai
 import os
 
-# 初始化 openai 客户端，可根据需要传入 API Key
-openai.api_key = os.getenv("DASHSCOPE_API_KEY")
-
+client = openai.OpenAI(
+    # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
+    api_key=os.getenv("DASHSCOPE_API_KEY"),  # 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+)
 
 def classify_question(question, categories):
     """
@@ -24,7 +28,7 @@ def classify_question(question, categories):
         prompt += f"分类：{cat}，说明：{desc}\n"
     prompt += "\n请输出最合适的分类以及简要解释。"
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="qwen-max-latest",  # 或使用其他支持的模型
         messages=[{"role": "user", "content": prompt}],
         temperature=0
@@ -36,11 +40,11 @@ def classify_question(question, categories):
 
 # 示例调用
 if __name__ == '__main__':
-    question = "我在使用新软件时遇到了一些技术问题..."
+    question = "在操作飞行管理系统时不知道如何使用飞行计划界面，我也不明白导航数据链的分类协议是什么意思。"
     categories = {
-        "技术咨询": "关于技术、软件、编程的问题",
-        "产品反馈": "对产品体验的意见反馈",
-        "常见问题": "系统常见问题或 FAQ"
+        "飞行操作咨询": "关于飞行程序、航电系统操作、空管协议的问题",
+        "机载系统故障": "涉及航空器机械、电子或软件系统的异常情况报告",
+        "适航规章咨询": "关于适航认证、空域管制条例、国际民航组织标准的疑问"
     }
     result = classify_question(question, categories)
-    print(result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))

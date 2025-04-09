@@ -33,7 +33,7 @@ def extract_text(file_path):
 # 示例调用
 if __name__ == '__main__':
     # 假设文件路径已知，此处演示 txt 文件
-    file_path = "example.txt"
+    file_path = "example.docx"
     try:
         text = extract_text(file_path)
         print("提取文本：")
