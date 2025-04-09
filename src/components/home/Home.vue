@@ -1,129 +1,3 @@
-<template>
-  <div class="home">
-    <div class="home-container">
-      <!-- 左侧公告板块 -->
-      <div class="notice-section">
-        <div class="section-header">
-          <h2>公告</h2>
-          <div class="tab-switch">
-            <span 
-              :class="{ active: currentNoticeTab === 'review' }" 
-              @click="currentNoticeTab = 'review'"
-            >审核通知</span>
-            <span 
-              :class="{ active: currentNoticeTab === 'system' }" 
-              @click="currentNoticeTab = 'system'"
-            >系统公告</span>
-          </div>
-        </div>
-        <div class="notice-content">
-          <div v-if="currentNoticeTab === 'review'" class="notice-list">
-            <div v-for="notice in reviewNotices" :key="notice.id" class="notice-item">
-              <i class="fas fa-check-circle"></i>
-              <div class="notice-text">
-                <h4>{{ notice.title }}</h4>
-                <p>{{ notice.content }}</p>
-                <span class="notice-time">{{ notice.time }}</span>
-              </div>
-            </div>
-          </div>
-          <div v-else class="notice-list">
-            <div v-for="notice in systemNotices" :key="notice.id" class="notice-item">
-              <i class="fas fa-bullhorn"></i>
-              <div class="notice-text">
-                <h4>{{ notice.title }}</h4>
-                <p>{{ notice.content }}</p>
-                <span class="notice-time">{{ notice.time }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 右侧智能体推荐板块 -->
-      <div class="agent-section">
-        <div class="section-header">
-          <h2>智能体推荐</h2>
-          <div class="tab-switch">
-            <span 
-              :class="{ active: currentAgentTab === 'hot' }" 
-              @click="currentAgentTab = 'hot'"
-            >热度推荐</span>
-            <span 
-              :class="{ active: currentAgentTab === 'following' }" 
-              @click="currentAgentTab = 'following'"
-            >关注用户智能体</span>
-            <span 
-              :class="{ active: currentAgentTab === 'favorite' }" 
-              @click="currentAgentTab = 'favorite'"
-            >收藏智能体</span>
-          </div>
-        </div>
-        <div class="agent-content">
-          <div class="agent-grid">
-            <div v-for="agent in paginatedAgents" :key="agent.id" class="agent-card">
-              <div class="agent-image">
-                <img :src="agent.image" :alt="agent.name">
-                <div class="agent-category">{{ agent.category }}</div>
-              </div>
-              <div class="agent-info">
-                <div class="agent-header">
-                  <h3>{{ agent.name }}</h3>
-                  <div class="agent-author">
-                    <img :src="agent.author.avatar" :alt="agent.author.name">
-                    <span>{{ agent.author.name }}</span>
-                  </div>
-                </div>
-                <p class="agent-description">{{ agent.description }}</p>
-                <div class="agent-stats">
-                  <span class="stat-item" title="使用量">
-                    <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>
-                    </svg>
-                    {{ agent.usage }}
-                  </span>
-                  <span class="stat-item" title="点赞量">
-                    <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                    </svg>
-                    {{ agent.likes }}
-                  </span>
-                  <span class="stat-item" title="收藏量">
-                    <svg class="favorite-icon" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/>
-                    </svg>
-                    {{ agent.favorites }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- 分页控件 -->
-          <div class="pagination">
-            <button 
-              :disabled="currentPage === 1"
-              @click="currentPage--"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-              </svg>
-            </button>
-            <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
-            <button 
-              :disabled="currentPage === totalPages"
-              @click="currentPage++"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 
@@ -591,6 +465,132 @@ watch (
   }
 )
 </script>
+
+<template>
+  <div class="home">
+    <div class="home-container">
+      <!-- 左侧公告板块 -->
+      <div class="notice-section">
+        <div class="section-header">
+          <h2>公告</h2>
+          <div class="tab-switch">
+            <span 
+              :class="{ active: currentNoticeTab === 'review' }" 
+              @click="currentNoticeTab = 'review'"
+            >审核通知</span>
+            <span 
+              :class="{ active: currentNoticeTab === 'system' }" 
+              @click="currentNoticeTab = 'system'"
+            >系统公告</span>
+          </div>
+        </div>
+        <div class="notice-content">
+          <div v-if="currentNoticeTab === 'review'" class="notice-list">
+            <div v-for="notice in reviewNotices" :key="notice.id" class="notice-item">
+              <i class="fas fa-check-circle"></i>
+              <div class="notice-text">
+                <h4>{{ notice.title }}</h4>
+                <p>{{ notice.content }}</p>
+                <span class="notice-time">{{ notice.time }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="notice-list">
+            <div v-for="notice in systemNotices" :key="notice.id" class="notice-item">
+              <i class="fas fa-bullhorn"></i>
+              <div class="notice-text">
+                <h4>{{ notice.title }}</h4>
+                <p>{{ notice.content }}</p>
+                <span class="notice-time">{{ notice.time }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧智能体推荐板块 -->
+      <div class="agent-section">
+        <div class="section-header">
+          <h2>智能体推荐</h2>
+          <div class="tab-switch">
+            <span 
+              :class="{ active: currentAgentTab === 'hot' }" 
+              @click="currentAgentTab = 'hot'"
+            >热度推荐</span>
+            <span 
+              :class="{ active: currentAgentTab === 'following' }" 
+              @click="currentAgentTab = 'following'"
+            >关注用户智能体</span>
+            <span 
+              :class="{ active: currentAgentTab === 'favorite' }" 
+              @click="currentAgentTab = 'favorite'"
+            >收藏智能体</span>
+          </div>
+        </div>
+        <div class="agent-content">
+          <div class="agent-grid">
+            <div v-for="agent in paginatedAgents" :key="agent.id" class="agent-card">
+              <div class="agent-image">
+                <img :src="agent.image" :alt="agent.name">
+                <div class="agent-category">{{ agent.category }}</div>
+              </div>
+              <div class="agent-info">
+                <div class="agent-header">
+                  <h3>{{ agent.name }}</h3>
+                  <div class="agent-author">
+                    <img :src="agent.author.avatar" :alt="agent.author.name">
+                    <span>{{ agent.author.name }}</span>
+                  </div>
+                </div>
+                <p class="agent-description">{{ agent.description }}</p>
+                <div class="agent-stats">
+                  <span class="stat-item" title="使用量">
+                    <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>
+                    </svg>
+                    {{ agent.usage }}
+                  </span>
+                  <span class="stat-item" title="点赞量">
+                    <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    {{ agent.likes }}
+                  </span>
+                  <span class="stat-item" title="收藏量">
+                    <svg class="favorite-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/>
+                    </svg>
+                    {{ agent.favorites }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 分页控件 -->
+          <div class="pagination">
+            <button 
+              :disabled="currentPage === 1"
+              @click="currentPage--"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+              </svg>
+            </button>
+            <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+            <button 
+              :disabled="currentPage === totalPages"
+              @click="currentPage++"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .home {

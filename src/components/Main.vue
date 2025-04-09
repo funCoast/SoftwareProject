@@ -104,7 +104,7 @@ function handleProfileNavigation() {
 
 .side-nav {
   width: 100px;
-  background: #0aaff5c8;
+  background: #2c3e50;
   color: white;
   padding: 6px;
   display: flex;
@@ -202,11 +202,11 @@ function handleProfileNavigation() {
 }
 
 .side-nav nav ul li:hover {
-  background-color: #028efad8;
+  background-color: #34495e;
 }
 
 .side-nav nav ul li.active {
-  background-color: #028efad8;
+  background-color: #34495e;
 }
 
 .side-nav nav ul li i {

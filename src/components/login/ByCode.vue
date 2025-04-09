@@ -1,12 +1,42 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onBeforeMount } from 'vue'
 import { Message, CircleCheckFilled} from '@element-plus/icons-vue';
 import axios from 'axios';
 import router from '../../router';
 import "./login.css"
 
-const email = ref('');
-const code = ref('');
+const email = ref('')
+const code = ref('')
+const disable = ref(false)
+const text = ref('发送验证码')
+
+onBeforeMount(() => {
+  const time = ref(0)
+  if (localStorage.getItem('time')) {
+    time.value = Number(localStorage.getItem('time'))
+  }
+  if (time.value > 0) {
+      count(time.value)
+  } else {
+    localStorage.removeItem('time')
+  }
+})
+
+function count(time:number) {
+  disable.value = true
+  text.value = time + "s后重新发送"
+  const timer = setInterval(() => {
+    if (time > 0) {
+      time--
+      text.value = time + "s后重新发送"
+      localStorage.setItem('time', time.toString())
+    } else {
+      clearInterval(timer);
+      disable.value = false
+      text.value = '重新发送'
+    }
+  }, 1000)
+}
 
 function sendCode() {
   const reg =  /^([A-Za-z0-9_\.\-])+\@([A-Za-z0-9_\.\-])+\.([A-Za-z]{2,4})$/
@@ -24,6 +54,7 @@ function sendCode() {
       if(response.data.code === 0) {
         alert('验证码已发送')
       }
+      count(60)
   })
 }
 
@@ -55,7 +86,7 @@ function login() {
   </el-row>
   <el-row class="row">
       <el-input class="input code" v-model="code" type="text" placeholder="请输入验证码" maxlength="6" :prefix-icon="CircleCheckFilled"/>
-      <el-button class="send_code" @click="sendCode()">发送验证码</el-button>
+      <el-button class="send_code" :disabled="disable" @click="sendCode()">{{text}}</el-button>
   </el-row>
   <el-row class="row">
       <el-text class="tip">未注册的用户输入验证码后将</el-text>
