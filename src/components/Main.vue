@@ -3,6 +3,7 @@ import { ref, onBeforeMount } from 'vue'
 import router from '../router'
 import axios from 'axios'
 
+const avatar = ref('')
 onBeforeMount(() => {
   axios({
     method: 'get',
@@ -10,12 +11,10 @@ onBeforeMount(() => {
     params: {
       id: sessionStorage.getItem('uid')
     }
+  }).then(function (response) {
+    avatar.value = response.data.avatar
   })
 })
-
-// 响应式数据
-const userAvatar = ref<string>('https://picsum.photos/50/50?random=1')
-const userName = ref<string>('AI开发者')
 
 // 类型声明
 interface NavItem {
@@ -64,13 +63,7 @@ function handleProfileNavigation() {
       <!-- 用户信息区域 -->
       <div class="user-section">
         <div class="user-info">
-          <img 
-            :src="userAvatar" 
-            :alt="userName" 
-            class="avatar"
-            @click="handleProfileNavigation"
-          >
-          <span class="user-name">{{ userName }}</span>
+          <img :src="avatar" alt="avatar" class="avatar" @click="handleProfileNavigation">
         </div>
         <div class="message-icon">
           <i class="fas fa-envelope"></i>
@@ -81,17 +74,8 @@ function handleProfileNavigation() {
       <!-- 导航菜单 -->
       <nav>
         <ul>
-          <li 
-            v-for="item in navItems" 
-            :key="item.path"
-            :class="{ active: cur === item.path }"
-            @click="handleNavigation(item.path)"
-          >
-            <img 
-              :src="item.icon" 
-              :alt="item.label"
-              class="nav-icon"
-            >
+          <li v-for="item in navItems" :key="item.path" :class="{ active: cur === item.path }" @click="handleNavigation(item.path)">
+            <img :src="item.icon" :alt="item.label" class="nav-icon">
             <span>{{ item.label }}</span>
           </li>
         </ul>
@@ -144,7 +128,7 @@ function handleProfileNavigation() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-bottom: 1px solid #34495e;
+  border-bottom: 1px solid #4f6f8f;
 }
 
 .user-info {

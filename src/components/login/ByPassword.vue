@@ -35,7 +35,7 @@ function login() {
     <el-input class="input full" v-model="account" type="text" placeholder="请输入邮箱/用户名" maxlength="25" :prefix-icon="Message"/>
   </el-row>
   <el-row class="row">
-      <el-input class="input password" v-model="password" type="text" placeholder="请输入密码" maxlength="6" :prefix-icon="Lock"/>
+      <el-input class="input password" v-model="password" type="text" placeholder="请输入密码" maxlength="20" :prefix-icon="Lock"/>
   </el-row>
   <el-row class="row">
       <el-text class="tip">初次使用请选择</el-text>

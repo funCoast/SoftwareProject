@@ -59,7 +59,7 @@ function login() {
   <el-row class="row">
       <el-text class="tip">未注册的用户输入验证码后将</el-text>
       <el-text class="tip blue">自动注册</el-text>
-      <el-text class="tip">账户</el-text>
+      <el-text class="tip">, 验证码有效时间为5分钟</el-text>
   </el-row>
   <el-row class="row">
     <el-button class="login_bt" type="primary" :disabled="!email || !code" @click="login()">登录/注册</el-button>
