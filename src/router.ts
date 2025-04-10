@@ -11,7 +11,7 @@ import WorkflowCanvas from './components/workspace/WorkflowCanvas.vue';
 import AgentDevelopment from './components/workspace/AgentDevelopment.vue';
 import ResourceLibrary from './components/workspace/ResourceLibrary.vue';
 
-const authRequired = false
+const authRequired = true
 const routes = [
     { 
         path: '/login',

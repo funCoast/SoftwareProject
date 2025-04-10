@@ -1,3 +1,105 @@
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
+import axios from "axios";
+
+const router = useRouter();
+const route = useRoute();
+const fileInput = ref<HTMLInputElement | null>(null);
+
+// 表单数据
+const formData = reactive({
+  avatar: '',
+  name: '',
+  password: '',
+  confirmPassword: '',
+  description: '',
+  uid: ''
+});
+
+// 密码验证错误信息
+const passwordError = computed(() => {
+  if (formData.password && formData.confirmPassword && 
+      formData.password !== formData.confirmPassword) {
+    return '两次输入的密码不一致';
+  }
+  return '';
+});
+
+// 表单验证
+const isFormValid = computed(() => {
+  if (!formData.name) return false;
+  if (formData.password && !formData.confirmPassword) return false;
+  if (passwordError.value) return false;
+  return true;
+});
+
+onMounted(() => {
+  formData.name = route.query.name as string || '';
+  formData.avatar = route.query.avatar as string || '';
+  formData.description = route.query.description as string || '';
+  formData.uid = route.query.uid as number || null as number;
+});
+
+// 触发文件选择
+function triggerFileInput() {
+  fileInput.value?.click();
+}
+
+// 处理头像更改
+function handleAvatarChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    
+    // 验证文件大小和类型
+    if (file.size > 2 * 1024 * 1024) {
+      alert('图片大小不能超过2MB');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      formData.avatar = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// 返回个人资料页面
+function goBack() {
+  router.push('/profile');
+}
+
+// 保存个人资料
+function saveProfile() {
+  if (!isFormValid.value) return;
+  console.log("avatar: ", formData.avatar)
+  axios({
+    method: 'post',
+    url: '/user/updateProfile',
+    data: {
+      uid: formData.uid,
+      name: formData.name,
+      avatar: formData.avatar,
+      description: formData.description,
+      password: formData.password
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      alert('个人资料已更新');
+      router.push('/profile');
+    } else {
+      alert('更新失败，请稍后重试');
+    }
+  }).catch(function (error) {
+    console.error('请求失败:', error);
+    alert('更新失败，请稍后重试');
+  });
+}
+</script>
+
 <template>
   <div class="edit-profile-container">
     <div class="edit-header">
@@ -82,108 +184,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useRoute } from 'vue-router';
-import axios from "axios";
-
-const router = useRouter();
-const route = useRoute();
-const fileInput = ref<HTMLInputElement | null>(null);
-
-// 表单数据
-const formData = reactive({
-  avatar: '',
-  name: '',
-  password: '',
-  confirmPassword: '',
-  description: '',
-  uid: null as number
-});
-
-// 密码验证错误信息
-const passwordError = computed(() => {
-  if (formData.password && formData.confirmPassword && 
-      formData.password !== formData.confirmPassword) {
-    return '两次输入的密码不一致';
-  }
-  return '';
-});
-
-// 表单验证
-const isFormValid = computed(() => {
-  if (!formData.name) return false;
-  if (formData.password && !formData.confirmPassword) return false;
-  if (passwordError.value) return false;
-  return true;
-});
-
-onMounted(() => {
-  formData.name = route.query.name as string || '';
-  formData.avatar = route.query.avatar as string || '';
-  formData.description = route.query.description as string || '';
-  formData.uid = route.query.uid as number || null as number;
-});
-
-// 触发文件选择
-function triggerFileInput() {
-  fileInput.value?.click();
-}
-
-// 处理头像更改
-function handleAvatarChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (input.files && input.files[0]) {
-    const file = input.files[0];
-    
-    // 验证文件大小和类型
-    if (file.size > 2 * 1024 * 1024) {
-      alert('图片大小不能超过2MB');
-      return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      formData.avatar = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  }
-}
-
-// 返回个人资料页面
-function goBack() {
-  router.push('/profile');
-}
-
-// 保存个人资料
-function saveProfile() {
-  if (!isFormValid.value) return;
-  console.log("avatar: ", formData.avatar)
-  axios({
-    method: 'post',
-    url: '/user/updateProfile',
-    data: {
-      uid: formData.uid,
-      name: formData.name,
-      avatar: formData.avatar,
-      description: formData.description,
-      password: formData.password
-    }
-  }).then(function (response) {
-    if (response.data.code === 0) {
-      alert('个人资料已更新');
-      router.push('/profile');
-    } else {
-      alert('更新失败，请稍后重试');
-    }
-  }).catch(function (error) {
-    console.error('请求失败:', error);
-    alert('更新失败，请稍后重试');
-  });
-}
-</script>
 
 <style scoped>
 .edit-profile-container {

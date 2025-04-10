@@ -391,7 +391,7 @@ function goToAgentDetail() {
 }
 
 .sub-nav {
-  width: 200px;
+  width: 150px;
   background: white;
   padding: 20px 0;
   border-right: 1px solid #e9ecef;
