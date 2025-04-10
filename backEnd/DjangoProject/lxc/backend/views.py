@@ -16,7 +16,7 @@ import json
 from django.conf import settings
 import redis
 from rest_framework.decorators import api_view
-
+from django.shortcuts import get_object_or_404
 # Redis 客户端配置
 redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
 
@@ -210,12 +210,11 @@ def user_login_by_password(request):
 """
 def user_update_profile(request):
     try:
-        data = json.loads(request.body.decode('utf-8'))
-        uid = data.get('uid')
-        name = data.get('name')
-        avatar = data.get('avatar')
-        description = data.get('description')
-        password = data.get('password')
+        uid = request.POST.get('uid')
+        name = request.POST.get('name')
+        avatar = request.FILES.get('avatar')  # 从文件中获取头像
+        description = request.POST.get('description')
+        password = request.POST.get('password')
 
         if not uid:
             return JsonResponse({"code": -1, "message": "缺少用户ID"})
@@ -226,12 +225,13 @@ def user_update_profile(request):
             user = User.objects.get(user_id=uid)
             user.username = name
             if avatar:
-                user.avatar = avatar
+                user.avatar = avatar  # 会自动保存到 MEDIA_ROOT 下的 avatars/
             if description:
                 user.description = description
             if password:
                 user.password = password
             user.save()
+
             return JsonResponse({"code": 0, "message": "修改成功"})
         except User.DoesNotExist:
             return JsonResponse({"code": -1, "message": "用户不存在"})
@@ -251,7 +251,7 @@ def user_fetch_profile(request):
         data = {
             "name": user.username,
             "account": user.email,
-            "avatar": user.avatar if hasattr(user, 'avatar') else "",  # 避免字段不存在时报错
+            "avatar": user.avatar.url if hasattr(user, 'avatar') else "",  # 避免字段不存在时报错
             "description": user.description if hasattr(user, 'description') else "",
             "following": user.following_count,
             "followers": user.fans_count,
@@ -267,3 +267,60 @@ def user_fetch_profile(request):
         return JsonResponse({"code": -1, "message": "用户不存在"})
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
+def user_update_avatar(request):
+    uid = request.POST.get('uid')
+    avatar = request.FILES.get('avatar')
+
+    if not uid or not avatar:
+        return JsonResponse({
+            "code": -1,
+            "message": "uid 或 avatar 缺失"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)  # 或 username/其他主键字段
+        user.avatar = avatar  # 会自动保存到 avatars/ 路径下
+        user.save()
+
+        return JsonResponse({
+            "code": 0,
+            "message": "更新成功"
+        })
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": f"更新失败：{str(e)}"
+        })
+
+
+def user_get_avatar(request):
+    uid = request.GET.get('uid')
+
+    if not uid:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 参数",
+            "avatar": ""
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)  # 如果你用的是自定义 user_id 字段
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在",
+            "avatar": ""
+        })
+
+    avatar_url = user.avatar.url if user.avatar else ""
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "avatar": avatar_url
+    })
