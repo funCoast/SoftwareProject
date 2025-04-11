@@ -5,10 +5,10 @@ import pytz
 from api.core.plugin.plugins.base_plugin import BasePlugin
 
 
-class TimePlugin(BasePlugin):
+class CurrentTimePlugin(BasePlugin):
     def __init__(self):
         super().__init__(
-            name="TimePlugin",
+            name="CurrentTimePlugin",
             version="1.0",
             description="获取当前时间"
         )
@@ -45,4 +45,4 @@ class TimePlugin(BasePlugin):
             return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
-    print(TimePlugin().execute(timezone="Asia/Tokyo", time_format="%Y-%m-%d %H:%M"))
+    print(CurrentTimePlugin().execute(timezone="Asia/Tokyo", time_format="%Y-%m-%d %H:%M"))
