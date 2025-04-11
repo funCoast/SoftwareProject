@@ -16,11 +16,15 @@ class TimePlugin(BasePlugin):
     def execute(self, *args, **kwargs):
         # 从 kwargs 中获取时区信息
         timezone = kwargs.get("timezone")
+        time_format = kwargs.get("time_format")
         try:
             if timezone:
                 tz = pytz.timezone(timezone)
             else:
                 tz = datetime.now().astimezone().tzinfo
+
+            if not time_format:
+                time_format = "%Y-%m-%d %H:%M:%S"
 
             current_time = datetime.now(tz)
             time_info = {
@@ -32,7 +36,7 @@ class TimePlugin(BasePlugin):
                 "second": current_time.second,
                 "microsecond": current_time.microsecond,
                 "timezone": str(tz),
-                "isoformat": current_time.isoformat()
+                "isoformat": current_time.strftime(time_format)
             }
             return {"status": "success", "result": time_info}
         except pytz.UnknownTimeZoneError:
@@ -41,4 +45,4 @@ class TimePlugin(BasePlugin):
             return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
-    print(TimePlugin().execute(timezone="Asia/Tokyo"))
+    print(TimePlugin().execute(timezone="Asia/Tokyo", time_format="%Y-%m-%d %H:%M"))
