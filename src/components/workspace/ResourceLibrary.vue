@@ -140,7 +140,7 @@ const resources = ref<resource[]> ([
 ])
 
 function createWorkflow() {
-  router.push('/workflowCanvas')
+  router.push('/workflow')
 }
 function createKnowledge() {
   // 处理创建知识库的逻辑
