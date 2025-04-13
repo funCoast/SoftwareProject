@@ -332,113 +332,6 @@ def user_get_avatar(request):
         "avatar": avatar_url
     })
 
-# Announcement
-
-@api_view(['POST'])
-def announcement_add(request):
-    title = request.data.get('title')
-    content = request.data.get('content')
-
-    if not title or not content:
-        return Response({
-            'code': -1,
-            'message': 'Title and content are required.',
-            'announcements': []
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    announcement = Announcement.objects.create(
-        title=title,
-        content=content,
-        time=timezone.now()
-    )
-
-    # 返回包含新公告的响应
-    return Response({
-        'code': 0,
-        'message': '获取成功',
-        'announcements': [{
-            'id': announcement.id,
-            'title': announcement.title,
-            'content': announcement.content,
-            'time': announcement.time.isoformat()
-        }]
-    }, status=status.HTTP_201_CREATED)
-
-
-@api_view(['PUT'])
-def announcement_update(request):
-    announcement_id = request.data.get('id')
-    title = request.data.get('title')
-    content = request.data.get('content')
-
-    try:
-        announcement = Announcement.objects.get(id=announcement_id)
-    except Announcement.DoesNotExist:
-        return Response({
-            'code': -1,
-            'message': 'Announcement not found.',
-            'announcements': []
-        }, status=status.HTTP_404_NOT_FOUND)
-
-    if title:
-        announcement.title = title
-    if content:
-        announcement.content = content
-    announcement.time = timezone.now()  # 更新修改时间
-    announcement.save()
-
-    return Response({
-        'code': 0,
-        'message': '获取成功',
-        'announcements': [{
-            'id': announcement.id,
-            'title': announcement.title,
-            'content': announcement.content,
-            'time': announcement.time.isoformat()
-        }]
-    }, status=status.HTTP_200_OK)
-
-@api_view(['DELETE'])
-def announcement_delete(request):
-    announcement_id = request.data.get('id')
-
-    try:
-        announcement = Announcement.objects.get(id=announcement_id)
-        announcement.delete()
-        return Response({
-            'code': 0,
-            'message': '获取成功',
-            'announcements': []
-        }, status=status.HTTP_200_OK)
-    except Announcement.DoesNotExist:
-        return Response({
-            'code': -1,
-            'message': 'Announcement not found.',
-            'announcements': []
-        }, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['GET'])
-def announcement_list(request):
-    announcements = Announcement.objects.all()
-    if not announcements:
-        return Response({
-            'code': -1,
-            'message': 'No announcements found.',
-            'announcements': []
-        }, status=status.HTTP_404_NOT_FOUND)
-
-    data = [{
-        'id': announcement.id,
-        'title': announcement.title,
-        'content': announcement.content,
-        'time': announcement.time.isoformat()
-    } for announcement in announcements]
-
-    return Response({
-        'code': 0,
-        'message': '获取成功',
-        'announcements': data
-    })
 def user_get_contacts(request):
     try:
         uid = request.GET.get('uid')
@@ -558,3 +451,142 @@ def user_send_message(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"发送失败: {str(e)}"})
+
+# Announcement
+@api_view(['POST'])
+def announcement_add(request):
+    """
+    添加公告
+    请求：POST /anno/add
+    """
+    # 从请求中获取公告的标题和内容
+    title = request.data.get('title')
+    content = request.data.get('content')
+
+    # 参数验证：标题和内容是必填字段
+    if not title or not content:
+        return Response({
+            'code': -1,
+            'message': 'Title and content are required.',
+            'announcements': []
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # 创建新的公告
+    announcement = Announcement.objects.create(
+        title=title,
+        content=content,
+        time=timezone.now()
+    )
+
+    # 返回包含新公告的响应
+    return Response({
+        'code': 0,
+        'message': '添加成功',
+        'announcements': [{
+            'id': announcement.id,
+            'title': announcement.title,
+            'content': announcement.content,
+            'time': announcement.time.isoformat()
+        }]
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PUT'])
+def announcement_update(request):
+    """
+    更新公告
+    请求：PUT /anno/update
+    """
+    # 从请求中获取公告的ID、标题和内容
+    announcement_id = request.data.get('id')
+    title = request.data.get('title')
+    content = request.data.get('content')
+
+    # 验证公告是否存在
+    try:
+        announcement = Announcement.objects.get(id=announcement_id)
+    except Announcement.DoesNotExist:
+        return Response({
+            'code': -1,
+            'message': 'Announcement not found.',
+            'announcements': []
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    # 更新公告字段
+    if title:
+        announcement.title = title
+    if content:
+        announcement.content = content
+
+    # 更新修改时间
+    announcement.time = timezone.now()
+    announcement.save()
+
+    # 返回更新后的公告信息
+    return Response({
+        'code': 0,
+        'message': '更新成功',
+        'announcements': [{
+            'id': announcement.id,
+            'title': announcement.title,
+            'content': announcement.content,
+            'time': announcement.time.isoformat()
+        }]
+    }, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+def announcement_delete(request):
+    """
+    删除公告
+    请求：DELETE /anno/delete
+    """
+    # 从请求中获取公告ID
+    announcement_id = request.data.get('id')
+
+    # 尝试查找并删除公告
+    try:
+        announcement = Announcement.objects.get(id=announcement_id)
+        announcement.delete()
+        return Response({
+            'code': 0,
+            'message': '删除成功',
+            'announcements': []
+        }, status=status.HTTP_200_OK)
+    except Announcement.DoesNotExist:
+        return Response({
+            'code': -1,
+            'message': 'Announcement not found.',
+            'announcements': []
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def announcement_list(request):
+    """
+    获取所有公告
+    请求：GET /anno/get
+    """
+    # 获取所有公告
+    announcements = Announcement.objects.all()
+
+    # 如果没有公告，返回空的公告列表
+    if not announcements:
+        return Response({
+            'code': 0,
+            'message': '获取成功',
+            'announcements': []
+        })
+
+    # 构建公告列表数据
+    data = [{
+        'id': announcement.id,
+        'title': announcement.title,
+        'content': announcement.content,
+        'time': announcement.time.isoformat()
+    } for announcement in announcements]
+
+    # 返回公告列表
+    return Response({
+        'code': 0,
+        'message': '获取成功',
+        'announcements': data
+    })
