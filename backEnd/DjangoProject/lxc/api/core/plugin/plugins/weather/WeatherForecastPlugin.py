@@ -17,8 +17,9 @@ class WeatherScraperPlugin(BasePlugin):
             description="得到天气"
         )
 
-    def execute(self, city_code):
+    def execute(self, *args, **kwargs):
         try:
+            city_code = kwargs['city_code']
             # 设置Selenium WebDriver
             options = webdriver.ChromeOptions()
             options.add_argument("--headless")  # 无头模式
@@ -94,4 +95,4 @@ class WeatherScraperPlugin(BasePlugin):
 
 if __name__ == "__main__":
     plugin = WeatherScraperPlugin()
-    print(plugin.execute("101270101"))
+    print(plugin.execute(city_code="101270101"))
