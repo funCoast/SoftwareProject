@@ -8,8 +8,12 @@ from django.core.validators import validate_email
 from django.http import HttpResponse
 # user/views.py
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from .models import User
+from django.views import View
+from .models import User, PrivateMessage
+from django.db.models import Q
 import json
 # backend/views.py
 from django.conf import settings
@@ -328,13 +332,138 @@ def user_get_avatar(request):
         "avatar": avatar_url
     })
 
-# Announcement
+def user_get_contacts(request):
+    try:
+        uid = request.GET.get('uid')
+        if not uid:
+            return JsonResponse({"code": -1, "message": "缺少uid参数"})
 
+        try:
+            user = User.objects.get(user_id=uid)
+        except User.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "用户不存在"})
+
+        # 查询与该用户有通信记录的用户（联系人）
+        messages = PrivateMessage.objects.filter(Q(sender=user) | Q(receiver=user)) \
+                    .select_related('sender', 'receiver') \
+                    .order_by('-send_time')
+
+        latest_msg_map = {}
+
+        for msg in messages:
+            contact_user = msg.receiver if msg.sender == user else msg.sender
+            cid = contact_user.user_id
+            if cid not in latest_msg_map:
+                latest_msg_map[cid] = msg  # 第一次
+            elif msg.send_time > latest_msg_map[cid].send_time:
+                latest_msg_map[cid] = msg  # 更新为更晚的消息
+
+        # 然后再统一生成联系人信息
+        contact_dict = {}
+        for idx, (cid, msg) in enumerate(latest_msg_map.items(), start=1):
+            contact_user = msg.receiver if msg.sender == user else msg.sender
+            contact_dict[cid] = {
+                "id": idx,
+                "name": contact_user.username,
+                "avatar": contact_user.avatar.url if contact_user.avatar else "",
+                "unread": PrivateMessage.objects.filter(sender=contact_user, receiver=user, is_read=False).count(),
+                "lastMessage": {
+                    "text": msg.content
+                },
+                "lastMessageTime": msg.send_time
+            }
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "data": list(contact_dict.values())
+        })
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"服务器错误: {str(e)}"})
+def user_get_messages(request):
+    try:
+        uid1 = request.GET.get('messagerId1')
+        uid2 = request.GET.get('messagerId2')
+
+        if not uid1 or not uid2:
+            return JsonResponse({"code": -1, "message": "缺少参数 messagerId1 或 messagerId2"})
+
+        try:
+            user1 = User.objects.get(user_id=uid1)
+            user2 = User.objects.get(user_id=uid2)
+        except User.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "用户不存在"})
+
+        # 查询二人之间的所有消息
+        messages = PrivateMessage.objects.filter(
+            (Q(sender=user1) & Q(receiver=user2)) |
+            (Q(sender=user2) & Q(receiver=user1))
+        ).select_related('sender').order_by('send_time')  # 正序时间排序
+
+        # 标记对 user1 来说“未读且是 user2 发来的消息”为已读
+        PrivateMessage.objects.filter(sender=user2, receiver=user1, is_read=False).update(is_read=True)
+
+        data = []
+        for msg in messages:
+            data.append({
+                "sender": msg.sender.username,
+                "avatar": msg.sender.avatar.url if msg.sender.avatar else "",
+                "time": msg.send_time,
+                "text": msg.content
+            })
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "data": data
+        })
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"服务器错误: {str(e)}"})
+
+def user_send_message(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        sender_id = data.get("sender")
+        receiver_id = data.get("receiver")
+        message_text = data.get("message")
+
+        if not sender_id or not receiver_id or not message_text:
+            return JsonResponse({"code": -1, "message": "缺少必要字段"})
+
+        try:
+            sender = User.objects.get(user_id=sender_id)
+            receiver = User.objects.get(user_id=receiver_id)
+        except User.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "发送方或接收方用户不存在"})
+
+        # 创建消息
+        PrivateMessage.objects.create(
+            sender=sender,
+            receiver=receiver,
+            content=message_text,
+            send_time=timezone.now(),
+            is_read=False
+        )
+
+        return JsonResponse({"code": 0, "message": "发送成功"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"发送失败: {str(e)}"})
+
+# Announcement
 @api_view(['POST'])
 def announcement_add(request):
+    """
+    添加公告
+    请求：POST /anno/add
+    """
+    # 从请求中获取公告的标题和内容
     title = request.data.get('title')
     content = request.data.get('content')
 
+    # 参数验证：标题和内容是必填字段
     if not title or not content:
         return Response({
             'code': -1,
@@ -342,6 +471,7 @@ def announcement_add(request):
             'announcements': []
         }, status=status.HTTP_400_BAD_REQUEST)
 
+    # 创建新的公告
     announcement = Announcement.objects.create(
         title=title,
         content=content,
@@ -351,7 +481,7 @@ def announcement_add(request):
     # 返回包含新公告的响应
     return Response({
         'code': 0,
-        'message': '获取成功',
+        'message': '添加成功',
         'announcements': [{
             'id': announcement.id,
             'title': announcement.title,
@@ -363,10 +493,16 @@ def announcement_add(request):
 
 @api_view(['PUT'])
 def announcement_update(request):
+    """
+    更新公告
+    请求：PUT /anno/update
+    """
+    # 从请求中获取公告的ID、标题和内容
     announcement_id = request.data.get('id')
     title = request.data.get('title')
     content = request.data.get('content')
 
+    # 验证公告是否存在
     try:
         announcement = Announcement.objects.get(id=announcement_id)
     except Announcement.DoesNotExist:
@@ -376,16 +512,20 @@ def announcement_update(request):
             'announcements': []
         }, status=status.HTTP_404_NOT_FOUND)
 
+    # 更新公告字段
     if title:
         announcement.title = title
     if content:
         announcement.content = content
-    announcement.time = timezone.now()  # 更新修改时间
+
+    # 更新修改时间
+    announcement.time = timezone.now()
     announcement.save()
 
+    # 返回更新后的公告信息
     return Response({
         'code': 0,
-        'message': '获取成功',
+        'message': '更新成功',
         'announcements': [{
             'id': announcement.id,
             'title': announcement.title,
@@ -396,14 +536,20 @@ def announcement_update(request):
 
 @api_view(['DELETE'])
 def announcement_delete(request):
+    """
+    删除公告
+    请求：DELETE /anno/delete
+    """
+    # 从请求中获取公告ID
     announcement_id = request.data.get('id')
 
+    # 尝试查找并删除公告
     try:
         announcement = Announcement.objects.get(id=announcement_id)
         announcement.delete()
         return Response({
             'code': 0,
-            'message': '获取成功',
+            'message': '删除成功',
             'announcements': []
         }, status=status.HTTP_200_OK)
     except Announcement.DoesNotExist:
@@ -415,14 +561,22 @@ def announcement_delete(request):
 
 @api_view(['GET'])
 def announcement_list(request):
+    """
+    获取所有公告
+    请求：GET /anno/get
+    """
+    # 获取所有公告
     announcements = Announcement.objects.all()
+
+    # 如果没有公告，返回空的公告列表
     if not announcements:
         return Response({
-            'code': -1,
-            'message': 'No announcements found.',
+            'code': 0,
+            'message': '获取成功',
             'announcements': []
-        }, status=status.HTTP_404_NOT_FOUND)
+        })
 
+    # 构建公告列表数据
     data = [{
         'id': announcement.id,
         'title': announcement.title,
@@ -430,6 +584,7 @@ def announcement_list(request):
         'time': announcement.time.isoformat()
     } for announcement in announcements]
 
+    # 返回公告列表
     return Response({
         'code': 0,
         'message': '获取成功',

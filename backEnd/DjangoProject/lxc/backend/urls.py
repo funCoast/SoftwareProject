@@ -13,6 +13,9 @@ urlpatterns = [
     path('user/fetchProfile', views.user_fetch_profile, name='user_fetch_profile'),
     path('user/updateAvatar', views.user_update_avatar, name='user_update_avatar'),
     path('user/getAvatar', views.user_get_avatar, name='user_get_avatar'),
+    path('user/getContacts',views.user_get_contacts, name='user_get_contacts'),
+    path('user/getMessages',views.user_get_messages, name='user_get_messages'),
+    path('user/sendMessage',views.user_send_message, name='user_send_message'),
     # Announcement
     path('anno/add', views.announcement_add, name='announcement_add'),
     path('anno/update', views.announcement_update, name='announcement_update'),
