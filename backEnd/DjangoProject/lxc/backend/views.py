@@ -3,20 +3,23 @@ import random
 from smtplib import SMTPException
 
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMessage, EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives
 from django.core.validators import validate_email
 from django.http import HttpResponse
 # user/views.py
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views import View
 from .models import User
 import json
 # backend/views.py
 from django.conf import settings
 import redis
 from rest_framework.decorators import api_view
-from django.shortcuts import get_object_or_404
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Announcement
+from django.utils import timezone
+
 # Redis 客户端配置
 redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
 
@@ -323,4 +326,112 @@ def user_get_avatar(request):
         "code": 0,
         "message": "获取成功",
         "avatar": avatar_url
+    })
+
+# Announcement
+
+@api_view(['POST'])
+def announcement_add(request):
+    title = request.data.get('title')
+    content = request.data.get('content')
+
+    if not title or not content:
+        return Response({
+            'code': -1,
+            'message': 'Title and content are required.',
+            'announcements': []
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    announcement = Announcement.objects.create(
+        title=title,
+        content=content,
+        time=timezone.now()
+    )
+
+    # 返回包含新公告的响应
+    return Response({
+        'code': 0,
+        'message': '获取成功',
+        'announcements': [{
+            'id': announcement.id,
+            'title': announcement.title,
+            'content': announcement.content,
+            'time': announcement.time.isoformat()
+        }]
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PUT'])
+def announcement_update(request):
+    announcement_id = request.data.get('id')
+    title = request.data.get('title')
+    content = request.data.get('content')
+
+    try:
+        announcement = Announcement.objects.get(id=announcement_id)
+    except Announcement.DoesNotExist:
+        return Response({
+            'code': -1,
+            'message': 'Announcement not found.',
+            'announcements': []
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    if title:
+        announcement.title = title
+    if content:
+        announcement.content = content
+    announcement.time = timezone.now()  # 更新修改时间
+    announcement.save()
+
+    return Response({
+        'code': 0,
+        'message': '获取成功',
+        'announcements': [{
+            'id': announcement.id,
+            'title': announcement.title,
+            'content': announcement.content,
+            'time': announcement.time.isoformat()
+        }]
+    }, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+def announcement_delete(request):
+    announcement_id = request.data.get('id')
+
+    try:
+        announcement = Announcement.objects.get(id=announcement_id)
+        announcement.delete()
+        return Response({
+            'code': 0,
+            'message': '获取成功',
+            'announcements': []
+        }, status=status.HTTP_200_OK)
+    except Announcement.DoesNotExist:
+        return Response({
+            'code': -1,
+            'message': 'Announcement not found.',
+            'announcements': []
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def announcement_list(request):
+    announcements = Announcement.objects.all()
+    if not announcements:
+        return Response({
+            'code': -1,
+            'message': 'No announcements found.',
+            'announcements': []
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    data = [{
+        'id': announcement.id,
+        'title': announcement.title,
+        'content': announcement.content,
+        'time': announcement.time.isoformat()
+    } for announcement in announcements]
+
+    return Response({
+        'code': 0,
+        'message': '获取成功',
+        'announcements': data
     })
