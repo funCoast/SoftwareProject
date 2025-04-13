@@ -27,7 +27,7 @@ class CurrentTimePlugin(BasePlugin):
                 time_format = "%Y-%m-%d %H:%M:%S"
 
             current_time = datetime.now(tz)
-            time_info = {
+            result = {
                 "year": current_time.year,
                 "month": current_time.month,
                 "day": current_time.day,
@@ -38,7 +38,7 @@ class CurrentTimePlugin(BasePlugin):
                 "timezone": str(tz),
                 "isoformat": current_time.strftime(time_format)
             }
-            return {"status": "success", "result": time_info}
+            return {"status": "success", "result": result}
         except pytz.UnknownTimeZoneError:
             return {"status": "error", "message": f"Unknown timezone: {timezone}"}
         except Exception as e:
