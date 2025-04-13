@@ -336,14 +336,30 @@ def announcement_add(request):
     content = request.data.get('content')
 
     if not title or not content:
-        return Response({'error': 'Title and content are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'code': -1,
+            'message': 'Title and content are required.',
+            'announcements': []
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     announcement = Announcement.objects.create(
         title=title,
         content=content,
         time=timezone.now()
     )
-    return Response({'message': 'Announcement added.', 'id': announcement.id}, status=status.HTTP_201_CREATED)
+
+    # 返回包含新公告的响应
+    return Response({
+        'code': 0,
+        'message': '获取成功',
+        'announcements': [{
+            'id': announcement.id,
+            'title': announcement.title,
+            'content': announcement.content,
+            'time': announcement.time.isoformat()
+        }]
+    }, status=status.HTTP_201_CREATED)
+
 
 @api_view(['PUT'])
 def announcement_update(request):
@@ -354,16 +370,29 @@ def announcement_update(request):
     try:
         announcement = Announcement.objects.get(id=announcement_id)
     except Announcement.DoesNotExist:
-        return Response({'error': 'Announcement not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            'code': -1,
+            'message': 'Announcement not found.',
+            'announcements': []
+        }, status=status.HTTP_404_NOT_FOUND)
 
     if title:
         announcement.title = title
     if content:
         announcement.content = content
-    announcement.time = timezone.now()  # 可选：更新时间为“最后修改时间”
+    announcement.time = timezone.now()  # 更新修改时间
     announcement.save()
 
-    return Response({'message': 'Announcement updated.'}, status=status.HTTP_200_OK)
+    return Response({
+        'code': 0,
+        'message': '获取成功',
+        'announcements': [{
+            'id': announcement.id,
+            'title': announcement.title,
+            'content': announcement.content,
+            'time': announcement.time.isoformat()
+        }]
+    }, status=status.HTTP_200_OK)
 
 @api_view(['DELETE'])
 def announcement_delete(request):
@@ -372,6 +401,37 @@ def announcement_delete(request):
     try:
         announcement = Announcement.objects.get(id=announcement_id)
         announcement.delete()
-        return Response({'message': 'Announcement deleted.'}, status=status.HTTP_200_OK)
+        return Response({
+            'code': 0,
+            'message': '获取成功',
+            'announcements': []
+        }, status=status.HTTP_200_OK)
     except Announcement.DoesNotExist:
-        return Response({'error': 'Announcement not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            'code': -1,
+            'message': 'Announcement not found.',
+            'announcements': []
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def announcement_list(request):
+    announcements = Announcement.objects.all()
+    if not announcements:
+        return Response({
+            'code': -1,
+            'message': 'No announcements found.',
+            'announcements': []
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    data = [{
+        'id': announcement.id,
+        'title': announcement.title,
+        'content': announcement.content,
+        'time': announcement.time.isoformat()
+    } for announcement in announcements]
+
+    return Response({
+        'code': 0,
+        'message': '获取成功',
+        'announcements': data
+    })

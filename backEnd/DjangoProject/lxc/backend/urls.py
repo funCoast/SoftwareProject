@@ -17,5 +17,5 @@ urlpatterns = [
     path('anno/add', views.announcement_add, name='announcement_add'),
     path('anno/update', views.announcement_update, name='announcement_update'),
     path('anno/delete', views.announcement_delete, name='announcement_delete'),
-
+    path('anno/get', views.announcement_list, name='announcement_list'),
 ]
