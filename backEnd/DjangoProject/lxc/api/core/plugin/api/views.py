@@ -13,8 +13,14 @@ register_plugins(plugin_manager)
 @csrf_exempt
 @require_http_methods(["GET"])
 def list_plugins(request):
-    plugins = [{"name": name, "description": plugin.description} for name, plugin in plugin_manager.plugins.items()]
-    return JsonResponse(plugins, safe=False)
+    try:
+        plugins = [{"name": name, "description": plugin.description} for name, plugin in plugin_manager.plugins.items()]
+        return {
+            "status": "success",
+            "plugins": JsonResponse(plugins, safe=False)
+        }
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, safe=False)
 
 @csrf_exempt
 @require_http_methods(["POST"])
