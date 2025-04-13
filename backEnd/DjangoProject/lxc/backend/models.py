@@ -86,13 +86,14 @@ class Comment(models.Model):
 
 # 8. 公告表（Announcement）
 class Announcement(models.Model):
-    announcement_id = models.AutoField(primary_key=True)
-    publisher = models.CharField(max_length=50)  # 如需关联可改为外键关联 Administrator
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=100)
     content = models.TextField()
-    announcement_time = models.DateTimeField(auto_now_add=True)
+    time = models.DateTimeField()
 
     def __str__(self):
-        return f"Announcement {self.announcement_id}"
+        return f"{self.title} ({self.type})"
+
 
 # 9. 工作流表（Workflow）
 class Workflow(models.Model):
