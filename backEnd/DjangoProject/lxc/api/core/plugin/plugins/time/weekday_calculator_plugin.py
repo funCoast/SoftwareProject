@@ -34,7 +34,6 @@ class WeekdayCalculatorPlugin(BasePlugin):
             return {
                 "status": "success",
                 "result": {
-                    "date": date_obj.isoformat(),
                     "weekday": weekday_name
                 }
             }
@@ -44,4 +43,4 @@ class WeekdayCalculatorPlugin(BasePlugin):
             return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
-    print(WeekdayCalculatorPlugin().execute(date="2025-04-11"))
+    print(WeekdayCalculatorPlugin().execute(date="2025-04-14"))

@@ -15,10 +15,10 @@ register_plugins(plugin_manager)
 def list_plugins(request):
     try:
         plugins = [{"name": name, "description": plugin.description} for name, plugin in plugin_manager.plugins.items()]
-        return {
+        return JsonResponse({
             "status": "success",
-            "plugins": JsonResponse(plugins, safe=False)
-        }
+            "plugins": plugins
+        }, safe=False)
     except Exception as e:
         return JsonResponse({"error": str(e)}, safe=False)
 

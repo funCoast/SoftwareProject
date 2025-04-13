@@ -96,7 +96,7 @@ class CodeRunPlugin:
             if not isinstance(result, dict):
                 return {"status":"error", "message": "返回结果必须是字典类型"}
 
-            return {"status":"success", "ret": result}
+            return {"status":"success", "result": result}
 
         except asyncio.TimeoutError:
             return {"status":"error", "message": "代码执行超时：运行超过 100 秒"}
@@ -116,7 +116,6 @@ async def main(args: Args) -> Output:
             "key21": "hi"
         },
     }
-    return ret
     return ret
     """
     variables = [

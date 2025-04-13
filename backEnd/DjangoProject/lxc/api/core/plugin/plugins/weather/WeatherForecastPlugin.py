@@ -83,7 +83,7 @@ class WeatherScraperPlugin(BasePlugin):
 
                 return {
                     "status": "success",
-                    "data": weather_data
+                    "result": weather_data
                 }
 
             except Exception as e:

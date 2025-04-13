@@ -45,7 +45,7 @@ class TimezoneSwitchPlugin(BasePlugin):
                 "isoformat": target_time.strftime("%Y-%m-%d %H:%M:%S")
             }
 
-            return {"status": "success", "data": time_info}
+            return {"status": "success", "result": time_info}
 
         except pytz.UnknownTimeZoneError as e:
             return {"status": "error", "message": f"Unknown timezone: {str(e)}"}
