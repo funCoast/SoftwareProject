@@ -57,9 +57,13 @@ class WeatherScraperPlugin(BasePlugin):
 
                     # 提取温度
                     temp_tag = item.find("p", class_="tem")
-                    temp_high = temp_tag.find("span").text
-                    temp_low = temp_tag.find("i").text
-                    temp = f"{temp_high}/{temp_low}"
+                    if temp_tag.find("span"):
+                        temp_high = temp_tag.find("span").text
+                        temp_low = temp_tag.find("i").text
+                        temp = f"{temp_high}/{temp_low}"
+                    else:
+                        temp_low = temp_tag.find("i").text
+                        temp = f"{temp_low}"
 
                     # 提取风向和风力
                     wind_dir_tags = item.find("p", class_="win").find_all("span")
