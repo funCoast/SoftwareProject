@@ -8,8 +8,12 @@ from django.core.validators import validate_email
 from django.http import HttpResponse
 # user/views.py
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from .models import User
+from django.views import View
+from .models import User, PrivateMessage
+from django.db.models import Q
 import json
 # backend/views.py
 from django.conf import settings
@@ -435,3 +439,122 @@ def announcement_list(request):
         'message': '获取成功',
         'announcements': data
     })
+def user_get_contacts(request):
+    try:
+        uid = request.GET.get('uid')
+        if not uid:
+            return JsonResponse({"code": -1, "message": "缺少uid参数"})
+
+        try:
+            user = User.objects.get(user_id=uid)
+        except User.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "用户不存在"})
+
+        # 查询与该用户有通信记录的用户（联系人）
+        messages = PrivateMessage.objects.filter(Q(sender=user) | Q(receiver=user)) \
+                    .select_related('sender', 'receiver') \
+                    .order_by('-send_time')
+
+        latest_msg_map = {}
+
+        for msg in messages:
+            contact_user = msg.receiver if msg.sender == user else msg.sender
+            cid = contact_user.user_id
+            if cid not in latest_msg_map:
+                latest_msg_map[cid] = msg  # 第一次
+            elif msg.send_time > latest_msg_map[cid].send_time:
+                latest_msg_map[cid] = msg  # 更新为更晚的消息
+
+        # 然后再统一生成联系人信息
+        contact_dict = {}
+        for idx, (cid, msg) in enumerate(latest_msg_map.items(), start=1):
+            contact_user = msg.receiver if msg.sender == user else msg.sender
+            contact_dict[cid] = {
+                "id": idx,
+                "name": contact_user.username,
+                "avatar": contact_user.avatar.url if contact_user.avatar else "",
+                "unread": PrivateMessage.objects.filter(sender=contact_user, receiver=user, is_read=False).count(),
+                "lastMessage": {
+                    "text": msg.content
+                },
+                "lastMessageTime": msg.send_time
+            }
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "data": list(contact_dict.values())
+        })
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"服务器错误: {str(e)}"})
+def user_get_messages(request):
+    try:
+        uid1 = request.GET.get('messagerId1')
+        uid2 = request.GET.get('messagerId2')
+
+        if not uid1 or not uid2:
+            return JsonResponse({"code": -1, "message": "缺少参数 messagerId1 或 messagerId2"})
+
+        try:
+            user1 = User.objects.get(user_id=uid1)
+            user2 = User.objects.get(user_id=uid2)
+        except User.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "用户不存在"})
+
+        # 查询二人之间的所有消息
+        messages = PrivateMessage.objects.filter(
+            (Q(sender=user1) & Q(receiver=user2)) |
+            (Q(sender=user2) & Q(receiver=user1))
+        ).select_related('sender').order_by('send_time')  # 正序时间排序
+
+        # 标记对 user1 来说“未读且是 user2 发来的消息”为已读
+        PrivateMessage.objects.filter(sender=user2, receiver=user1, is_read=False).update(is_read=True)
+
+        data = []
+        for msg in messages:
+            data.append({
+                "sender": msg.sender.username,
+                "avatar": msg.sender.avatar.url if msg.sender.avatar else "",
+                "time": msg.send_time,
+                "text": msg.content
+            })
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "data": data
+        })
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"服务器错误: {str(e)}"})
+
+def user_send_message(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        sender_id = data.get("sender")
+        receiver_id = data.get("receiver")
+        message_text = data.get("message")
+
+        if not sender_id or not receiver_id or not message_text:
+            return JsonResponse({"code": -1, "message": "缺少必要字段"})
+
+        try:
+            sender = User.objects.get(user_id=sender_id)
+            receiver = User.objects.get(user_id=receiver_id)
+        except User.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "发送方或接收方用户不存在"})
+
+        # 创建消息
+        PrivateMessage.objects.create(
+            sender=sender,
+            receiver=receiver,
+            content=message_text,
+            send_time=timezone.now(),
+            is_read=False
+        )
+
+        return JsonResponse({"code": 0, "message": "发送成功"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"发送失败: {str(e)}"})

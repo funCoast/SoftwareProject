@@ -18,4 +18,7 @@ urlpatterns = [
     path('anno/update', views.announcement_update, name='announcement_update'),
     path('anno/delete', views.announcement_delete, name='announcement_delete'),
     path('anno/get', views.announcement_list, name='announcement_list'),
+    path('user/getContacts',views.user_get_contacts, name='user_get_contacts'),
+    path('user/getMessages',views.user_get_messages, name='user_get_messages'),
+    path('user/sendMessage',views.user_send_message, name='user_send_message')
 ]
