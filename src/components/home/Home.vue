@@ -1,58 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import axios from 'axios'
+import { ref, computed, watch, onBeforeMount } from 'vue'
+import moment from 'moment'
 
-const currentNoticeTab = ref<string>('review')
 const currentAgentTab = ref<string>('hot')
 const currentPage = ref(1)
 const itemsPerPage = ref(6)
 
-interface notice {
+interface announcement {
   id: number
   title: string
   content: string
-  time: string
+  time: Date
 }
-const reviewNotices = ref<notice[]> ([
-  {
-    id: 1,
-    title: '智能体审核通过',
-    content: '您的智能体"AI助手"已通过审核，现已上线智能体市场。该智能体具有强大的自然语言处理能力，支持多轮对话和上下文理解，可以为用户提供智能问答、任务规划、信息检索等服务。系统对其进行了全面的安全性和稳定性测试，确保其能够安全可靠地为用户提供服务。',
-    time: '2024-03-15 14:30'
-  },
-  {
-    id: 2,
-    title: '智能体更新提醒',
-    content: '您的智能体"数据分析师"需要更新到最新版本。新版本增加了更多强大的数据分析功能，包括高级数据可视化、预测分析、机器学习模型训练等。同时优化了用户界面，提升了操作体验。建议您及时更新以获取最新功能和性能提升。',
-    time: '2024-03-14 16:45'
-  },
-  {
-    id: 3,
-    title: '新智能体上线',
-    content: '您的智能体"创意写作助手"已成功上线。该智能体采用最新的GPT模型，支持多种文体和风格，可以生成高质量的文章、故事、诗歌等。它能够理解用户的需求，提供个性化的写作建议，并支持多语言创作。欢迎广大用户体验新功能，提供宝贵意见。',
-    time: '2024-03-13 09:15'
-  }
-])
-const systemNotices = ref<notice[]> ([
-  {
-    id: 1,
-    title: '系统维护通知',
-    content: '系统将于今晚22:00-23:00进行例行维护。维护期间将进行系统性能优化、安全漏洞修复和功能升级。部分功能可能暂时无法使用，包括智能体创建、编辑和发布等。我们将在维护完成后第一时间恢复服务，给您带来的不便敬请谅解。',
-    time: '2024-03-15 10:00'
-  },
-  {
-    id: 2,
-    title: '新功能上线',
-    content: '智能体市场新增智能体评分和评论功能。用户现在可以为使用过的智能体打分和发表评论，分享使用体验。系统会根据评分和评论自动计算智能体的综合评分，帮助其他用户更好地选择适合自己的智能体。同时，我们推出了智能体推荐算法，基于用户的使用习惯和偏好，为用户推荐最合适的智能体。',
-    time: '2024-03-14 15:30'
-  },
-  {
-    id: 3,
-    title: '社区活动',
-    content: '智能体开发者社区将于本周六举办线上分享会。本次分享会邀请了多位行业专家，将分享智能体开发的最新趋势、技术突破和最佳实践。同时，我们还将展示一些优秀的智能体案例，并举办开发者交流环节。欢迎广大开发者积极参与，共同探讨智能体技术的发展方向。',
-    time: '2024-03-13 11:20'
-  }
-])
-  
+
+const announcements = ref<announcement[]>([])
+
 interface agent {
   id: number
   name: string
@@ -68,6 +31,21 @@ interface agent {
     avatar: string
   }
 }
+
+onBeforeMount (() => {
+  axios({
+    method: 'get',
+    url: 'anno/get',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+      if(response.data.code === 0) {
+        announcements.value=response.data.announcements
+      }
+  })
+})
+
 const hotAgents = ref<agent[]> ([
   {
     id: 1,
@@ -449,6 +427,7 @@ const currentAgents =  computed(() => {
       return hotAgents.value
   }
 })
+
 const totalPages =  computed(() => {
   return Math.ceil(currentAgents.value.length / itemsPerPage.value)
 })
@@ -473,35 +452,15 @@ watch (
       <div class="notice-section">
         <div class="section-header">
           <h2>公告</h2>
-          <div class="tab-switch">
-            <span 
-              :class="{ active: currentNoticeTab === 'review' }" 
-              @click="currentNoticeTab = 'review'"
-            >审核通知</span>
-            <span 
-              :class="{ active: currentNoticeTab === 'system' }" 
-              @click="currentNoticeTab = 'system'"
-            >系统公告</span>
-          </div>
         </div>
         <div class="notice-content">
-          <div v-if="currentNoticeTab === 'review'" class="notice-list">
-            <div v-for="notice in reviewNotices" :key="notice.id" class="notice-item">
+          <div class="notice-list">
+            <div v-for="announcement in announcements" :key="announcement.id" class="notice-item">
               <i class="fas fa-check-circle"></i>
               <div class="notice-text">
-                <h4>{{ notice.title }}</h4>
-                <p>{{ notice.content }}</p>
-                <span class="notice-time">{{ notice.time }}</span>
-              </div>
-            </div>
-          </div>
-          <div v-else class="notice-list">
-            <div v-for="notice in systemNotices" :key="notice.id" class="notice-item">
-              <i class="fas fa-bullhorn"></i>
-              <div class="notice-text">
-                <h4>{{ notice.title }}</h4>
-                <p>{{ notice.content }}</p>
-                <span class="notice-time">{{ notice.time }}</span>
+                <h4>{{ announcement.title }}</h4>
+                <p>{{ announcement.content }}</p>
+                <span class="notice-time">{{ moment(announcement.time).format('YYYY-MM-DD hh:mm:ss') }}</span>
               </div>
             </div>
           </div>

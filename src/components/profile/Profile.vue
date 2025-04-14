@@ -20,7 +20,7 @@ const userInfo = ref({
   followers: 0,
 })
 
-const uid = sessionStorage.getItem('uid')
+const uid = Number(sessionStorage.getItem('uid'))
 
 interface myWork {
   id: number
@@ -55,9 +55,9 @@ const error = ref({
 
 onBeforeMount(() => {
   fetchUserInfo()
-  fetchWorks()
-  fetchLikes()
-  fetchFavorites()
+  //fetchWorks()
+  //fetchLikes()
+  //fetchFavorites()
 })
 
 async function fetchUserInfo() {
@@ -76,6 +76,7 @@ async function fetchUserInfo() {
     if (response.data.code === 0) {
       userInfo.value = response.data.data
     } else {
+      alert(response.data.message)
       console.error('获取用户信息失败:', response.data.message)
       error.value.userInfo = response.data.message || '获取用户信息失败'
     }
@@ -161,7 +162,6 @@ function goToEditProfile() {
       name: userInfo.value.name,
       avatar: userInfo.value.avatar,
       description: userInfo.value.description,
-      uid: uid
     }
   });
 }

@@ -5,6 +5,7 @@ import axios from 'axios'
 
 const avatar = ref('')
 onBeforeMount(() => {
+  document.body.style.margin = '0'
   axios({
     method: 'get',
     url: 'user/getAvatar',
