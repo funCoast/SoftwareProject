@@ -7,7 +7,7 @@ import Community from './components/community/Community.vue';
 import AgentDetail from './components/agent/AgentDetail.vue';
 import Profile from './components/profile/Profile.vue';
 import EditProfile from './components/profile/EditProfile.vue';
-import WorkflowCanvas from './components/workspace/WorkflowCanvas.vue';
+import WorkflowCanvas from './components/workflow/WorkflowCanvas.vue';
 import AgentDevelopment from './components/workspace/AgentDevelopment.vue';
 import ResourceLibrary from './components/workspace/ResourceLibrary.vue';
 
@@ -72,9 +72,8 @@ const routes = [
         ]
     },
     {
-        path: '/workflowCanvas',
+        path: '/workflow',
         name: 'WorkflowCanvas',
-        meta: {authReq: authRequired},
         component: WorkflowCanvas
     }
 ];
