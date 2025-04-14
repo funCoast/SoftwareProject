@@ -2,8 +2,6 @@
 import { ref } from 'vue'
 import router from '../../router'
 
-const showDropdown = ref(false)
-
 interface resource {
   id: number
   name: string
@@ -84,28 +82,32 @@ function createKnowledge() {
     <!-- 顶部标题栏 -->
     <div class="header">
       <h2>资源库</h2>
-      <div class="create-dropdown">
-        <button class="create-btn" @mouseenter="showDropdown = true" @mouseleave="showDropdown = false">
+      <el-dropdown>
+        <button class="create-btn">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
           创建资源
         </button>
-        <div class="dropdown-menu" v-show="showDropdown" @mouseenter="showDropdown = true" @mouseleave="showDropdown = false">
-          <div class="dropdown-item" @click="createWorkflow">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
-            </svg>
-            <span>工作流</span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <div>
+            <el-dropdown-item class="dropdown-item" @click="createWorkflow">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+              </svg>
+              <span>工作流</span>
+            </el-dropdown-item>
           </div>
-          <div class="dropdown-item" @click="createKnowledge">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
-            </svg>
-            <span>知识库</span>
-          </div>
-        </div>
-      </div>
+            <el-dropdown-item @click="createKnowledge">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+              </svg>
+              <span>知识库</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
 
     <!-- 筛选栏 -->
@@ -187,36 +189,6 @@ function createKnowledge() {
 
 .create-btn:hover {
   background: #34495e;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: white;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  min-width: 160px;
-  z-index: 1000;
-  margin-top: 4px;
-}
-
-.dropdown-item {
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #2c3e50;
-  transition: background-color 0.3s;
-}
-
-.dropdown-item:hover {
-  background: #f8f9fa;
-}
-
-.dropdown-item svg {
-  color: #666;
 }
 
 .filter-bar {

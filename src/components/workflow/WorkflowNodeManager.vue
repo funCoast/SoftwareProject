@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, defineProps, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits } from 'vue'
 const NODE_WIDTH = 200
 const NODE_HEIGHT = 120
 const NODE_PADDING = 12

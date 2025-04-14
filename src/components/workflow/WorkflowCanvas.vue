@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import ClassifierNodeDetail from './node-details/ClassifierNodeDetail.vue'
 import CodeNodeDetail from "./node-details/CodeNodeDetail.vue"
 import ConditionNodeDetail from "./node-details/ConditionNodeDetail.vue"
@@ -39,6 +39,7 @@ interface nodeType {
   icon: string
   description: string
   image: string
+  draggable: boolean
 }
 const nodeTypes = ref<nodeType[]>([
   { 
