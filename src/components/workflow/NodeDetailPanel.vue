@@ -1,28 +1,5 @@
-<template>
-  <div class="node-detail-panel" v-if="show">
-    <div class="panel-header">
-      <div class="node-title">
-        <img :src="nodeImage" :alt="node?.label" class="node-icon">
-        <h3>{{ node?.label }}</h3>
-      </div>
-      <button class="close-btn" @click="closePanel">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    
-    <div class="panel-content">
-      <!-- 根据节点类型动态加载不同的详情组件 -->
-      <component 
-        :is="getNodeDetailComponent" 
-        :node="node"
-        @update:node="updateNode"
-      ></component>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, computed, defineProps, defineEmits } from 'vue'
+import { computed, defineEmits } from 'vue'
 import ClassifierNodeDetail from './node-details/ClassifierNodeDetail.vue'
 import CodeNodeDetail from './node-details/CodeNodeDetail.vue'
 import ConditionNodeDetail from './node-details/ConditionNodeDetail.vue'
@@ -82,6 +59,29 @@ function updateNode(updatedNode: any) {
   emit('update:node', updatedNode)
 }
 </script>
+
+<template>
+  <div class="node-detail-panel" v-if="show">
+    <div class="panel-header">
+      <div class="node-title">
+        <img :src="nodeImage" :alt="node?.label" class="node-icon">
+        <h3>{{ node?.label }}</h3>
+      </div>
+      <button class="close-btn" @click="closePanel">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="panel-content">
+      <!-- 根据节点类型动态加载不同的详情组件 -->
+      <component 
+        :is="getNodeDetailComponent" 
+        :node="node"
+        @update:node="updateNode"
+      ></component>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .node-detail-panel {

@@ -1,3 +1,17 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import router from '../../router'
+
+const currentView = ref<string>('agent')
+
+function handleNavigation(dst: string) {
+  if(dst === 'agentDevelopment') currentView.value = 'agent'
+  else currentView.value = 'resource'
+  
+  router.push('/workspace/' + dst)
+}
+</script>
+
 <template>
   <div class="workspace-container">
     <!-- 二级导航栏 -->
@@ -21,20 +35,6 @@
     <router-view> </router-view>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue'
-import router from '../../router'
-
-const currentView = ref<string>('agent')
-
-function handleNavigation(dst: string) {
-  if(dst === 'agentDevelopment') currentView.value = 'agent'
-  else currentView.value = 'resource'
-  
-  router.push('/workspace/' + dst)
-}
-</script>
 
 <style scoped>
 .workspace-container {

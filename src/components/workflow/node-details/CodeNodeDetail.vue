@@ -1,3 +1,68 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import { WorkflowNode } from '@/types/workflow'
+
+const props = defineProps<{
+  node: WorkflowNode
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: WorkflowNode): void
+}>()
+
+const nodeData = ref({
+  language: props.node.data?.language || 'javascript',
+  code: props.node.data?.code || '',
+  inputParams: props.node.data?.inputParams || [],
+  outputParams: props.node.data?.outputParams || [],
+  useSandbox: props.node.data?.useSandbox || true,
+  timeoutEnabled: props.node.data?.timeoutEnabled || false,
+  timeout: props.node.data?.timeout || 30
+})
+
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+
+function addParam() {
+  nodeData.value.inputParams.push({ name: '', type: 'string' })
+  updateNode()
+}
+
+function removeParam(index: number) {
+  nodeData.value.inputParams.splice(index, 1)
+  updateNode()
+}
+
+function addOutputParam() {
+  nodeData.value.outputParams.push({ name: '', type: 'string' })
+  updateNode()
+}
+
+function removeOutputParam(index: number) {
+  nodeData.value.outputParams.splice(index, 1)
+  updateNode()
+}
+</script>
+
 <template>
   <div class="code-node-detail">
     <div class="form-group">
@@ -100,71 +165,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { WorkflowNode } from '@/types/workflow'
-
-const props = defineProps<{
-  node: WorkflowNode
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: WorkflowNode): void
-}>()
-
-const nodeData = ref({
-  language: props.node.data?.language || 'javascript',
-  code: props.node.data?.code || '',
-  inputParams: props.node.data?.inputParams || [],
-  outputParams: props.node.data?.outputParams || [],
-  useSandbox: props.node.data?.useSandbox || true,
-  timeoutEnabled: props.node.data?.timeoutEnabled || false,
-  timeout: props.node.data?.timeout || 30
-})
-
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-
-function addParam() {
-  nodeData.value.inputParams.push({ name: '', type: 'string' })
-  updateNode()
-}
-
-function removeParam(index: number) {
-  nodeData.value.inputParams.splice(index, 1)
-  updateNode()
-}
-
-function addOutputParam() {
-  nodeData.value.outputParams.push({ name: '', type: 'string' })
-  updateNode()
-}
-
-function removeOutputParam(index: number) {
-  nodeData.value.outputParams.splice(index, 1)
-  updateNode()
-}
-</script>
 
 <style scoped>
 .code-node-detail {

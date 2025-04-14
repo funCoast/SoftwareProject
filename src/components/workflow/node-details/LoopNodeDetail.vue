@@ -1,3 +1,53 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import { WorkflowNode } from '@/types/workflow'
+
+const props = defineProps<{
+  node: WorkflowNode
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: WorkflowNode): void
+}>()
+
+const nodeData = ref({
+  loopType: props.node.data?.loopType || 'for',
+  initialValue: props.node.data?.initialValue || '',
+  condition: props.node.data?.condition || '',
+  increment: props.node.data?.increment || '',
+  whileCondition: props.node.data?.whileCondition || '',
+  collectionVariable: props.node.data?.collectionVariable || '',
+  currentItemVariable: props.node.data?.currentItemVariable || '',
+  maxIterations: props.node.data?.maxIterations || 100,
+  timeout: props.node.data?.timeout || 60,
+  breakOnError: props.node.data?.breakOnError || true,
+  parallelExecution: props.node.data?.parallelExecution || false,
+  maxParallel: props.node.data?.maxParallel || 3
+})
+
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+</script>
+
 <template>
   <div class="loop-node-detail">
     <div class="form-group">
@@ -135,56 +185,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { WorkflowNode } from '@/types/workflow'
-
-const props = defineProps<{
-  node: WorkflowNode
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: WorkflowNode): void
-}>()
-
-const nodeData = ref({
-  loopType: props.node.data?.loopType || 'for',
-  initialValue: props.node.data?.initialValue || '',
-  condition: props.node.data?.condition || '',
-  increment: props.node.data?.increment || '',
-  whileCondition: props.node.data?.whileCondition || '',
-  collectionVariable: props.node.data?.collectionVariable || '',
-  currentItemVariable: props.node.data?.currentItemVariable || '',
-  maxIterations: props.node.data?.maxIterations || 100,
-  timeout: props.node.data?.timeout || 60,
-  breakOnError: props.node.data?.breakOnError || true,
-  parallelExecution: props.node.data?.parallelExecution || false,
-  maxParallel: props.node.data?.maxParallel || 3
-})
-
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-</script>
 
 <style scoped>
 .loop-node-detail {

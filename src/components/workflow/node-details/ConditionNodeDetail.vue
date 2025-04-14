@@ -1,3 +1,51 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import { WorkflowNode } from '@/types/workflow'
+
+const props = defineProps<{
+  node: WorkflowNode
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: WorkflowNode): void
+}>()
+
+const nodeData = ref({
+  conditionType: props.node.data?.conditionType || 'expression',
+  expression: props.node.data?.expression || '',
+  leftOperand: props.node.data?.leftOperand || '',
+  operator: props.node.data?.operator || '==',
+  rightOperand: props.node.data?.rightOperand || '',
+  customCode: props.node.data?.customCode || '',
+  trueLabel: props.node.data?.trueLabel || '是',
+  falseLabel: props.node.data?.falseLabel || '否',
+  caseSensitive: props.node.data?.caseSensitive || false,
+  logResult: props.node.data?.logResult || false
+})
+
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+</script>
+
 <template>
   <div class="condition-node-detail">
     <div class="form-group">
@@ -107,54 +155,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { WorkflowNode } from '@/types/workflow'
-
-const props = defineProps<{
-  node: WorkflowNode
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: WorkflowNode): void
-}>()
-
-const nodeData = ref({
-  conditionType: props.node.data?.conditionType || 'expression',
-  expression: props.node.data?.expression || '',
-  leftOperand: props.node.data?.leftOperand || '',
-  operator: props.node.data?.operator || '==',
-  rightOperand: props.node.data?.rightOperand || '',
-  customCode: props.node.data?.customCode || '',
-  trueLabel: props.node.data?.trueLabel || '是',
-  falseLabel: props.node.data?.falseLabel || '否',
-  caseSensitive: props.node.data?.caseSensitive || false,
-  logResult: props.node.data?.logResult || false
-})
-
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-</script>
 
 <style scoped>
 .condition-node-detail {

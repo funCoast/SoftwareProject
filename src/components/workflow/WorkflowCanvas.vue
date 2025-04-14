@@ -1,131 +1,3 @@
-<template>
-  <div class="workflow-container">
-    <!-- 上侧导航栏 -->
-    <div class="top-navbar">
-      <button class="back-btn" @click="$router.go(-1)">
-        <i class="fas fa-arrow-left"></i>
-        返回
-      </button>
-      <div class="workflow-info">
-        <img src="https://picsum.photos/40/40?random=11" alt="Workflow" class="workflow-image">
-        <div class="workflow-details">
-          <h3 class="workflow-name">工作流名称</h3>
-          <p class="workflow-description">这是工作流的描述信息。</p>
-        </div>
-      </div>
-      <button class="publish-btn">
-        发布
-      </button>
-    </div>
-
-    <!-- 中间画布区域 -->
-    <div class="canvas-area"
-         ref="canvasEl"
-         @scroll.passive="updateCanvasPosition($event.target as HTMLElement)"
-         @dragover.prevent="handleDragOver"
-         @drop="handleDrop"
-         @mousemove="handleCanvasMouseMove"
-         @mousedown="handleCanvasMouseDown"
-         @mouseup="handleCanvasMouseUp"
-         @mouseleave="handleCanvasMouseUp"
-         @click="handleCanvasClick"
-         :style="{ transform: `scale(${zoom})`, cursor: isDraggingCanvas ? 'grabbing' : 'default' }">
-      <div class="grid-background"></div>
-
-      <WorkflowNodeManager
-          :nodes="workflowNodes"
-          :connections="connections"
-          :nodeTypes="nodeTypes"
-          :zoom="zoom"
-          @update:nodes="updateNodes"
-          @update:connections="updateConnections"
-          @node-click="handleNodeClick"
-          @node-drag-start="handleNodeDragStart"
-          @node-drag-end="handleNodeDragEnd"
-      />
-
-      <!-- 临时节点 -->
-      <div
-        v-if="isAddingNode && tempNode"
-        class="workflow-node"
-        :style="{
-          left: `${tempNode.x}px`,
-          top: `${tempNode.y}px`,
-          opacity: 0.8,
-          position: 'absolute'
-        }"
-        @click="handleTempNodeClick"
-      >
-        <div class="node-content">
-          <div class="node-icon">
-            <img v-if="getNodeImage(tempNode.type)" :src="getNodeImage(tempNode.type)" :alt="tempNode.label">
-            <i v-else :class="nodeTypes.find(nt => nt.type === tempNode.type)?.icon"></i>
-          </div>
-          <div class="node-title">{{ tempNode.label }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 底部工具栏 -->
-    <div class="floating-toolbar">
-      <button class="tool-btn primary" @click="showNodeSelector = true">
-        <img src="https://api.iconify.design/material-symbols:add-box.svg" alt="添加" class="tool-btn-icon">
-        添加节点
-      </button>
-      <button class="tool-btn secondary" @click="debug">
-        <img src="https://api.iconify.design/material-symbols:bug-report.svg" alt="调试" class="tool-btn-icon">
-        调试
-      </button>
-      <button class="tool-btn accent" @click="runTest">
-        <img src="https://api.iconify.design/material-symbols:play-circle.svg" alt="运行" class="tool-btn-icon">
-        试运行
-      </button>
-    </div>
-
-    <!-- 节点选择弹窗 -->
-    <div class="node-selector-modal" v-if="showNodeSelector" @click.self="showNodeSelector = false">
-      <div class="node-selector-content">
-        <div class="node-selector-header">
-          <h3>选择节点类型</h3>
-          <button class="close-btn" @click="showNodeSelector = false">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="node-types-grid">
-          <div v-for="node in nodeTypes" :key="node.type" 
-               class="node-type-item"
-               @click="addNode(node.type)">
-            <div class="node-icon">
-              <img v-if="node.image" :src="node.image" :alt="node.label">
-              <i v-else :class="node.icon"></i>
-            </div>
-            <div class="node-info">
-              <span class="node-label">{{ node.label }}</span>
-              <span class="node-desc">{{ node.description }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 节点详情面板 -->
-    <div v-if="selectedNode" class="node-detail-panel">
-      <div class="node-detail-header">
-        <h3>{{ selectedNode.label || '节点详情' }}</h3>
-        <button @click="closeDetailPanel" class="close-btn">×</button>
-      </div>
-      
-      <div class="node-detail-content">
-        <component
-          :is="getNodeDetailComponent(selectedNode.type)"
-          :node="selectedNode"
-          @update:node="updateNode"
-        />
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import ClassifierNodeDetail from './node-details/ClassifierNodeDetail.vue'
@@ -523,6 +395,134 @@ onMounted(() => {
   updateCanvasPosition(canvasEl.value!)
 })
 </script>
+
+<template>
+  <div class="workflow-container">
+    <!-- 上侧导航栏 -->
+    <div class="top-navbar">
+      <button class="back-btn" @click="$router.go(-1)">
+        <i class="fas fa-arrow-left"></i>
+        返回
+      </button>
+      <div class="workflow-info">
+        <img src="https://picsum.photos/40/40?random=11" alt="Workflow" class="workflow-image">
+        <div class="workflow-details">
+          <h3 class="workflow-name">工作流名称</h3>
+          <p class="workflow-description">这是工作流的描述信息。</p>
+        </div>
+      </div>
+      <button class="publish-btn">
+        发布
+      </button>
+    </div>
+
+    <!-- 中间画布区域 -->
+    <div class="canvas-area"
+         ref="canvasEl"
+         @scroll.passive="updateCanvasPosition($event.target as HTMLElement)"
+         @dragover.prevent="handleDragOver"
+         @drop="handleDrop"
+         @mousemove="handleCanvasMouseMove"
+         @mousedown="handleCanvasMouseDown"
+         @mouseup="handleCanvasMouseUp"
+         @mouseleave="handleCanvasMouseUp"
+         @click="handleCanvasClick"
+         :style="{ transform: `scale(${zoom})`, cursor: isDraggingCanvas ? 'grabbing' : 'default' }">
+      <div class="grid-background"></div>
+
+      <WorkflowNodeManager
+          :nodes="workflowNodes"
+          :connections="connections"
+          :nodeTypes="nodeTypes"
+          :zoom="zoom"
+          @update:nodes="updateNodes"
+          @update:connections="updateConnections"
+          @node-click="handleNodeClick"
+          @node-drag-start="handleNodeDragStart"
+          @node-drag-end="handleNodeDragEnd"
+      />
+
+      <!-- 临时节点 -->
+      <div
+        v-if="isAddingNode && tempNode"
+        class="workflow-node"
+        :style="{
+          left: `${tempNode.x}px`,
+          top: `${tempNode.y}px`,
+          opacity: 0.8,
+          position: 'absolute'
+        }"
+        @click="handleTempNodeClick"
+      >
+        <div class="node-content">
+          <div class="node-icon">
+            <img v-if="getNodeImage(tempNode.type)" :src="getNodeImage(tempNode.type)" :alt="tempNode.label">
+            <i v-else :class="nodeTypes.find(nt => nt.type === tempNode.type)?.icon"></i>
+          </div>
+          <div class="node-title">{{ tempNode.label }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部工具栏 -->
+    <div class="floating-toolbar">
+      <button class="tool-btn primary" @click="showNodeSelector = true">
+        <img src="https://api.iconify.design/material-symbols:add-box.svg" alt="添加" class="tool-btn-icon">
+        添加节点
+      </button>
+      <button class="tool-btn secondary" @click="debug">
+        <img src="https://api.iconify.design/material-symbols:bug-report.svg" alt="调试" class="tool-btn-icon">
+        调试
+      </button>
+      <button class="tool-btn accent" @click="runTest">
+        <img src="https://api.iconify.design/material-symbols:play-circle.svg" alt="运行" class="tool-btn-icon">
+        试运行
+      </button>
+    </div>
+
+    <!-- 节点选择弹窗 -->
+    <div class="node-selector-modal" v-if="showNodeSelector" @click.self="showNodeSelector = false">
+      <div class="node-selector-content">
+        <div class="node-selector-header">
+          <h3>选择节点类型</h3>
+          <button class="close-btn" @click="showNodeSelector = false">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="node-types-grid">
+          <div v-for="node in nodeTypes" :key="node.type" 
+               class="node-type-item"
+               @click="addNode(node.type)">
+            <div class="node-icon">
+              <img v-if="node.image" :src="node.image" :alt="node.label">
+              <i v-else :class="node.icon"></i>
+            </div>
+            <div class="node-info">
+              <span class="node-label">{{ node.label }}</span>
+              <span class="node-desc">{{ node.description }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 节点详情面板 -->
+    <div v-if="selectedNode" class="node-detail-panel">
+      <div class="node-detail-header">
+        <h3>{{ selectedNode.label || '节点详情' }}</h3>
+        <button @click="closeDetailPanel" class="close-btn">×</button>
+      </div>
+      
+      <div class="node-detail-content">
+        <component
+          :is="getNodeDetailComponent(selectedNode.type)"
+          :node="selectedNode"
+          @update:node="updateNode"
+        />
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .workflow-container {

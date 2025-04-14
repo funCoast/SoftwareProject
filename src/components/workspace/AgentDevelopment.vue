@@ -1,56 +1,3 @@
-<template>
-  <div class="content">
-    <!-- 顶部标题栏 -->
-    <div class="header">
-      <h1>智能体开发</h1>
-      <button class="create-btn">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-        </svg>
-        创建智能体
-      </button>
-    </div>
-
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <select class="filter-select">
-        <option value="create-time">按创建时间排序</option>
-        <option value="name">按名称排序</option>
-        <option value="modify-time">按修改时间排序</option>
-      </select>
-      <select class="filter-select">
-        <option value="all">默认</option>
-        <option value="published">已发布</option>
-        <option value="unpublished">未发布</option>
-      </select>
-      <div class="search-box">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-        </svg>
-        <input type="text" placeholder="搜索智能体...">
-      </div>
-    </div>
-
-    <!-- 智能体列表 -->
-    <div class="agent-list">
-      <div v-for="agent in agents" :key="agent.id" class="agent-card">
-        <div class="agent-image">
-          <img :src="agent.image" :alt="agent.name">
-          <div class="agent-status" :class="agent.status">{{ agent.statusText }}</div>
-        </div>
-        <div class="agent-info">
-          <h3>{{ agent.name }}</h3>
-          <p>{{ agent.description }}</p>
-          <div class="agent-meta">
-            <span class="category">{{ agent.category }}</span>
-            <span class="update-time">最后更新：{{ agent.updateTime }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref } from 'vue'
 interface agent {
@@ -126,6 +73,59 @@ const agents = ref<agent[]> ([
   }
 ])
 </script>
+
+<template>
+  <div class="content">
+    <!-- 顶部标题栏 -->
+    <div class="header">
+      <h1>智能体开发</h1>
+      <button class="create-btn">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+        创建智能体
+      </button>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <select class="filter-select">
+        <option value="create-time">按创建时间排序</option>
+        <option value="name">按名称排序</option>
+        <option value="modify-time">按修改时间排序</option>
+      </select>
+      <select class="filter-select">
+        <option value="all">默认</option>
+        <option value="published">已发布</option>
+        <option value="unpublished">未发布</option>
+      </select>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+        <input type="text" placeholder="搜索智能体...">
+      </div>
+    </div>
+
+    <!-- 智能体列表 -->
+    <div class="agent-list">
+      <div v-for="agent in agents" :key="agent.id" class="agent-card">
+        <div class="agent-image">
+          <img :src="agent.image" :alt="agent.name">
+          <div class="agent-status" :class="agent.status">{{ agent.statusText }}</div>
+        </div>
+        <div class="agent-info">
+          <h3>{{ agent.name }}</h3>
+          <p>{{ agent.description }}</p>
+          <div class="agent-meta">
+            <span class="category">{{ agent.category }}</span>
+            <span class="update-time">最后更新：{{ agent.updateTime }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .content {

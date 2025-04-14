@@ -1,3 +1,139 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+const newComment = ref('')
+interface commnet {
+  id: number
+  name: string
+  userId: string
+  avatar: string
+  content: string
+  time: string
+}
+const comments = ref<commnet[]> ([
+  {
+    id: 1,
+    name: '创意达人',
+    userId: '@creative_master',
+    avatar: 'https://picsum.photos/40/40?random=4',
+    content: '这个写作助手真的很棒！帮我完成了很多高质量的文章，特别是在优化文章结构方面非常专业。',
+    time: '2024-03-15 14:30'
+  },
+  {
+    id: 2,
+    name: '科技探索者',
+    userId: '@tech_explorer',
+    avatar: 'https://picsum.photos/40/40?random=5',
+    content: '使用了一周，文章质量明显提升，特别是在专业术语的使用上很准确。',
+    time: '2024-03-15 13:25'
+  },
+  {
+    id: 3,
+    name: '内容创作者',
+    userId: '@content_creator',
+    avatar: 'https://picsum.photos/40/40?random=6',
+    content: '界面简洁，操作方便，生成的内容很有创意，推荐给需要写作帮助的朋友们！',
+    time: '2024-03-15 12:18'
+  },
+  {
+    id: 4,
+    name: '数据分析师',
+    userId: '@data_analyst',
+    avatar: 'https://picsum.photos/40/40?random=7',
+    content: '作为一个经常需要写报告的人，这个助手帮我节省了很多时间，而且质量很好。',
+    time: '2024-03-15 11:45'
+  },
+  {
+    id: 5,
+    name: '营销专家',
+    userId: '@marketing_pro',
+    avatar: 'https://picsum.photos/40/40?random=8',
+    content: '文案创作必备工具，特别适合需要大量内容创作的营销人员。',
+    time: '2024-03-15 10:30'
+  },
+  {
+    id: 6,
+    name: '学术研究者',
+    userId: '@researcher',
+    avatar: 'https://picsum.photos/40/40?random=9',
+    content: '学术写作方面表现出色，参考文献的引用格式也很规范。',
+    time: '2024-03-15 09:20'
+  },
+  {
+    id: 7,
+    name: '自媒体人',
+    userId: '@media_creator',
+    avatar: 'https://picsum.photos/40/40?random=10',
+    content: '日常创作的得力助手，文章的逻辑性和可读性都很好。',
+    time: '2024-03-14 23:15'
+  },
+  {
+    id: 8,
+    name: '编辑总监',
+    userId: '@editor_chief',
+    avatar: 'https://picsum.photos/40/40?random=11',
+    content: '作为专业编辑，我认为这个AI助手的输出质量很高，需要的修改很少。',
+    time: '2024-03-14 22:40'
+  },
+  {
+    id: 9,
+    name: '写作爱好者',
+    userId: '@writing_lover',
+    avatar: 'https://picsum.photos/40/40?random=12',
+    content: '对新手很友好，会给出很多有建设性的修改建议。',
+    time: '2024-03-14 21:55'
+  },
+  {
+    id: 10,
+    name: '产品经理',
+    userId: '@product_manager',
+    avatar: 'https://picsum.photos/40/40?random=13',
+    content: '产品文档写作的好帮手，专业术语运用准确，逻辑清晰。',
+    time: '2024-03-14 20:30'
+  },
+  {
+    id: 11,
+    name: '技术博主',
+    userId: '@tech_blogger',
+    avatar: 'https://picsum.photos/40/40?random=14',
+    content: '技术文章写作效果很好，能够准确理解和表达技术概念。',
+    time: '2024-03-14 19:15'
+  },
+  {
+    id: 12,
+    name: '教育工作者',
+    userId: '@educator',
+    avatar: 'https://picsum.photos/40/40?random=15',
+    content: '很适合用来辅助教案编写，生成的内容通俗易懂。',
+    time: '2024-03-14 18:40'
+  },
+  {
+    id: 13,
+    name: '新闻记者',
+    userId: '@journalist',
+    avatar: 'https://picsum.photos/40/40?random=16',
+    content: '新闻写作的好助手，能快速整理要点，生成初稿。',
+    time: '2024-03-14 17:25'
+  },
+  {
+    id: 14,
+    name: '小说作家',
+    userId: '@novelist',
+    avatar: 'https://picsum.photos/40/40?random=17',
+    content: '在创意写作方面表现出色，能给出很多有趣的故事发展建议。',
+    time: '2024-03-14 16:10'
+  },
+  {
+    id: 15,
+    name: '广告文案',
+    userId: '@copywriter',
+    avatar: 'https://picsum.photos/40/40?random=18',
+    content: '文案创作效果很好，能抓住重点，文字简洁有力。',
+    time: '2024-03-14 15:00'
+  }
+])
+</script>
+
 <template>
   <div class="agent-detail">
     <!-- 左侧智能体展示区 -->
@@ -228,142 +364,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue'
-
-const newComment = ref('')
-interface commnet {
-  id: number
-  name: string
-  userId: string
-  avatar: string
-  content: string
-  time: string
-}
-const comments = ref<commnet[]> ([
-  {
-    id: 1,
-    name: '创意达人',
-    userId: '@creative_master',
-    avatar: 'https://picsum.photos/40/40?random=4',
-    content: '这个写作助手真的很棒！帮我完成了很多高质量的文章，特别是在优化文章结构方面非常专业。',
-    time: '2024-03-15 14:30'
-  },
-  {
-    id: 2,
-    name: '科技探索者',
-    userId: '@tech_explorer',
-    avatar: 'https://picsum.photos/40/40?random=5',
-    content: '使用了一周，文章质量明显提升，特别是在专业术语的使用上很准确。',
-    time: '2024-03-15 13:25'
-  },
-  {
-    id: 3,
-    name: '内容创作者',
-    userId: '@content_creator',
-    avatar: 'https://picsum.photos/40/40?random=6',
-    content: '界面简洁，操作方便，生成的内容很有创意，推荐给需要写作帮助的朋友们！',
-    time: '2024-03-15 12:18'
-  },
-  {
-    id: 4,
-    name: '数据分析师',
-    userId: '@data_analyst',
-    avatar: 'https://picsum.photos/40/40?random=7',
-    content: '作为一个经常需要写报告的人，这个助手帮我节省了很多时间，而且质量很好。',
-    time: '2024-03-15 11:45'
-  },
-  {
-    id: 5,
-    name: '营销专家',
-    userId: '@marketing_pro',
-    avatar: 'https://picsum.photos/40/40?random=8',
-    content: '文案创作必备工具，特别适合需要大量内容创作的营销人员。',
-    time: '2024-03-15 10:30'
-  },
-  {
-    id: 6,
-    name: '学术研究者',
-    userId: '@researcher',
-    avatar: 'https://picsum.photos/40/40?random=9',
-    content: '学术写作方面表现出色，参考文献的引用格式也很规范。',
-    time: '2024-03-15 09:20'
-  },
-  {
-    id: 7,
-    name: '自媒体人',
-    userId: '@media_creator',
-    avatar: 'https://picsum.photos/40/40?random=10',
-    content: '日常创作的得力助手，文章的逻辑性和可读性都很好。',
-    time: '2024-03-14 23:15'
-  },
-  {
-    id: 8,
-    name: '编辑总监',
-    userId: '@editor_chief',
-    avatar: 'https://picsum.photos/40/40?random=11',
-    content: '作为专业编辑，我认为这个AI助手的输出质量很高，需要的修改很少。',
-    time: '2024-03-14 22:40'
-  },
-  {
-    id: 9,
-    name: '写作爱好者',
-    userId: '@writing_lover',
-    avatar: 'https://picsum.photos/40/40?random=12',
-    content: '对新手很友好，会给出很多有建设性的修改建议。',
-    time: '2024-03-14 21:55'
-  },
-  {
-    id: 10,
-    name: '产品经理',
-    userId: '@product_manager',
-    avatar: 'https://picsum.photos/40/40?random=13',
-    content: '产品文档写作的好帮手，专业术语运用准确，逻辑清晰。',
-    time: '2024-03-14 20:30'
-  },
-  {
-    id: 11,
-    name: '技术博主',
-    userId: '@tech_blogger',
-    avatar: 'https://picsum.photos/40/40?random=14',
-    content: '技术文章写作效果很好，能够准确理解和表达技术概念。',
-    time: '2024-03-14 19:15'
-  },
-  {
-    id: 12,
-    name: '教育工作者',
-    userId: '@educator',
-    avatar: 'https://picsum.photos/40/40?random=15',
-    content: '很适合用来辅助教案编写，生成的内容通俗易懂。',
-    time: '2024-03-14 18:40'
-  },
-  {
-    id: 13,
-    name: '新闻记者',
-    userId: '@journalist',
-    avatar: 'https://picsum.photos/40/40?random=16',
-    content: '新闻写作的好助手，能快速整理要点，生成初稿。',
-    time: '2024-03-14 17:25'
-  },
-  {
-    id: 14,
-    name: '小说作家',
-    userId: '@novelist',
-    avatar: 'https://picsum.photos/40/40?random=17',
-    content: '在创意写作方面表现出色，能给出很多有趣的故事发展建议。',
-    time: '2024-03-14 16:10'
-  },
-  {
-    id: 15,
-    name: '广告文案',
-    userId: '@copywriter',
-    avatar: 'https://picsum.photos/40/40?random=18',
-    content: '文案创作效果很好，能抓住重点，文字简洁有力。',
-    time: '2024-03-14 15:00'
-  }
-])
-</script>
 
 <style scoped>
 .agent-detail {

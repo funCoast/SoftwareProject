@@ -1,67 +1,3 @@
-<template>
-  <div class="classifier-node-detail">
-    <div class="form-group">
-      <label>分类类型</label>
-      <select v-model="nodeData.type" @change="updateNode">
-        <option value="intent">意图识别</option>
-        <option value="topic">主题分类</option>
-        <option value="sentiment">情感分析</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>分类标签</label>
-      <div class="tags-input">
-        <div v-for="(tag, index) in nodeData.tags" :key="index" class="tag">
-          {{ tag }}
-          <button @click="removeTag(index)" class="remove-tag">×</button>
-        </div>
-        <input
-          v-model="newTag"
-          @keyup.enter="addTag"
-          placeholder="输入标签后按回车"
-          class="tag-input"
-        />
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>置信度阈值</label>
-      <input
-        type="range"
-        v-model="nodeData.confidenceThreshold"
-        min="0"
-        max="1"
-        step="0.01"
-        @input="updateNode"
-      />
-      <span class="threshold-value">{{ nodeData.confidenceThreshold }}</span>
-    </div>
-
-    <div class="form-group">
-      <label>高级设置</label>
-      <div class="advanced-settings">
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            v-model="nodeData.enableMultiLabel"
-            @change="updateNode"
-          />
-          允许多标签
-        </label>
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            v-model="nodeData.saveHistory"
-            @change="updateNode"
-          />
-          保存历史记录
-        </label>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 
@@ -134,6 +70,70 @@ const updateNode = () => {
   emit('update:node', updatedNode)
 }
 </script>
+
+<template>
+  <div class="classifier-node-detail">
+    <div class="form-group">
+      <label>分类类型</label>
+      <select v-model="nodeData.type" @change="updateNode">
+        <option value="intent">意图识别</option>
+        <option value="topic">主题分类</option>
+        <option value="sentiment">情感分析</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>分类标签</label>
+      <div class="tags-input">
+        <div v-for="(tag, index) in nodeData.tags" :key="index" class="tag">
+          {{ tag }}
+          <button @click="removeTag(index)" class="remove-tag">×</button>
+        </div>
+        <input
+          v-model="newTag"
+          @keyup.enter="addTag"
+          placeholder="输入标签后按回车"
+          class="tag-input"
+        />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>置信度阈值</label>
+      <input
+        type="range"
+        v-model="nodeData.confidenceThreshold"
+        min="0"
+        max="1"
+        step="0.01"
+        @input="updateNode"
+      />
+      <span class="threshold-value">{{ nodeData.confidenceThreshold }}</span>
+    </div>
+
+    <div class="form-group">
+      <label>高级设置</label>
+      <div class="advanced-settings">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            v-model="nodeData.enableMultiLabel"
+            @change="updateNode"
+          />
+          允许多标签
+        </label>
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            v-model="nodeData.saveHistory"
+            @change="updateNode"
+          />
+          保存历史记录
+        </label>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .classifier-node-detail {

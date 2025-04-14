@@ -1,3 +1,82 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import { WorkflowNode } from '@/types/workflow'
+
+const props = defineProps<{
+  node: WorkflowNode
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: WorkflowNode): void
+}>()
+
+const nodeData = ref({
+  pluginId: props.node.data?.pluginId || '',
+  pluginVersion: props.node.data?.pluginVersion || '',
+  inputParams: props.node.data?.inputParams || [],
+  outputMappings: props.node.data?.outputMappings || [],
+  useSandbox: props.node.data?.useSandbox || true,
+  timeoutEnabled: props.node.data?.timeoutEnabled || false,
+  timeout: props.node.data?.timeout || 30,
+  retryOnError: props.node.data?.retryOnError || false,
+  maxRetries: props.node.data?.maxRetries || 3
+})
+
+// 可用插件列表（示例数据）
+const availablePlugins = ref([
+  { id: '1', name: '天气查询插件', versions: ['1.0.0', '1.1.0'] },
+  { id: '2', name: '翻译插件', versions: ['1.0.0', '1.2.0'] },
+  { id: '3', name: '图片处理插件', versions: ['1.0.0', '1.3.0'] }
+])
+
+function getPluginVersions(pluginId: string) {
+  const plugin = availablePlugins.value.find(p => p.id === pluginId)
+  return plugin?.versions || []
+}
+
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+
+function addParam() {
+  nodeData.value.inputParams.push({ name: '', type: 'string', value: '' })
+  updateNode()
+}
+
+function removeParam(index: number) {
+  nodeData.value.inputParams.splice(index, 1)
+  updateNode()
+}
+
+function addMapping() {
+  nodeData.value.outputMappings.push({ source: '', target: '' })
+  updateNode()
+}
+
+function removeMapping(index: number) {
+  nodeData.value.outputMappings.splice(index, 1)
+  updateNode()
+}
+</script>
+
 <template>
   <div class="plugin-node-detail">
     <div class="form-group">
@@ -122,85 +201,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { WorkflowNode } from '@/types/workflow'
-
-const props = defineProps<{
-  node: WorkflowNode
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: WorkflowNode): void
-}>()
-
-const nodeData = ref({
-  pluginId: props.node.data?.pluginId || '',
-  pluginVersion: props.node.data?.pluginVersion || '',
-  inputParams: props.node.data?.inputParams || [],
-  outputMappings: props.node.data?.outputMappings || [],
-  useSandbox: props.node.data?.useSandbox || true,
-  timeoutEnabled: props.node.data?.timeoutEnabled || false,
-  timeout: props.node.data?.timeout || 30,
-  retryOnError: props.node.data?.retryOnError || false,
-  maxRetries: props.node.data?.maxRetries || 3
-})
-
-// 可用插件列表（示例数据）
-const availablePlugins = ref([
-  { id: '1', name: '天气查询插件', versions: ['1.0.0', '1.1.0'] },
-  { id: '2', name: '翻译插件', versions: ['1.0.0', '1.2.0'] },
-  { id: '3', name: '图片处理插件', versions: ['1.0.0', '1.3.0'] }
-])
-
-function getPluginVersions(pluginId: string) {
-  const plugin = availablePlugins.value.find(p => p.id === pluginId)
-  return plugin?.versions || []
-}
-
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-
-function addParam() {
-  nodeData.value.inputParams.push({ name: '', type: 'string', value: '' })
-  updateNode()
-}
-
-function removeParam(index: number) {
-  nodeData.value.inputParams.splice(index, 1)
-  updateNode()
-}
-
-function addMapping() {
-  nodeData.value.outputMappings.push({ source: '', target: '' })
-  updateNode()
-}
-
-function removeMapping(index: number) {
-  nodeData.value.outputMappings.splice(index, 1)
-  updateNode()
-}
-</script>
 
 <style scoped>
 .plugin-node-detail {

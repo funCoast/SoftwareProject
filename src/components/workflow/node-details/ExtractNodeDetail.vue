@@ -1,3 +1,61 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import { WorkflowNode } from '@/types/workflow'
+
+const props = defineProps<{
+  node: WorkflowNode
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: WorkflowNode): void
+}>()
+
+const nodeData = ref({
+  documentType: props.node.data?.documentType || 'text',
+  extractMethod: props.node.data?.extractMethod || 'regex',
+  regexPattern: props.node.data?.regexPattern || '',
+  templateFields: props.node.data?.templateFields || [],
+  aiInstruction: props.node.data?.aiInstruction || '',
+  outputFormat: props.node.data?.outputFormat || 'json',
+  includeMetadata: props.node.data?.includeMetadata || false,
+  cleanText: props.node.data?.cleanText || false,
+  removeWhitespace: props.node.data?.removeWhitespace || true,
+  removeSpecialChars: props.node.data?.removeSpecialChars || false
+})
+
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+
+function addTemplateField() {
+  nodeData.value.templateFields.push({ name: '', pattern: '' })
+  updateNode()
+}
+
+function removeTemplateField(index: number) {
+  nodeData.value.templateFields.splice(index, 1)
+  updateNode()
+}
+</script>
+
 <template>
   <div class="extract-node-detail">
     <div class="form-group">
@@ -119,64 +177,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { WorkflowNode } from '@/types/workflow'
-
-const props = defineProps<{
-  node: WorkflowNode
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: WorkflowNode): void
-}>()
-
-const nodeData = ref({
-  documentType: props.node.data?.documentType || 'text',
-  extractMethod: props.node.data?.extractMethod || 'regex',
-  regexPattern: props.node.data?.regexPattern || '',
-  templateFields: props.node.data?.templateFields || [],
-  aiInstruction: props.node.data?.aiInstruction || '',
-  outputFormat: props.node.data?.outputFormat || 'json',
-  includeMetadata: props.node.data?.includeMetadata || false,
-  cleanText: props.node.data?.cleanText || false,
-  removeWhitespace: props.node.data?.removeWhitespace || true,
-  removeSpecialChars: props.node.data?.removeSpecialChars || false
-})
-
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-
-function addTemplateField() {
-  nodeData.value.templateFields.push({ name: '', pattern: '' })
-  updateNode()
-}
-
-function removeTemplateField(index: number) {
-  nodeData.value.templateFields.splice(index, 1)
-  updateNode()
-}
-</script>
 
 <style scoped>
 .extract-node-detail {

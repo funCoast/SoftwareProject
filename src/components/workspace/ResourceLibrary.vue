@@ -1,72 +1,3 @@
-<template>
-  <div class="content">
-    <!-- 顶部标题栏 -->
-    <div class="header">
-      <h2>资源库</h2>
-      <div class="create-dropdown">
-        <button class="create-btn" @mouseenter="showDropdown = true" @mouseleave="showDropdown = false">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-          </svg>
-          创建资源
-        </button>
-        <div class="dropdown-menu" v-show="showDropdown" @mouseenter="showDropdown = true" @mouseleave="showDropdown = false">
-          <div class="dropdown-item" @click="createWorkflow">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
-            </svg>
-            <span>工作流</span>
-          </div>
-          <div class="dropdown-item" @click="createKnowledge">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
-            </svg>
-            <span>知识库</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <select class="filter-select">
-        <option value="create-time">按创建时间排序</option>
-        <option value="name">按名称排序</option>
-        <option value="modify-time">按修改时间排序</option>
-      </select>
-      <select class="filter-select">
-        <option value="all">全部</option>
-        <option value="workflow">工作流</option>
-        <option value="plugin">插件</option>
-        <option value="knowledge">知识库</option>
-      </select>
-      <div class="search-box">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-        </svg>
-        <input type="text" placeholder="搜索资源...">
-      </div>
-    </div>
-
-    <!-- 资源列表 -->
-    <div class="resource-list">
-      <div v-for="resource in resources" :key="resource.id" class="resource-card">
-        <div class="resource-icon">
-          <img :src="resource.icon" :alt="resource.name">
-          <div class="resource-type">{{ resource.type }}</div>
-        </div>
-        <div class="resource-info">
-          <h3>{{ resource.name }}</h3>
-          <p>{{ resource.description }}</p>
-          <div class="resource-meta">
-            <span class="update-time">最后更新：{{ resource.updateTime }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref } from 'vue'
 import router from '../../router'
@@ -147,6 +78,75 @@ function createKnowledge() {
   console.log('创建知识库')
 } 
 </script>
+
+<template>
+  <div class="content">
+    <!-- 顶部标题栏 -->
+    <div class="header">
+      <h2>资源库</h2>
+      <div class="create-dropdown">
+        <button class="create-btn" @mouseenter="showDropdown = true" @mouseleave="showDropdown = false">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          创建资源
+        </button>
+        <div class="dropdown-menu" v-show="showDropdown" @mouseenter="showDropdown = true" @mouseleave="showDropdown = false">
+          <div class="dropdown-item" @click="createWorkflow">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+            </svg>
+            <span>工作流</span>
+          </div>
+          <div class="dropdown-item" @click="createKnowledge">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+            </svg>
+            <span>知识库</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <select class="filter-select">
+        <option value="create-time">按创建时间排序</option>
+        <option value="name">按名称排序</option>
+        <option value="modify-time">按修改时间排序</option>
+      </select>
+      <select class="filter-select">
+        <option value="all">全部</option>
+        <option value="workflow">工作流</option>
+        <option value="plugin">插件</option>
+        <option value="knowledge">知识库</option>
+      </select>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+        <input type="text" placeholder="搜索资源...">
+      </div>
+    </div>
+
+    <!-- 资源列表 -->
+    <div class="resource-list">
+      <div v-for="resource in resources" :key="resource.id" class="resource-card">
+        <div class="resource-icon">
+          <img :src="resource.icon" :alt="resource.name">
+          <div class="resource-type">{{ resource.type }}</div>
+        </div>
+        <div class="resource-info">
+          <h3>{{ resource.name }}</h3>
+          <p>{{ resource.description }}</p>
+          <div class="resource-meta">
+            <span class="update-time">最后更新：{{ resource.updateTime }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .content {

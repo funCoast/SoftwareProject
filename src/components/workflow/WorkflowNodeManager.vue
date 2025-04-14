@@ -1,95 +1,3 @@
-<template>
-  <div>
-    <!-- 节点容器 -->
-    <div class="nodes-container">
-      <div v-for="node in nodes" 
-           :key="node.id" 
-           class="workflow-node"
-           :class="{ selected: node.id === selectedNodeId }"
-           :data-node-id="node.id"
-           :style="{
-             left: node.x + 'px',
-             top: node.y + 'px',
-             transform: `scale(${1/zoom})`  // 反向缩放保持节点实际大小
-           }"
-           @click="handleNodeClick(node)"
-           @mousedown="startDrag(node, $event)"
-           @contextmenu.prevent="showContextMenu(node, $event)">
-        <!-- 左侧连接点 -->
-        <div class="connector left" 
-             @mousedown.stop="startConnection(node, 'left', $event)"
-             @mouseenter="showConnectorTooltip(node, 'left')"
-             @mouseleave="hideConnectorTooltip">
-          <div class="connector-plus">+</div>
-        </div>
-        
-        <div class="node-content">
-          <div class="node-header">
-            <img :src="getNodeImage(node.type)" :alt="node.label" class="node-type-icon">
-            <span class="node-title">{{ node.label }}</span>
-          </div>
-        </div>
-
-        <!-- 右侧连接点 -->
-        <div class="connector right" 
-             @mousedown.stop="startConnection(node, 'right', $event)"
-             @mouseenter="showConnectorTooltip(node, 'right')"
-             @mouseleave="hideConnectorTooltip">
-          <div class="connector-plus">+</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 连线 -->
-    <svg class="connections-layer">
-      <g v-for="connection in connections" 
-         :key="`${connection.id}-${connectionUpdateTrigger}`"
-         class="connection-group"
-         @contextmenu.prevent="showConnectionContextMenu(connection, $event)">
-        <path :d="getConnectionPath(connection)"
-              :stroke-width="2/zoom"
-              class="connection-path"/>
-      </g>
-      <!-- 正在创建的连线 -->
-      <path v-if="activeConnection.sourceNode"
-            :d="getActiveConnectionPath()"
-            class="connection-path active"/>
-    </svg>
-
-    <!-- 连接提示 -->
-    <div v-if="showConnectorHint" 
-         class="connector-hint"
-         :style="connectorHintStyle">
-      <i class="fas fa-link"></i>
-      <span>连接到此</span>
-    </div>
-
-    <!-- 右键菜单 -->
-    <div v-if="contextMenu.show" 
-         class="context-menu"
-         :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }">
-      <div class="context-menu-item" @click="copyNode">
-        <i class="fas fa-copy"></i>
-        <span>复制节点</span>
-      </div>
-      <div class="context-menu-item" @click="deleteNode">
-        <i class="fas fa-trash"></i>
-        <span>删除节点</span>
-      </div>
-    </div>
-
-    <!-- 连线右键菜单 -->
-    <div v-if="connectionContextMenu.show" 
-         class="context-menu"
-         :style="{ left: connectionContextMenu.x + 'px', top: connectionContextMenu.y + 'px' }">
-      <div class="context-menu-item" @click="deleteConnection">
-        <i class="fas fa-trash"></i>
-        <span>删除连线</span>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, defineProps, defineEmits } from 'vue'
 const NODE_WIDTH = 200
@@ -476,6 +384,98 @@ function handleNodeClick(node: any) {
   emit('node-click', node)
 }
 </script>
+
+<template>
+  <div>
+    <!-- 节点容器 -->
+    <div class="nodes-container">
+      <div v-for="node in nodes" 
+           :key="node.id" 
+           class="workflow-node"
+           :class="{ selected: node.id === selectedNodeId }"
+           :data-node-id="node.id"
+           :style="{
+             left: node.x + 'px',
+             top: node.y + 'px',
+             transform: `scale(${1/zoom})`  // 反向缩放保持节点实际大小
+           }"
+           @click="handleNodeClick(node)"
+           @mousedown="startDrag(node, $event)"
+           @contextmenu.prevent="showContextMenu(node, $event)">
+        <!-- 左侧连接点 -->
+        <div class="connector left" 
+             @mousedown.stop="startConnection(node, 'left', $event)"
+             @mouseenter="showConnectorTooltip(node, 'left')"
+             @mouseleave="hideConnectorTooltip">
+          <div class="connector-plus">+</div>
+        </div>
+        
+        <div class="node-content">
+          <div class="node-header">
+            <img :src="getNodeImage(node.type)" :alt="node.label" class="node-type-icon">
+            <span class="node-title">{{ node.label }}</span>
+          </div>
+        </div>
+
+        <!-- 右侧连接点 -->
+        <div class="connector right" 
+             @mousedown.stop="startConnection(node, 'right', $event)"
+             @mouseenter="showConnectorTooltip(node, 'right')"
+             @mouseleave="hideConnectorTooltip">
+          <div class="connector-plus">+</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 连线 -->
+    <svg class="connections-layer">
+      <g v-for="connection in connections" 
+         :key="`${connection.id}-${connectionUpdateTrigger}`"
+         class="connection-group"
+         @contextmenu.prevent="showConnectionContextMenu(connection, $event)">
+        <path :d="getConnectionPath(connection)"
+              :stroke-width="2/zoom"
+              class="connection-path"/>
+      </g>
+      <!-- 正在创建的连线 -->
+      <path v-if="activeConnection.sourceNode"
+            :d="getActiveConnectionPath()"
+            class="connection-path active"/>
+    </svg>
+
+    <!-- 连接提示 -->
+    <div v-if="showConnectorHint" 
+         class="connector-hint"
+         :style="connectorHintStyle">
+      <i class="fas fa-link"></i>
+      <span>连接到此</span>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div v-if="contextMenu.show" 
+         class="context-menu"
+         :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }">
+      <div class="context-menu-item" @click="copyNode">
+        <i class="fas fa-copy"></i>
+        <span>复制节点</span>
+      </div>
+      <div class="context-menu-item" @click="deleteNode">
+        <i class="fas fa-trash"></i>
+        <span>删除节点</span>
+      </div>
+    </div>
+
+    <!-- 连线右键菜单 -->
+    <div v-if="connectionContextMenu.show" 
+         class="context-menu"
+         :style="{ left: connectionContextMenu.x + 'px', top: connectionContextMenu.y + 'px' }">
+      <div class="context-menu-item" @click="deleteConnection">
+        <i class="fas fa-trash"></i>
+        <span>删除连线</span>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .nodes-container {

@@ -1,3 +1,49 @@
+<script setup lang="ts">
+import { ref, defineProps, defineEmits, watch } from 'vue'
+
+const props = defineProps<{
+  node: any
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: any): void
+}>()
+
+// 节点数据
+const nodeData = ref({
+  modelType: props.node.data?.modelType || 'gpt-3.5',
+  temperature: props.node.data?.temperature || 0.7,
+  maxTokens: props.node.data?.maxTokens || 2048,
+  systemPrompt: props.node.data?.systemPrompt || '',
+  streamOutput: props.node.data?.streamOutput || false,
+  saveHistory: props.node.data?.saveHistory || false
+})
+
+// 监听数据变化并更新节点
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+// 更新节点
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+</script>
+
 <template>
   <div class="model-node-detail">
     <div class="form-group">
@@ -66,52 +112,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, defineProps, defineEmits, watch } from 'vue'
-
-const props = defineProps<{
-  node: any
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: any): void
-}>()
-
-// 节点数据
-const nodeData = ref({
-  modelType: props.node.data?.modelType || 'gpt-3.5',
-  temperature: props.node.data?.temperature || 0.7,
-  maxTokens: props.node.data?.maxTokens || 2048,
-  systemPrompt: props.node.data?.systemPrompt || '',
-  streamOutput: props.node.data?.streamOutput || false,
-  saveHistory: props.node.data?.saveHistory || false
-})
-
-// 监听数据变化并更新节点
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-// 更新节点
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-</script>
 
 <style scoped>
 .model-node-detail {

@@ -1,3 +1,67 @@
+<script setup lang="ts">
+import { ref, defineEmits, watch } from 'vue'
+
+const props = defineProps<{
+  node: any
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: any): void
+}>()
+
+// 节点数据
+const nodeData = ref({
+  workflowId: props.node.data?.workflowId || '',
+  inputMappings: props.node.data?.inputMappings || [{ source: '', target: '' }],
+  outputMappings: props.node.data?.outputMappings || [{ source: '', target: '' }],
+  continueOnError: props.node.data?.continueOnError || false,
+  returnAllOutputs: props.node.data?.returnAllOutputs || false
+})
+
+// 可用工作流列表（示例数据）
+const availableWorkflows = ref([
+  { id: '1', name: '工作流1' },
+  { id: '2', name: '工作流2' },
+  { id: '3', name: '工作流3' }
+])
+
+// 监听数据变化并更新节点
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+// 更新节点
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+
+// 添加映射
+function addMapping() {
+  nodeData.value.inputMappings.push({ source: '', target: '' })
+  updateNode()
+}
+
+// 删除映射
+function removeMapping(index: number) {
+  nodeData.value.inputMappings.splice(index, 1)
+  updateNode()
+}
+</script>
+
 <template>
   <div class="workflow-node-detail">
     <div class="form-group">
@@ -79,70 +143,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, defineProps, defineEmits, watch } from 'vue'
-
-const props = defineProps<{
-  node: any
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: any): void
-}>()
-
-// 节点数据
-const nodeData = ref({
-  workflowId: props.node.data?.workflowId || '',
-  inputMappings: props.node.data?.inputMappings || [{ source: '', target: '' }],
-  outputMappings: props.node.data?.outputMappings || [{ source: '', target: '' }],
-  continueOnError: props.node.data?.continueOnError || false,
-  returnAllOutputs: props.node.data?.returnAllOutputs || false
-})
-
-// 可用工作流列表（示例数据）
-const availableWorkflows = ref([
-  { id: '1', name: '工作流1' },
-  { id: '2', name: '工作流2' },
-  { id: '3', name: '工作流3' }
-])
-
-// 监听数据变化并更新节点
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-// 更新节点
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-
-// 添加映射
-function addMapping() {
-  nodeData.value.inputMappings.push({ source: '', target: '' })
-  updateNode()
-}
-
-// 删除映射
-function removeMapping(index: number) {
-  nodeData.value.inputMappings.splice(index, 1)
-  updateNode()
-}
-</script>
 
 <style scoped>
 .workflow-node-detail {

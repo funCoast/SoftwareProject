@@ -1,3 +1,63 @@
+<script setup lang="ts">
+import { ref, defineProps, defineEmits, watch } from 'vue'
+
+const props = defineProps<{
+  node: any
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: any): void
+}>()
+
+// 节点数据
+const nodeData = ref({
+  method: props.node.data?.method || 'GET',
+  url: props.node.data?.url || '',
+  headers: props.node.data?.headers || [{ key: '', value: '' }],
+  body: props.node.data?.body || '',
+  timeout: props.node.data?.timeout || 5000,
+  retryCount: props.node.data?.retryCount || 3,
+  verifySSL: props.node.data?.verifySSL || true,
+  followRedirects: props.node.data?.followRedirects || true
+})
+
+// 监听数据变化并更新节点
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+// 更新节点
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+
+// 添加请求头
+function addHeader() {
+  nodeData.value.headers.push({ key: '', value: '' })
+  updateNode()
+}
+
+// 删除请求头
+function removeHeader(index: number) {
+  nodeData.value.headers.splice(index, 1)
+  updateNode()
+}
+</script>
+
 <template>
   <div class="http-node-detail">
     <div class="form-group">
@@ -98,66 +158,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, defineProps, defineEmits, watch } from 'vue'
-
-const props = defineProps<{
-  node: any
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: any): void
-}>()
-
-// 节点数据
-const nodeData = ref({
-  method: props.node.data?.method || 'GET',
-  url: props.node.data?.url || '',
-  headers: props.node.data?.headers || [{ key: '', value: '' }],
-  body: props.node.data?.body || '',
-  timeout: props.node.data?.timeout || 5000,
-  retryCount: props.node.data?.retryCount || 3,
-  verifySSL: props.node.data?.verifySSL || true,
-  followRedirects: props.node.data?.followRedirects || true
-})
-
-// 监听数据变化并更新节点
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-// 更新节点
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-
-// 添加请求头
-function addHeader() {
-  nodeData.value.headers.push({ key: '', value: '' })
-  updateNode()
-}
-
-// 删除请求头
-function removeHeader(index: number) {
-  nodeData.value.headers.splice(index, 1)
-  updateNode()
-}
-</script>
 
 <style scoped>
 .http-node-detail {
