@@ -274,6 +274,7 @@ def user_fetch_profile(request):
         return JsonResponse({"code": -1, "message": "用户不存在"})
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
+
 def user_update_avatar(request):
     uid = request.POST.get('uid')
     avatar = request.FILES.get('avatar')
@@ -285,13 +286,22 @@ def user_update_avatar(request):
         })
 
     try:
-        user = User.objects.get(user_id=uid)  # 或 username/其他主键字段
-        user.avatar = avatar  # 会自动保存到 avatars/ 路径下
+        user = User.objects.get(user_id=uid)
+
+        # 可选：删除旧头像（防止堆积文件）
+        if user.avatar:
+            old_avatar_path = os.path.join(settings.MEDIA_ROOT, user.avatar.name)
+            if os.path.exists(old_avatar_path):
+                os.remove(old_avatar_path)
+
+        # 保存新头像
+        user.avatar = avatar
         user.save()
 
         return JsonResponse({
             "code": 0,
-            "message": "更新成功"
+            "message": "更新成功",
+            "avatar_url": request.build_absolute_uri(user.avatar.url)  # 返回完整 URL
         })
     except User.DoesNotExist:
         return JsonResponse({
@@ -316,21 +326,21 @@ def user_get_avatar(request):
         })
 
     try:
-        user = User.objects.get(user_id=uid)  # 如果你用的是自定义 user_id 字段
+        user = User.objects.get(user_id=uid)
+        avatar_url = request.build_absolute_uri(user.avatar.url) if user.avatar else ""
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "avatar": avatar_url
+        })
+
     except User.DoesNotExist:
         return JsonResponse({
             "code": -1,
             "message": "用户不存在",
             "avatar": ""
         })
-
-    avatar_url = user.avatar.url if user.avatar else ""
-
-    return JsonResponse({
-        "code": 0,
-        "message": "获取成功",
-        "avatar": avatar_url
-    })
 
 def user_get_contacts(request):
     try:
