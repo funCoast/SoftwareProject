@@ -6,7 +6,11 @@
         <!-- 聊天头部 -->
         <div class="chat-header">
           <div class="chat-header-left">
-            <img src="https://api.iconify.design/material-symbols:robot.svg" alt="智能体" class="agent-icon">
+            <img
+              src="https://api.iconify.design/material-symbols:robot.svg"
+              alt="智能体"
+              class="agent-icon"
+            />
             <div class="agent-status">
               <span class="agent-name">智能写作助手</span>
               <span class="status-badge online">在线</span>
@@ -14,10 +18,18 @@
           </div>
           <div class="chat-actions">
             <button class="action-btn" title="清空对话">
-              <img src="https://api.iconify.design/material-symbols:delete-outline.svg" alt="清空" class="action-icon">
+              <img
+                src="https://api.iconify.design/material-symbols:delete-outline.svg"
+                alt="清空"
+                class="action-icon"
+              />
             </button>
             <button class="action-btn" title="导出对话">
-              <img src="https://api.iconify.design/material-symbols:download.svg" alt="导出" class="action-icon">
+              <img
+                src="https://api.iconify.design/material-symbols:download.svg"
+                alt="导出"
+                class="action-icon"
+              />
             </button>
           </div>
         </div>
@@ -25,7 +37,7 @@
         <!-- 聊天内容区 -->
         <div class="chat-content">
           <div class="chat-day-divider">今天</div>
-          
+
           <!-- 系统消息 -->
           <div class="message system">
             <div class="message-content">
@@ -43,13 +55,11 @@
           <!-- 用户消息 -->
           <div class="message user">
             <div class="message-avatar">
-              <img src="https://picsum.photos/40/40?random=1" alt="用户头像">
+              <img src="https://picsum.photos/40/40?random=1" alt="用户头像" />
             </div>
             <div class="message-content">
-              帮我写一篇关于人工智能对未来教育影响的文章，要求：
-              1. 1500字左右
-              2. 包含具体案例
-              3. 重点讨论利弊
+              帮我写一篇关于人工智能对未来教育影响的文章，要求： 1. 1500字左右
+              2. 包含具体案例 3. 重点讨论利弊
             </div>
             <div class="message-time">14:23</div>
           </div>
@@ -57,7 +67,10 @@
           <!-- 助手消息 -->
           <div class="message assistant">
             <div class="message-avatar">
-              <img src="https://api.iconify.design/material-symbols:robot.svg" alt="助手头像">
+              <img
+                src="https://api.iconify.design/material-symbols:robot.svg"
+                alt="助手头像"
+              />
             </div>
             <div class="message-content">
               好的，我来帮你写一篇关于人工智能对未来教育影响的文章。以下是文章大纲：
@@ -65,12 +78,9 @@
               <div class="outline-block">
                 <div class="outline-title">文章大纲：</div>
                 <div class="outline-content">
-                  1. 引言：AI 教育变革的时代背景
-                  2. AI 在教育中的应用现状
-                  3. AI 教育的优势分析
-                  4. 潜在的挑战和风险
-                  5. 案例分析
-                  6. 未来展望和建议
+                  1. 引言：AI 教育变革的时代背景 2. AI 在教育中的应用现状 3. AI
+                  教育的优势分析 4. 潜在的挑战和风险 5. 案例分析 6.
+                  未来展望和建议
                 </div>
               </div>
 
@@ -82,18 +92,19 @@
           <!-- 用户消息 -->
           <div class="message user">
             <div class="message-avatar">
-              <img src="https://picsum.photos/40/40?random=1" alt="用户头像">
+              <img src="https://picsum.photos/40/40?random=1" alt="用户头像" />
             </div>
-            <div class="message-content">
-              好的，请帮我完整写出这篇文章
-            </div>
+            <div class="message-content">好的，请帮我完整写出这篇文章</div>
             <div class="message-time">14:24</div>
           </div>
 
           <!-- 助手消息（带进度条） -->
           <div class="message assistant">
             <div class="message-avatar">
-              <img src="https://api.iconify.design/material-symbols:robot.svg" alt="助手头像">
+              <img
+                src="https://api.iconify.design/material-symbols:robot.svg"
+                alt="助手头像"
+              />
             </div>
             <div class="message-content">
               <div class="typing-indicator">
@@ -112,17 +123,25 @@
         <!-- 输入区域 -->
         <div class="chat-input-area">
           <div class="input-container">
-            <textarea 
-              placeholder="输入消息..." 
+            <textarea
+              placeholder="输入消息..."
               rows="1"
               class="chat-input"
             ></textarea>
             <div class="input-actions">
               <button class="action-btn" title="上传文件">
-                <img src="https://api.iconify.design/material-symbols:attach-file.svg" alt="上传" class="action-icon">
+                <img
+                  src="https://api.iconify.design/material-symbols:attach-file.svg"
+                  alt="上传"
+                  class="action-icon"
+                />
               </button>
               <button class="send-btn" title="发送">
-                <img src="https://api.iconify.design/material-symbols:send.svg" alt="发送" class="action-icon">
+                <img
+                  src="https://api.iconify.design/material-symbols:send.svg"
+                  alt="发送"
+                  class="action-icon"
+                />
               </button>
             </div>
           </div>
@@ -138,21 +157,39 @@
       <!-- 基本信息板块 -->
       <div class="info-panel basic-info">
         <div class="agent-header">
-          <img src="https://picsum.photos/100/100?random=2" alt="智能体图片" class="agent-photo">
+          <img
+            src="https://picsum.photos/100/100?random=2"
+            alt="智能体图片"
+            class="agent-photo"
+          />
           <div class="agent-meta">
             <h2>智能写作助手</h2>
-            <p class="description">专业的AI写作助手，帮助你创作高质量文章，优化文章结构，改进表达方式。支持多种写作风格，让你的文章更具感染力。</p>
+            <p class="description">
+              专业的AI写作助手，帮助你创作高质量文章，优化文章结构，改进表达方式。支持多种写作风格，让你的文章更具感染力。
+            </p>
             <div class="stats">
               <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:bar-chart.svg" alt="使用量" class="stat-icon">
+                <img
+                  src="https://api.iconify.design/material-symbols:bar-chart.svg"
+                  alt="使用量"
+                  class="stat-icon"
+                />
                 <span>使用量 12,345</span>
               </div>
               <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="stat-icon">
+                <img
+                  src="https://api.iconify.design/material-symbols:favorite.svg"
+                  alt="点赞"
+                  class="stat-icon"
+                />
                 <span>点赞 2,456</span>
               </div>
               <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="stat-icon">
+                <img
+                  src="https://api.iconify.design/material-symbols:bookmark.svg"
+                  alt="收藏"
+                  class="stat-icon"
+                />
                 <span>收藏 1,234</span>
               </div>
             </div>
@@ -160,45 +197,77 @@
         </div>
 
         <div class="author-info">
-          <img src="https://picsum.photos/40/40?random=3" alt="作者头像" class="author-avatar">
+          <img
+            src="https://picsum.photos/40/40?random=3"
+            alt="作者头像"
+            class="author-avatar"
+          />
           <div class="author-meta">
             <span class="author-name">创新实验室</span>
             <span class="author-id">@innovation_lab</span>
           </div>
           <button class="follow-btn">
-            <img src="https://api.iconify.design/material-symbols:person-add-outline.svg" alt="关注" class="action-icon">
+            <img
+              src="https://api.iconify.design/material-symbols:person-add-outline.svg"
+              alt="关注"
+              class="action-icon"
+            />
             <span>关注</span>
           </button>
         </div>
 
         <div class="action-buttons">
           <button class="action-btn primary">
-            <img src="https://api.iconify.design/material-symbols:favorite-outline.svg" alt="点赞" class="action-icon">
+            <img
+              src="https://api.iconify.design/material-symbols:favorite-outline.svg"
+              alt="点赞"
+              class="action-icon"
+            />
             <span>点赞</span>
           </button>
           <button class="action-btn primary">
-            <img src="https://api.iconify.design/material-symbols:bookmark-outline.svg" alt="收藏" class="action-icon">
+            <img
+              src="https://api.iconify.design/material-symbols:bookmark-outline.svg"
+              alt="收藏"
+              class="action-icon"
+            />
             <span>收藏</span>
           </button>
           <button class="action-btn secondary">
-            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
+            <img
+              src="https://api.iconify.design/material-symbols:content-copy.svg"
+              alt="复制"
+              class="action-icon"
+            />
             <span>复制</span>
           </button>
           <button class="action-btn secondary">
-            <img src="https://api.iconify.design/material-symbols:flag.svg" alt="举报" class="action-icon">
+            <img
+              src="https://api.iconify.design/material-symbols:flag.svg"
+              alt="举报"
+              class="action-icon"
+            />
             <span>举报</span>
           </button>
         </div>
       </div>
 
       <!-- 评论区板块 -->
-      <div class="info-panel comments-section">
+      <div class="info-panel comments-section" style="min-height: 400px">
         <h3>评论区</h3>
         <div class="comments-list">
-          <div v-for="comment in comments" :key="comment.id" class="comment-card">
+          <div
+            v-for="comment in comments"
+            :key="comment.id"
+            class="comment-card"
+          >
             <div class="comment-header">
               <div class="comment-user">
-                <img :src="comment.avatar" :alt="comment.name" class="comment-avatar">
+                <img
+                  :src="comment.avatar"
+                  :alt="comment.name"
+                  class="comment-avatar"
+                />
                 <div class="user-info">
                   <span class="comment-name">{{ comment.name }}</span>
                   <span class="comment-id">{{ comment.userId }}</span>
@@ -209,18 +278,23 @@
             <p class="comment-text">{{ comment.content }}</p>
           </div>
         </div>
-        
+
         <!-- 发布评论区域 -->
         <div class="comment-publish">
           <div class="publish-content">
-            <textarea 
-              placeholder="写下你的评论..." 
+            <textarea
+              placeholder="写下你的评论..."
               class="comment-textarea"
               v-model="newComment"
               rows="1"
             ></textarea>
             <button class="publish-btn">
-              <img src="https://api.iconify.design/material-symbols:send.svg" alt="发布" class="action-icon">
+              <img
+                src="https://api.iconify.design/material-symbols:send.svg"
+                alt="发布"
+                class="action-icon"
+                @click="sendComment"
+              />
             </button>
           </div>
         </div>
@@ -230,136 +304,56 @@
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
-  name: 'AgentDetail',
+  name: "AgentDetail",
   data() {
     return {
-      newComment: '',
-      comments: [
-        {
-          id: 1,
-          name: '创意达人',
-          userId: '@creative_master',
-          avatar: 'https://picsum.photos/40/40?random=4',
-          content: '这个写作助手真的很棒！帮我完成了很多高质量的文章，特别是在优化文章结构方面非常专业。',
-          time: '2024-03-15 14:30'
-        },
-        {
-          id: 2,
-          name: '科技探索者',
-          userId: '@tech_explorer',
-          avatar: 'https://picsum.photos/40/40?random=5',
-          content: '使用了一周，文章质量明显提升，特别是在专业术语的使用上很准确。',
-          time: '2024-03-15 13:25'
-        },
-        {
-          id: 3,
-          name: '内容创作者',
-          userId: '@content_creator',
-          avatar: 'https://picsum.photos/40/40?random=6',
-          content: '界面简洁，操作方便，生成的内容很有创意，推荐给需要写作帮助的朋友们！',
-          time: '2024-03-15 12:18'
-        },
-        {
-          id: 4,
-          name: '数据分析师',
-          userId: '@data_analyst',
-          avatar: 'https://picsum.photos/40/40?random=7',
-          content: '作为一个经常需要写报告的人，这个助手帮我节省了很多时间，而且质量很好。',
-          time: '2024-03-15 11:45'
-        },
-        {
-          id: 5,
-          name: '营销专家',
-          userId: '@marketing_pro',
-          avatar: 'https://picsum.photos/40/40?random=8',
-          content: '文案创作必备工具，特别适合需要大量内容创作的营销人员。',
-          time: '2024-03-15 10:30'
-        },
-        {
-          id: 6,
-          name: '学术研究者',
-          userId: '@researcher',
-          avatar: 'https://picsum.photos/40/40?random=9',
-          content: '学术写作方面表现出色，参考文献的引用格式也很规范。',
-          time: '2024-03-15 09:20'
-        },
-        {
-          id: 7,
-          name: '自媒体人',
-          userId: '@media_creator',
-          avatar: 'https://picsum.photos/40/40?random=10',
-          content: '日常创作的得力助手，文章的逻辑性和可读性都很好。',
-          time: '2024-03-14 23:15'
-        },
-        {
-          id: 8,
-          name: '编辑总监',
-          userId: '@editor_chief',
-          avatar: 'https://picsum.photos/40/40?random=11',
-          content: '作为专业编辑，我认为这个AI助手的输出质量很高，需要的修改很少。',
-          time: '2024-03-14 22:40'
-        },
-        {
-          id: 9,
-          name: '写作爱好者',
-          userId: '@writing_lover',
-          avatar: 'https://picsum.photos/40/40?random=12',
-          content: '对新手很友好，会给出很多有建设性的修改建议。',
-          time: '2024-03-14 21:55'
-        },
-        {
-          id: 10,
-          name: '产品经理',
-          userId: '@product_manager',
-          avatar: 'https://picsum.photos/40/40?random=13',
-          content: '产品文档写作的好帮手，专业术语运用准确，逻辑清晰。',
-          time: '2024-03-14 20:30'
-        },
-        {
-          id: 11,
-          name: '技术博主',
-          userId: '@tech_blogger',
-          avatar: 'https://picsum.photos/40/40?random=14',
-          content: '技术文章写作效果很好，能够准确理解和表达技术概念。',
-          time: '2024-03-14 19:15'
-        },
-        {
-          id: 12,
-          name: '教育工作者',
-          userId: '@educator',
-          avatar: 'https://picsum.photos/40/40?random=15',
-          content: '很适合用来辅助教案编写，生成的内容通俗易懂。',
-          time: '2024-03-14 18:40'
-        },
-        {
-          id: 13,
-          name: '新闻记者',
-          userId: '@journalist',
-          avatar: 'https://picsum.photos/40/40?random=16',
-          content: '新闻写作的好助手，能快速整理要点，生成初稿。',
-          time: '2024-03-14 17:25'
-        },
-        {
-          id: 14,
-          name: '小说作家',
-          userId: '@novelist',
-          avatar: 'https://picsum.photos/40/40?random=17',
-          content: '在创意写作方面表现出色，能给出很多有趣的故事发展建议。',
-          time: '2024-03-14 16:10'
-        },
-        {
-          id: 15,
-          name: '广告文案',
-          userId: '@copywriter',
-          avatar: 'https://picsum.photos/40/40?random=18',
-          content: '文案创作效果很好，能抓住重点，文字简洁有力。',
-          time: '2024-03-14 15:00'
+      newComment: "",
+      comments: [],
+    };
+  },
+  mounted() {
+    // 待添加参数
+    // agent 被评价的智能体
+    axios
+      .get("/agent/getComments")
+      .then((response) => {
+        response = response.data;
+        if (response.code === 0) {
+          this.comments = response.data;
+        } else {
+          alert(response.message);
         }
-      ]
-    }
-  }
-}
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  },
+  methods: {
+    sendComment() {
+      // 待添加参数
+      // agent 被评价的智能体
+      // uid 发评论的用户id
+      axios
+        .post("/agent/sendComment", {
+          comment: this.newComment,
+        })
+        .then((response) => {
+          response = response.data;
+          if (response.code === 0) {
+            alert("发送成功");
+          } else {
+            alert(response.message);
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -425,7 +419,7 @@ export default {
   padding: 4px;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .agent-status {
@@ -448,7 +442,7 @@ export default {
 }
 
 .status-badge.online::before {
-  content: '';
+  content: "";
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -500,7 +494,7 @@ export default {
 
 .chat-day-divider::before,
 .chat-day-divider::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   width: 100px;
@@ -611,13 +605,24 @@ export default {
   animation: typing 1s infinite ease-in-out;
 }
 
-.typing-dot:nth-child(1) { animation-delay: 0.2s; }
-.typing-dot:nth-child(2) { animation-delay: 0.3s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+.typing-dot:nth-child(1) {
+  animation-delay: 0.2s;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.3s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 @keyframes typing {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 .progress-bar {
@@ -757,7 +762,8 @@ export default {
 .stat-icon {
   width: 20px;
   height: 20px;
-  filter: invert(23%) sepia(19%) saturate(1111%) hue-rotate(182deg) brightness(95%) contrast(85%);
+  filter: invert(23%) sepia(19%) saturate(1111%) hue-rotate(182deg)
+    brightness(95%) contrast(85%);
 }
 
 .author-info {
@@ -1040,4 +1046,4 @@ export default {
   height: 20px;
   filter: brightness(0) invert(1);
 }
-</style> 
+</style>

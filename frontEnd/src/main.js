@@ -1,57 +1,58 @@
-import { createApp } from 'vue'
-import { createRouter, createWebHistory } from 'vue-router'
-import App from './App.vue'
-import Home from './components/Home.vue'
-import Workspace from './components/Workspace.vue'
-import Message from './components/Message.vue'
-import Community from './components/Community.vue'
-import Profile from './components/Profile.vue'
-import WorkflowCanvas from './components/WorkflowCanvas.vue'
-import AgentDetail from './components/AgentDetail.vue'
+import { createApp } from "vue";
+import { createRouter, createWebHistory } from "vue-router";
+import App from "./App.vue";
+import AgentDetail from "./components/AgentDetail.vue";
+import Community from "./components/Community.vue";
+import Home from "./components/Home.vue";
+import Message from "./components/Message.vue";
+import Profile from "./components/Profile.vue";
+import WorkflowCanvas from "./components/WorkflowCanvas.vue";
+import Workspace from "./components/Workspace.vue";
+import "./mock/mock";
 
 const routes = [
   {
-    path: '/',
-    name: 'home',
-    component: Home
+    path: "/",
+    name: "home",
+    component: Home,
   },
   {
-    path: '/workspace',
-    name: 'workspace',
-    component: Workspace
+    path: "/workspace",
+    name: "workspace",
+    component: Workspace,
   },
   {
-    path: '/message',
-    name: 'message',
-    component: Message
+    path: "/message",
+    name: "message",
+    component: Message,
   },
   {
-    path: '/workspace/workflow',
-    name: 'workflow',
-    component: WorkflowCanvas
+    path: "/workspace/workflow",
+    name: "workflow",
+    component: WorkflowCanvas,
   },
   {
-    path: '/community',
-    name: 'community',
-    component: Community
+    path: "/community",
+    name: "community",
+    component: Community,
   },
   {
-    path: '/agent-detail',
-    name: 'AgentDetail',
-    component: AgentDetail
+    path: "/agent-detail",
+    name: "AgentDetail",
+    component: AgentDetail,
   },
   {
-    path: '/profile',
-    name: 'profile',
-    component: Profile
-  }
-]
+    path: "/profile",
+    name: "profile",
+    component: Profile,
+  },
+];
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
-})
+  routes,
+});
 
-const app = createApp(App)
-app.use(router)
-app.mount('#app')
+const app = createApp(App);
+app.use(router);
+app.mount("#app");
