@@ -21,4 +21,7 @@ urlpatterns = [
     path('anno/update', views.announcement_update, name='announcement_update'),
     path('anno/delete', views.announcement_delete, name='announcement_delete'),
     path('anno/get', views.announcement_list, name='announcement_list'),
+
+    # 更新密码
+    path('user/updatePassword', views.user_update_password, name='user_update_password'),
 ]

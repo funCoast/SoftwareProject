@@ -590,3 +590,32 @@ def announcement_list(request):
         'message': '获取成功',
         'announcements': data
     })
+
+@api_view(['POST'])
+def user_update_password(request):
+    data = json.loads(request.body)
+
+    uid = data['uid']
+    old_password = data['oldPwd']
+    new_password = data['newPwd']
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return Response({
+            'code': -1,
+            'message': '该用户不存在'
+        })
+
+    if user.password != old_password:
+        return JsonResponse({
+            'code': -1,
+            'message': '密码错误'
+        })
+
+    user.password = new_password
+    user.save()
+    return Response({
+        'code': 0,
+        'message': '更新成功'
+    })
