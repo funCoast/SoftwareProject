@@ -22,4 +22,6 @@ urlpatterns = [
     path('linksoul/', include("backend.urls")),
 
     path('linksoul/plugins/', include('api.core.plugin.api.urls')),
+
+    path('linksoul/agent/', include('backend.community.urls'))
 ]
