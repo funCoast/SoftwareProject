@@ -10,9 +10,7 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from .models import User
-from django.views import View
-from .models import User, PrivateMessage
+from backend.models import User, PrivateMessage, Announcement
 from django.db.models import Q
 import json
 # backend/views.py
@@ -21,15 +19,22 @@ import redis
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Announcement
 from django.utils import timezone
+
+import os
+from django.conf import settings
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.crypto import get_random_string
 
 # Redis 客户端配置
 redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
 
+
 def index(request):
     # request.method 请求方式，GET、POST，例如用request.GET.get("key")读取数据
     return HttpResponse("Hello, welcome to our Lingxi Community")
+
 
 @csrf_exempt
 def register(request):
@@ -55,9 +60,12 @@ def register(request):
     else:
         return JsonResponse({'success': False, 'msg': '仅支持 POST 请求'})
 
+
 """
 用户请求发送验证码
 """
+
+
 @api_view(['POST'])
 def send_code(request):
     def generate_code(length=6):
@@ -101,9 +109,12 @@ def send_code(request):
     except Exception as e:
         return JsonResponse({'code': -1, 'message': str(e)}, status=500)
 
+
 '''
 用户验证码登录接口
 '''
+
+
 def user_login_by_code(request):
     try:
         data = json.loads(request.body)
@@ -159,8 +170,9 @@ def user_login_by_code(request):
 """
 用户密码登录接口
 """
-def user_login_by_password(request):
 
+
+def user_login_by_password(request):
     try:
         data = json.loads(request.body)
         account = data.get('account', None)
@@ -212,9 +224,12 @@ def user_login_by_password(request):
             'message': str(e)
         })
 
+
 """
 用户修改个人信息接口
 """
+
+
 def user_update_profile(request):
     try:
         uid = request.POST.get('uid')
@@ -246,6 +261,7 @@ def user_update_profile(request):
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
 
+
 def user_fetch_profile(request):
     uid = request.GET.get('uid')
     if not uid:
@@ -275,72 +291,64 @@ def user_fetch_profile(request):
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
 
+
+AVATAR_DIR = os.path.join(settings.MEDIA_ROOT, 'avatars')
+AVATAR_URL_BASE = settings.MEDIA_URL + 'avatars/'
+
+os.makedirs(AVATAR_DIR, exist_ok=True)
+
+
+@csrf_exempt
 def user_update_avatar(request):
     uid = request.POST.get('uid')
     avatar = request.FILES.get('avatar')
 
     if not uid or not avatar:
-        return JsonResponse({
-            "code": -1,
-            "message": "uid 或 avatar 缺失"
-        })
+        return JsonResponse({"code": -1, "message": "uid 或 avatar 缺失"})
 
     try:
         user = User.objects.get(user_id=uid)
 
-        # 可选：删除旧头像（防止堆积文件）
-        if user.avatar:
-            old_avatar_path = os.path.join(settings.MEDIA_ROOT, user.avatar.name)
-            if os.path.exists(old_avatar_path):
-                os.remove(old_avatar_path)
+        # 创建头像保存路径
+        avatar_dir = os.path.join(settings.MEDIA_ROOT, 'avatars')
+        os.makedirs(avatar_dir, exist_ok=True)
 
-        # 保存新头像
-        user.avatar = avatar
+        # 构造文件名，使用用户id作为文件名
+        filename = f"{uid}_{avatar.name}"
+        filepath = os.path.join(avatar_dir, filename)
+
+        # 写入文件
+        with open(filepath, 'wb+') as destination:
+            for chunk in avatar.chunks():
+                destination.write(chunk)
+
+        # 构造 URL（这是 Nginx 公开访问路径）
+        avatar_url = f"/media/avatars/{filename}"
+        user.avatar_url = avatar_url  # 你需要在 User 模型里加一个 avatar_url 字段
         user.save()
 
-        return JsonResponse({
-            "code": 0,
-            "message": "更新成功",
-            "avatar_url": request.build_absolute_uri(user.avatar.url)  # 返回完整 URL
-        })
+        return JsonResponse({"code": 0, "message": "上传成功", "avatar": avatar_url})
     except User.DoesNotExist:
-        return JsonResponse({
-            "code": -1,
-            "message": "用户不存在"
-        })
+        return JsonResponse({"code": -1, "message": "用户不存在"})
     except Exception as e:
-        return JsonResponse({
-            "code": -1,
-            "message": f"更新失败：{str(e)}"
-        })
+        return JsonResponse({"code": -1, "message": f"上传失败：{str(e)}"})
 
 
 def user_get_avatar(request):
     uid = request.GET.get('uid')
-
     if not uid:
-        return JsonResponse({
-            "code": -1,
-            "message": "缺少 uid 参数",
-            "avatar": ""
-        })
+        return JsonResponse({"code": -1, "message": "缺少 uid 参数", "avatar": ""})
 
     try:
         user = User.objects.get(user_id=uid)
-        avatar_url = request.build_absolute_uri(user.avatar.url) if user.avatar else ""
-
         return JsonResponse({
             "code": 0,
             "message": "获取成功",
-            "avatar": avatar_url
+            "avatar": user.avatar_url  # 返回的是 Nginx 可访问的 URL
         })
-
     except User.DoesNotExist:
-        return JsonResponse({
-            "code": -1,
-            "message": "用户不存在",
-            "avatar": ""
-        })
+        return JsonResponse({"code": -1, "message": "用户不存在", "avatar": ""})
+
 
 def user_get_contacts(request):
     try:
@@ -355,8 +363,8 @@ def user_get_contacts(request):
 
         # 查询与该用户有通信记录的用户（联系人）
         messages = PrivateMessage.objects.filter(Q(sender=user) | Q(receiver=user)) \
-                    .select_related('sender', 'receiver') \
-                    .order_by('-send_time')
+            .select_related('sender', 'receiver') \
+            .order_by('-send_time')
 
         latest_msg_map = {}
 
@@ -391,6 +399,8 @@ def user_get_contacts(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"服务器错误: {str(e)}"})
+
+
 def user_get_messages(request):
     try:
         uid1 = request.GET.get('messagerId1')
@@ -432,6 +442,7 @@ def user_get_messages(request):
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"服务器错误: {str(e)}"})
 
+
 def user_send_message(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
@@ -461,6 +472,7 @@ def user_send_message(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"发送失败: {str(e)}"})
+
 
 # Announcement
 @api_view(['POST'])
@@ -544,6 +556,7 @@ def announcement_update(request):
         }]
     }, status=status.HTTP_200_OK)
 
+
 @api_view(['DELETE'])
 def announcement_delete(request):
     """
@@ -568,6 +581,7 @@ def announcement_delete(request):
             'message': 'Announcement not found.',
             'announcements': []
         }, status=status.HTTP_404_NOT_FOUND)
+
 
 @api_view(['GET'])
 def announcement_list(request):
@@ -600,6 +614,7 @@ def announcement_list(request):
         'message': '获取成功',
         'announcements': data
     })
+
 
 @api_view(['POST'])
 def user_update_password(request):
