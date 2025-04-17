@@ -1,7 +1,71 @@
+import json
+from datetime import datetime
+
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 
-from backend.models import Agent, Comment
+from backend.models import Agent, Comment, User
+
+
+@api_view(['POST'])
+def agent_send_comment(request):
+    try:
+        data = json.loads(request.body)
+
+        agent_id = data['agent']
+        user_id = data['uid']
+        comment = data['comment']
+
+        if not agent_id:
+            return JsonResponse({
+                'code': -1,
+                'message': '缺少参数 agent',
+            })
+
+        if not user_id:
+            return JsonResponse({
+                'code': -1,
+                'message': '用户为空'
+            })
+
+        if not comment:
+            return JsonResponse({
+                'code': -1,
+                'message': '不能发送空评论'
+            })
+
+        try:
+            agent = Agent.objects.get(agent_id=agent_id)
+        except Agent.DoesNotExist:
+            return JsonResponse({
+                'code': -1,
+                'message': '该智能体不存在'
+            })
+
+        try:
+            user = User.objects.get(user_id=user_id)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'code': -1,
+                'message': '用户不存在'
+            })
+
+        comment = Comment.objects.create(
+            agent=agent,
+            user=user,
+            content=comment,
+            comment_time=datetime.now(),
+        )
+
+        return JsonResponse({
+            'code': 0,
+            'message': '评论添加成功'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'code': -1,
+            'message': str(e)
+        })
 
 
 @api_view(['GET'])
