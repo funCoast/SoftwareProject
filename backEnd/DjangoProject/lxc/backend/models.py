@@ -1,4 +1,7 @@
 from django.db import models
+import uuid
+from django.utils import timezone
+
 
 # 1. 用户表（User）
 class User(models.Model):
@@ -108,20 +111,22 @@ class Workflow(models.Model):
     def __str__(self):
         return f"Workflow {self.workflow_id}"
 
-# 10. 知识库表（Knowledge Base）
+# 知识库表（Knowledge Base）
 class KnowledgeBase(models.Model):
     kb_id = models.AutoField(primary_key=True)
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     kb_name = models.CharField(max_length=100, unique=True)
     kb_type = models.CharField(max_length=50)
     kb_description = models.TextField(null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)  # 创建者
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.kb_name
 
-# 11. 知识条目表（Knowledge Entry）
-class KnowledgeEntry(models.Model):
-    # 联合主键，通过 unique_together 实现
+# 知识条目表（Agent 与 KB 的关联）
+class AgentKnowledgeEntry(models.Model):
     agent = models.ForeignKey('Agent', on_delete=models.CASCADE)
     kb = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE)
     is_used = models.BooleanField(default=False)  # 0-未调用，1-已调用
