@@ -1,6 +1,6 @@
 from django.urls import path
-
 from . import views
+from .views import UploadKnowledgeFileView
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -24,4 +24,9 @@ urlpatterns = [
 
     # 更新密码
     path('user/updatePassword', views.user_update_password, name='user_update_password'),
+
+    # knowledgeBase
+    path('api/kb/<int:kb_id>/upload/', UploadKnowledgeFileView.as_view()),
+    path('api/kb/<int:kb_id>/file/<int:file_id>/tree/', views.ChunkTreeView.as_view(), name='chunk-tree'),
+    path('api/kb/<int:kb_id>/file/<int:file_id>/chunks/', views.ChunkListView.as_view(), name='chunk-list'),
 ]
