@@ -1,14 +1,25 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import axios from "axios";
+import { ref, computed, onMounted, inject, type Ref } from 'vue'
+import axios from "axios"
+import router from '../../router'
+import { useRoute }from 'vue-router'
 
-const router = useRouter();
-const route = useRoute();
+const avatar = inject('avatar') as Ref
+const refreshAvatar = inject('refreshAvatar') as Function
+const newAvatar = ref('')
+
+const showAvatar = computed(() => {
+  if (newAvatar.value === '') {
+    return avatar.value
+  } else {
+    return newAvatar.value
+  }
+})
+
+const route = useRoute()
 const fileInput = ref<HTMLInputElement | null>(null);
 
 // 表单数据
-const avatar = ref('')
 const name = ref('')
 const description = ref('')
 const formData = new FormData()
@@ -19,17 +30,16 @@ const newPwd = ref('')
 const confirmPwd = ref('')
 
 onMounted(() => {
-  avatar.value = route.query.avatar as string || '';
-  name.value = route.query.name as string || '';
-  description.value = route.query.description as string || '';
+  name.value = route.query.name as string || ''
+  description.value = route.query.description as string || ''
 });
 
 // 密码验证错误信息
 const passwordError = computed(() => {
   if (newPwd.value && confirmPwd.value && newPwd.value !== confirmPwd.value) {
-    return '两次输入的密码不一致';
+    return '两次输入的密码不一致'
   }
-  return null;
+  return null
 });
 
 const pwdCheck = computed(() => {
@@ -38,7 +48,7 @@ const pwdCheck = computed(() => {
 
 // 触发文件选择
 function triggerFileInput() {
-  fileInput.value?.click();
+  fileInput.value?.click()
 }
 
 function uploadAvatar() {
@@ -51,27 +61,34 @@ function uploadAvatar() {
     headers: {
           'Content-Type': 'multipart/form-data',
     },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      refreshAvatar('http://122.9.33.84:8000' + response.data.avatar)
+      alert(response.data.message)
+    } else {
+      alert(response.data.message)
+    }
   })
 }
 
 // 处理头像更改
 function handleAvatarChange(event: Event) {
-  const input = event.target as HTMLInputElement;
+  const input = event.target as HTMLInputElement
   if (input.files && input.files[0]) {
-    const file = input.files[0];
+    const file = input.files[0]
     
     // 验证文件大小和类型
     if (file.size > 2 * 1024 * 1024) {
-      alert('图片大小不能超过2MB');
+      alert('图片大小不能超过2MB')
       return;
     }
     
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (e) => {
-      avatar.value = e.target?.result as string;
-    };
-    formData.append('source', input.files[0])
-    reader.readAsDataURL(file);
+      newAvatar.value = e.target?.result as string
+    }
+    formData.append('avatar', input.files[0])
+    reader.readAsDataURL(file)
   }
 }
 
@@ -86,7 +103,7 @@ function updateBasicInfo() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      alert('修改成功')
+      alert(response.data.message)
     } else {
       alert(response.data.message)
     }
@@ -139,7 +156,7 @@ function goBack() {
       <div class="form-section avatar-section">
         <label>头像</label>
         <div class="avatar-upload">
-          <img :src="avatar" alt="用户头像" class="current-avatar">
+          <img :src="showAvatar" alt="用户头像" class="current-avatar">
           <div class="upload-controls">
             <el-button class="upload-btn" @click="triggerFileInput">选择头像</el-button>
             <el-button :v-if="fileInput?.value!=null" type="primary" @click="uploadAvatar">上传头像</el-button>

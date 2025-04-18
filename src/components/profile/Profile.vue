@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onBeforeMount, inject } from 'vue'
 import axios from 'axios'
+import router from '../../router'
 
-const router = useRouter()
+const avatar = inject('avatar') as string
+
 const currentTab = ref('works')
 const tabs = ref([
   { id: 'works', name: '作品' },
@@ -14,7 +15,6 @@ const tabs = ref([
 const userInfo = ref({
   name: '',
   account: '',
-  avatar: '',
   description: '',
   following: 0,
   followers: 0,
@@ -66,7 +66,6 @@ async function fetchUserInfo() {
     console.error('用户未登录，无法获取用户信息')
     return
   }
-
   try {
     const response = await axios({
       method: 'get',
@@ -160,7 +159,6 @@ function goToEditProfile() {
     path: '/editProfile',
     query: {
       name: userInfo.value.name,
-      avatar: userInfo.value.avatar,
       description: userInfo.value.description,
     }
   });
@@ -276,7 +274,7 @@ function getDefaultFavorites(): favorite[] {
     <div class="profile-header">
       <div class="profile-info">
         <div class="avatar-section">
-          <img :src="userInfo.avatar" :alt="userInfo.name" class="avatar">
+          <img :src="avatar" :alt="userInfo.name" class="avatar">
         </div>
         <div class="info-section">
           <div class="user-name">{{ userInfo.name }}</div>
@@ -331,7 +329,7 @@ function getDefaultFavorites(): favorite[] {
             <div class="agent-header">
               <h3>{{ agent.name }}</h3>
               <div class="agent-author">
-                <img :src="userInfo.avatar" :alt="userInfo.name">
+                <img :src="avatar" :alt="userInfo.name">
                 <span>{{ userInfo.name }}</span>
               </div>
             </div>

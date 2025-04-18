@@ -1,23 +1,37 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
+import { ref, onBeforeMount, provide } from 'vue'
 import router from '../router'
 import axios from 'axios'
 
 const avatar = ref('')
-onBeforeMount(() => {
-  document.body.style.margin = '0'
+function refreshAvatar(newOne: string) {
+  avatar.value = newOne
+}
+provide('avatar', avatar)
+provide('refreshAvatar', refreshAvatar)
+
+function getAvatar() {
   axios({
     method: 'get',
     url: 'user/getAvatar',
     params: {
-      id: sessionStorage.getItem('uid')
+      uid: sessionStorage.getItem('uid')
     }
   }).then(function (response) {
-    avatar.value = response.data.avatar
+    if (response.data.code === 0) {
+      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar
+      alert(avatar.value)
+    } else {
+      alert(response.data.message)
+    }
   })
+}
+
+onBeforeMount(() => {
+  document.body.style.margin = '0'
+  getAvatar()
 })
 
-// 类型声明
 interface NavItem {
   path: string
   label: string
@@ -85,7 +99,7 @@ function handleProfileNavigation() {
 
     <!-- 主要内容区域 -->
     <div class="main-content">
-      <router-view></router-view>
+      <router-view :avatar="avatar"></router-view>
     </div>
   </div>
 </template>
