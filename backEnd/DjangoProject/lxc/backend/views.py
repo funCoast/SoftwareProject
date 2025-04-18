@@ -19,12 +19,7 @@ import redis
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from django.utils import timezone
-
 import os
-from django.conf import settings
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.utils.crypto import get_random_string
 
 # Redis 客户端配置
@@ -314,8 +309,13 @@ def user_update_avatar(request):
         os.makedirs(avatar_dir, exist_ok=True)
 
         # 构造文件名，使用用户id作为文件名
-        filename = f"{uid}_{avatar.name}"
+        _, ext = os.path.splitext(avatar.name)
+        filename = f"{uid}{ext}"
         filepath = os.path.join(avatar_dir, filename)
+
+        # 删除旧头像（如果存在）
+        if os.path.exists(filepath):
+            os.remove(filepath)
 
         # 写入文件
         with open(filepath, 'wb+') as destination:
