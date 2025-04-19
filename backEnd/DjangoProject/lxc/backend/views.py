@@ -31,6 +31,10 @@ from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
 from .utils.vector_store import add_chunks_to_agent_index
 
+from .models import Announcement
+from django.utils import timezone
+# workflow
+from ..api.core.workflow.executor import Executor
 # Redis 客户端配置
 redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
 
@@ -814,3 +818,12 @@ def ask_question(request):
         "answer": answer,
         "context": related_chunks
     })
+def workflow_run(request):
+    nodes = request.data.get("nodes", [])
+    edges = request.data.get("edges", [])
+    user_id = request.user.id
+    workflow_id = request.data.get("workflowId")
+
+    executor = Executor(user_id, workflow_id, nodes, edges)
+    result = executor.execute()
+    return JsonResponse({"result": result})

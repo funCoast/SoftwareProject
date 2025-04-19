@@ -31,4 +31,6 @@ urlpatterns = [
     path('api/kb/<int:kb_id>/file/<int:file_id>/chunks/', views.ChunkListView.as_view(), name='chunk-list'),
     path('api/vector/search/', views.VectorSearchView.as_view(), name='vector-search'),
     path('api/agent/ask/', views.ask_question, name='agent-ask'),
+    # 工作流
+    path('workflow/run',views.workflow_run, name='workflow_run')
 ]

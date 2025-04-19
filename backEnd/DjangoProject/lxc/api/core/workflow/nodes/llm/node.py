@@ -1,4 +1,7 @@
 from openai import OpenAI
+
+from ...registry import register_node
+
 import json
 client = OpenAI(
     #该API-KEY为组内成员(hty)个人所有。
@@ -6,9 +9,10 @@ client = OpenAI(
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
 
-def call_llm(prompt: str):
+def call_llm(prompt: str)->str:
     """
     使用通义Qwen模型处理用户输入，并返回完整 JSON 字符串结果
+    """
     """
     try:
         response = client.chat.completions.create(
@@ -18,6 +22,27 @@ def call_llm(prompt: str):
                 {"role": "user", "content": prompt},
             ]
         )
-        return response.model_dump_json(indent=2)  # ✅ 输出完整 JSON
+        return response.choices[0].message.content
     except Exception as e:
-        return json.dumps({"error": str(e)}, ensure_ascii=False)
+        return f"[错误] {str(e)}"
+    """
+    return "这是一个test，避免浪费token"
+
+@register_node("llm")
+def run_llm_node(node, inputs):
+    """
+    工作流中 llm 类型节点的执行函数
+    :param node: 节点配置（含 outputs）
+    :return: {'response': json_string}
+    """
+    prompt = inputs[0].get("value", "")
+    result = call_llm(prompt)
+
+    # 自动生成 outputs（按输出定义）
+    outputs = {}
+    for output in node.get("outputs", []):
+        id = output["id"]
+        outputs[id] = result  # 所有输出都给一样的结果（你也可以按 name 分别生成）
+    return outputs
+
+print(call_llm("你好吗"))
