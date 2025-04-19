@@ -8,7 +8,8 @@ class WeekdayCalculatorPlugin(BasePlugin):
         super().__init__(
             name="WeekdayCalculatorPlugin",
             version="1.0",
-            description="计算指定日期是星期几"
+            description="计算指定日期是星期几",
+            intent="Calculates and returns the day of the week for a specified date"
         )
 
     def execute(self, *args, **kwargs) -> dict:

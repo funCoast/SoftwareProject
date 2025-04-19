@@ -10,7 +10,8 @@ class TimezoneSwitchPlugin(BasePlugin):
         super().__init__(
             name="TimezoneSwitchPlugin",
             version="1.0",
-            description="时区转换"
+            description="时区转换",
+            intent="Converts time from one timezone to another"
         )
 
     def execute(self, *args, **kwargs):

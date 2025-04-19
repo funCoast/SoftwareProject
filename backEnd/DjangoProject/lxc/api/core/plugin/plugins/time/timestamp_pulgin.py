@@ -10,7 +10,8 @@ class TimestampPlugin(BasePlugin):
         super().__init__(
             name="TimestampPlugin",
             version="1.0",
-            description="获取时间戳"
+            description="获取时间戳",
+            intent="Obtain the timestamp"
         )
 
     def execute(self, *args, **kwargs):

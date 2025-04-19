@@ -10,7 +10,8 @@ class CurrentTimePlugin(BasePlugin):
         super().__init__(
             name="CurrentTimePlugin",
             version="1.0",
-            description="获取当前时间"
+            description="获取当前时间",
+            intent="Query the current time"
         )
 
     def execute(self, *args, **kwargs):

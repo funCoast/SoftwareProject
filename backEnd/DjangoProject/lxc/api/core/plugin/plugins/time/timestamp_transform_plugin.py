@@ -10,7 +10,8 @@ class TimestampTransformPlugin(BasePlugin):
         super().__init__(
             name="TimestampTransformPlugin",
             version="1.0",
-            description="时间戳转换为时间"
+            description="时间戳转换为时间",
+            intent="Calculate the time based on the timestamp"
         )
 
     def execute(self, *args, **kwargs):

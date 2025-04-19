@@ -14,9 +14,12 @@ def convert_to_wav(input_file, output_file):
 
 class TextToSpeechPlugin(BasePlugin):
     def __init__(self):
-        self.name = "TextToSpeech"
-        self.version = "1.0"
-        self.description = "将文本转化为语音"
+        super().__init__(
+            name = "TextToSpeech",
+            version = "1.0",
+            description = "将文本转化为语音",
+            intent="Convert the text into speech"
+        )
 
     def execute(self, *args, **kwargs):
         try:
