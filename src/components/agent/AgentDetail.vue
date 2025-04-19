@@ -356,11 +356,11 @@ const comments = ref<commnet[]> ([
   },
   {
     id: 15,
-    name: '广告文案',
-    userId: '@copywriter',
+    name: 'HerryOnJourney',
+    userId: '17754985138@163.com',
     avatar: 'https://picsum.photos/40/40?random=18',
-    content: '文案创作效果很好，能抓住重点，文字简洁有力。',
-    time: '2024-03-14 15:00'
+    content: '不错！',
+    time: '2025-04-13 15:00'
   }
 ])
 </script>
