@@ -20,6 +20,7 @@ import WorkflowNodeManager from "./WorkflowNodeManager.vue";
 import StartNodeDetail from './node-details/StartNodeDetail.vue'
 import EndNodeDetail from './node-details/EndNodeDetail.vue'
 import {useRouter} from "vue-router";
+import axios from "axios";
 
 const router = useRouter()
 
@@ -33,7 +34,7 @@ interface nodeType {
 
 const nodeTypes = ref<nodeType[]>([
   { 
-    type: 'model',
+    type: 'llm',
     label: '大模型',
     description: '使用AI大模型处理任务',
     image: 'https://api.iconify.design/carbon:machine-learning-model.svg',
@@ -156,6 +157,7 @@ interface WorkflowNode {
   inputs: Input[]
   outputs: Output[]
   data?: any
+  runResult?: any
 }
 
 interface Input {
@@ -207,8 +209,6 @@ const selectorPage = ref<'nodes' | 'plugins'>('nodes')
 const showRunDialog = ref(false)
 const runInputs = ref<Record<string, any>>({})
 const runStatus = ref<'running' | 'success' | 'error' | null>(null)
-const runResult = ref<any>(null)
-const runError = ref<string | null>(null)
 
 // 获取开始节点
 const startNode = computed(() => {
@@ -418,6 +418,7 @@ function runTest() {
 
 // 执行试运行
 async function executeRun() {
+  if (!startNode.value) return
   startNode.value.inputs = startNode.value.outputs.map(output => ({
     id: output.id,
     name: output.name,
@@ -432,31 +433,38 @@ async function executeRun() {
   console.log("nodes:", workflowNodes.value)
   console.log("connections: ", connections.value)
   runStatus.value = 'running'
-  runResult.value = null
-  runError.value = null
   try {
-    const response = await fetch('/workflow/run', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
+    const response = await axios({
+      method: 'post',
+      url: 'workflow/run',
+      data: {
         nodes: workflowNodes.value,
         edges: connections.value,
-      })
+        user_id: Date.now(),
+        workflow_id: Date.now()
+      }
     })
-    const data = await response.json()
-    console.log("data: ", data)
-    if (data.success) {
-      runResult.value = data.result
-      runStatus.value = 'success'
-    } else {
-      runStatus.value = 'error'
-      runError.value = data.error || '执行失败'
-    }
-  } catch (e: any) {
+    console.log("response: ", response.data)
+    const results = response.data['result']
+    console.log(results)
+    workflowNodes.value = workflowNodes.value.map(node => {
+      if (results[node.id]) {
+        return {
+          ...node,
+          runResult: results[node.id]["0"]
+        }
+      }
+      return {
+        ...node,
+        runResult: null
+      }
+    })
+    runStatus.value = 'success'
+    showRunDialog.value = false
+  } catch (error) {
+    console.error("Error:", error)
     runStatus.value = 'error'
-    runError.value = e.message || String(e)
+    showRunDialog.value = false
   }
 }
 
@@ -498,7 +506,7 @@ function getNodeDetailComponent(type: string) {
       return KnowledgeNodeDetail
     case 'loop':
       return LoopNodeDetail
-    case 'model':
+    case 'llm':
       return ModelNodeDetail
     case 'workflow':
       return WorkflowNodeDetail
@@ -775,21 +783,6 @@ const clearWorkflowCacheAndGoBack = () => {
               {{ runStatus === 'running' ? '运行中' : 
                  runStatus === 'success' ? '成功' : '失败' }}
             </span>
-          </div>
-          
-          <div v-if="runStatus === 'success' && runResult" 
-               class="result-content success">
-            <pre>{{ JSON.stringify(runResult, null, 2) }}</pre>
-          </div>
-          
-          <div v-if="runStatus === 'error' && runError" 
-               class="result-content error">
-            <pre>{{ runError }}</pre>
-          </div>
-          
-          <div v-if="runStatus === 'running'" class="result-content loading">
-            <div class="loading-spinner"></div>
-            <span>正在运行中...</span>
           </div>
         </div>
       </div>
@@ -1227,52 +1220,15 @@ const clearWorkflowCacheAndGoBack = () => {
   color: #f44336;
 }
 
-.result-content {
-  background: #f8f9fa;
-  border-radius: 4px;
-  padding: 12px;
-  margin-top: 8px;
-  font-family: monospace;
-  font-size: 12px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.result-content.error {
-  background: #ffebee;
-  color: #d32f2f;
-}
-
 .result-content pre {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-all;
 }
 
-.loading-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #e3e3e3;
-  border-top: 2px solid #3498db;
-  border-radius: 50%;
-  margin-right: 8px;
-  animation: spin 1s linear infinite;
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-.result-content.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
 }
 
 .selector-tabs {

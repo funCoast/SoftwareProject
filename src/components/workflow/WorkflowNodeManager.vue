@@ -489,6 +489,22 @@ onMounted(async () => {
              @mousedown.stop="startConnection(node, 'right', $event)">
           <div class="connector-plus">+</div>
         </div>
+
+        <!-- 运行结果显示 -->
+        <div v-if="node.runResult" class="node-result">
+          <div class="result-header">
+            <span class="result-title">运行结果</span>
+            <span class="result-type">{{ typeof node.runResult === 'object' ? 'Object' : typeof node.runResult }}</span>
+          </div>
+          <div class="result-content" :class="{ 'result-string': typeof node.runResult === 'string' }">
+            <template v-if="typeof node.runResult === 'object'">
+              <pre>{{ JSON.stringify(node.runResult, null, 2) }}</pre>
+            </template>
+            <template v-else>
+              {{ node.runResult }}
+            </template>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -556,7 +572,7 @@ onMounted(async () => {
 .workflow-node {
   position: absolute;
   width: 200px;
-  height: 120px;
+  min-height: 120px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -565,7 +581,7 @@ onMounted(async () => {
   border: 1px solid #eee;
   padding: 12px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   cursor: pointer;
   transform-origin: 0 0;
   
@@ -580,9 +596,10 @@ onMounted(async () => {
 
 .node-content {
   flex: 1;
-  height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
+  padding: 0 12px;
 }
 
 .node-header {
@@ -750,5 +767,85 @@ onMounted(async () => {
   width: 20px;
   height: 20px;
   color: #3498db;
+}
+
+.node-result {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  z-index: 10;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #e9ecef;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.result-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.result-type {
+  font-size: 11px;
+  color: #6c757d;
+  background: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.result-content {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #495057;
+  max-height: 120px;
+  overflow: auto;
+  background: white;
+}
+
+.result-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+}
+
+.result-string {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+}
+
+/* 自定义滚动条样式 */
+.result-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.result-content::-webkit-scrollbar-track {
+  background: #f1f3f5;
+  border-radius: 3px;
+}
+
+.result-content::-webkit-scrollbar-thumb {
+  background: #ced4da;
+  border-radius: 3px;
+}
+
+.result-content::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
 }
 </style> 

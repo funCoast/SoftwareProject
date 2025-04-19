@@ -76,7 +76,7 @@ async function handleRunClick() {
   }
 
   try {
-    const response = await axios.post('/plugins/WeekdayCalculatorPlugin/execute/', {
+    const response = await axios.post('/plugins/WeekdayCalculatorPlugin/execute', {
       args: [],
       kwargs: { date: runInputText.value }
     })
