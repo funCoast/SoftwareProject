@@ -18,7 +18,10 @@ class TextToSpeechPlugin(BasePlugin):
             name = "TextToSpeech",
             version = "1.0",
             description = "将文本转化为语音",
-            intent="Convert the text into speech"
+            intent="Convert_the_text_into_speech",
+            param_description={
+                "text": "text"
+            }
         )
 
     def execute(self, *args, **kwargs):

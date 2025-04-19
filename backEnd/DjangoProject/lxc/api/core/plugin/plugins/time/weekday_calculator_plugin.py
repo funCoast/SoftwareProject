@@ -9,7 +9,12 @@ class WeekdayCalculatorPlugin(BasePlugin):
             name="WeekdayCalculatorPlugin",
             version="1.0",
             description="计算指定日期是星期几",
-            intent="Calculates and returns the day of the week for a specified date"
+            intent="Calculates_and_returns_the_day_of_the_week_for_a_specified_date",
+            param_description={
+                "date": "The date for which the weekday is calculated. "
+                        "default: None. "
+                        "Format: A string in the ISO 8601 format \"YYYY-MM-DD\"."
+            }
         )
 
     def execute(self, *args, **kwargs) -> dict:

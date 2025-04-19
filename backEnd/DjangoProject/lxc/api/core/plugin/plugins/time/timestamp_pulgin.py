@@ -11,7 +11,15 @@ class TimestampPlugin(BasePlugin):
             name="TimestampPlugin",
             version="1.0",
             description="获取时间戳",
-            intent="Obtain the timestamp"
+            intent="Obtain_the_timestamp",
+            param_description= {
+                "timezone": "The timezone for which the current time is requested. "
+                            "default: None. "
+                            "Format: A string representing a timezone, e.g., \"Asia/Tokyo\", \"America/New_York\".",
+                "readable_time": "A human-readable time that the timestamp is based on. "
+                                 "default: None"
+                                 "Format: A string in the format \"%Y-%m-%d %H:%M:%S\"."
+            }
         )
 
     def execute(self, *args, **kwargs):
