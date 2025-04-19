@@ -1,4 +1,4 @@
-from ...registry import register_node
+from api.core.workflow.registry import register_node
 @register_node("start")
 def run_start_node(node,input):
     outputs = {}

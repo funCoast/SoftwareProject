@@ -5,8 +5,8 @@ import uuid
 from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional
 
-from .registry import NODE_REGISTRY
-
+from api.core.workflow.registry import NODE_REGISTRY
+from api.core.workflow.nodes import loader
 
 class NodeExecutionError(Exception):
     pass

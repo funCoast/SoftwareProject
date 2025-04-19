@@ -44,5 +44,3 @@ def run_llm_node(node, inputs):
         id = output["id"]
         outputs[id] = result  # 所有输出都给一样的结果（你也可以按 name 分别生成）
     return outputs
-
-print(call_llm("你好吗"))
