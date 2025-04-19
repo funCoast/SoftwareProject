@@ -1,11 +1,16 @@
+from api.core.plugin.plugins.base_plugin import BasePlugin
+
+
 class PluginManager:
     def __init__(self):
+        self.params_dict = {}
         self.plugins = {}
         self.intent_dict = {}
 
     def register_plugin(self, plugin):
-        self.plugins[plugin.name] = plugin
-        self.intent_dict[plugin.intent] = plugin
+        self.plugins[plugin().name] = plugin
+        self.intent_dict[plugin().intent] = plugin
+        self.params_dict[plugin().name] = plugin().param_description
 
     def get_plugin(self, name):
         if name not in self.plugins:

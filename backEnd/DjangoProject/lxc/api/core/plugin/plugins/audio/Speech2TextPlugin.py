@@ -12,7 +12,10 @@ class SpeechToTextPlugin(BasePlugin):
             name = "SpeechToTextPlugin",
             version = "1.0",
             description = "将语音音频转换为文本",
-            intent="Convert voice audio to text"
+            intent="Convert_voice_audio_to_text",
+            param_description={
+                "audio_path": "path_to_audio"
+            }
         )
 
     def convert_audio_to_wav(self, audio_path):

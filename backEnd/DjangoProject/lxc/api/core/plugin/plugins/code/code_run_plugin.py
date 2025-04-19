@@ -19,7 +19,10 @@ class CodeRunPlugin(BasePlugin):
             name="CodeRunPlugin",
             version="1.0",
             description="执行代码并返回输出",
-            intent="Run the code"
+            intent="Run_the_code",
+            param_description={
+                "code": "print(\"Hellow, world!\")"
+            }
         )
 
 
