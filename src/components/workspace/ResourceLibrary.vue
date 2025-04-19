@@ -68,13 +68,28 @@ const resources = ref<resource[]> ([
   }
 ])
 
+const dialogVisible = ref(false); // 控制弹窗显示
+const knowledgeForm = ref({
+  type: '文本', // 默认类型
+  name: '',
+  description: '',
+});
+
+// 打开弹窗
+function createKnowledge() {
+  dialogVisible.value = true;
+}
+
+// 提交表单
+function submitKnowledge() {
+  console.log('知识库信息:', knowledgeForm.value);
+  // 在这里处理提交逻辑，例如发送到后端
+  dialogVisible.value = false; // 关闭弹窗
+}
+
 function createWorkflow() {
   router.push('/workflow')
 }
-function createKnowledge() {
-  // 处理创建知识库的逻辑
-  console.log('创建知识库')
-} 
 </script>
 
 <template>
@@ -109,6 +124,44 @@ function createKnowledge() {
         </template>
       </el-dropdown>
     </div>
+
+    <!-- 知识库创建弹窗 -->
+    <el-dialog v-model="dialogVisible" title="创建知识库" width="500px" class="custom-dialog">
+      <div class="dialog-body">
+        <!-- 类型 -->
+        <div class="form-row">
+          <label class="form-label">类型</label>
+          <el-select v-model="knowledgeForm.type" placeholder="请选择类型" class="form-input">
+            <el-option label="文本" value="文本"></el-option>
+            <el-option label="表格" value="表格"></el-option>
+            <el-option label="图像" value="图像"></el-option>
+          </el-select>
+        </div>
+
+        <!-- 名称 -->
+        <div class="form-row">
+          <label class="form-label">名称</label>
+          <el-input v-model="knowledgeForm.name" placeholder="请输入知识库名称" class="form-input" />
+        </div>
+
+        <!-- 描述 -->
+        <div class="form-row">
+          <label class="form-label">描述</label>
+          <el-input
+            v-model="knowledgeForm.description"
+            type="textarea"
+            placeholder="请输入知识库描述"
+            rows="4"
+            class="form-input"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitKnowledge">创建</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 筛选栏 -->
     <div class="filter-bar">
@@ -306,4 +359,41 @@ function createKnowledge() {
   color: #95a5a6;
   font-size: 11px;
 }
-</style> 
+
+/* 自定义弹窗样式 */
+.custom-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.custom-dialog .el-dialog__header {
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+  font-size: 18px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.dialog-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* 表单项之间的间距 */
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.form-input {
+  width: 100%;
+  border-radius: 6px;
+}
+</style>

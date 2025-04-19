@@ -10,8 +10,11 @@ import EditProfile from './components/profile/EditProfile.vue';
 import WorkflowCanvas from './components/workflow/WorkflowCanvas.vue';
 import AgentDevelopment from './components/workspace/AgentDevelopment.vue';
 import ResourceLibrary from './components/workspace/ResourceLibrary.vue';
+import PictureBase from './components/knowledgeBase/PictureBase.vue';
+import TextBase from './components/knowledgeBase/TextBase.vue';
+import TableBase from './components/knowledgeBase/TableBase.vue';
 
-const authRequired = true
+const authRequired = false
 const routes = [
     { 
         path: '/login',
@@ -46,6 +49,24 @@ const routes = [
                 path: 'resourceLibrary',
                 name: 'ResourceLibrary',
                 component: ResourceLibrary
+            },
+            {
+                path: 'pictureBase/:id',
+                name: 'PictureBase',
+                component: PictureBase,
+                meta: {authReq: authRequired}
+            },
+            {
+                path: 'textBase/:id',
+                name: 'TextBase',
+                component: TextBase,
+                meta: {authReq: authRequired}
+            },
+            {
+                path: 'tableBase/:id',
+                name: 'TableBase',
+                component: TableBase,
+                meta: {authReq: authRequired}
             }
             ]
         },
