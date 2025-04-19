@@ -27,9 +27,9 @@ from backend.utils.chunker import split_text
 from .utils.segmenter import auto_clean_and_split, custom_split, split_by_headings
 from .utils.tree import build_chunk_tree
 
-from .utils.vector_store import search_similar_chunks, search_agent_chunks
+from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
-from utils.vector_store import add_chunks_to_agent_index
+from .utils.vector_store import add_chunks_to_agent_index
 
 # Redis 客户端配置
 redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
@@ -789,7 +789,7 @@ class VectorSearchView(APIView):
         if not query:
             return Response({'error': 'Missing query'}, status=400)
 
-        results = search_similar_chunks(query)
+        results = search_agent_chunks(query)
         return Response(results)
 
 
