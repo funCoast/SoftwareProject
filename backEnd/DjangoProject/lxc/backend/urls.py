@@ -29,4 +29,6 @@ urlpatterns = [
     path('api/kb/<int:kb_id>/upload/', UploadKnowledgeFileView.as_view()),
     path('api/kb/<int:kb_id>/file/<int:file_id>/tree/', views.ChunkTreeView.as_view(), name='chunk-tree'),
     path('api/kb/<int:kb_id>/file/<int:file_id>/chunks/', views.ChunkListView.as_view(), name='chunk-list'),
+    path('api/vector/search/', views.VectorSearchView.as_view(), name='vector-search'),
+    path('api/agent/ask/', views.ask_question, name='agent-ask'),
 ]
