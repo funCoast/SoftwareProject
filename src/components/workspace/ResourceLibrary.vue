@@ -1,77 +1,6 @@
-<template>
-  <div class="content">
-    <!-- 顶部标题栏 -->
-    <div class="header">
-      <h2>资源库</h2>
-      <div class="create-dropdown">
-        <button class="create-btn" @mouseenter="showDropdown = true" @mouseleave="showDropdown = false">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-          </svg>
-          创建资源
-        </button>
-        <div class="dropdown-menu" v-show="showDropdown" @mouseenter="showDropdown = true" @mouseleave="showDropdown = false">
-          <div class="dropdown-item" @click="createWorkflow">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
-            </svg>
-            <span>工作流</span>
-          </div>
-          <div class="dropdown-item" @click="createKnowledge">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
-            </svg>
-            <span>知识库</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <select class="filter-select">
-        <option value="create-time">按创建时间排序</option>
-        <option value="name">按名称排序</option>
-        <option value="modify-time">按修改时间排序</option>
-      </select>
-      <select class="filter-select">
-        <option value="all">全部</option>
-        <option value="workflow">工作流</option>
-        <option value="plugin">插件</option>
-        <option value="knowledge">知识库</option>
-      </select>
-      <div class="search-box">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-        </svg>
-        <input type="text" placeholder="搜索资源...">
-      </div>
-    </div>
-
-    <!-- 资源列表 -->
-    <div class="resource-list">
-      <div v-for="resource in resources" :key="resource.id" class="resource-card">
-        <div class="resource-icon">
-          <img :src="resource.icon" :alt="resource.name">
-          <div class="resource-type">{{ resource.type }}</div>
-        </div>
-        <div class="resource-info">
-          <h3>{{ resource.name }}</h3>
-          <p>{{ resource.description }}</p>
-          <div class="resource-meta">
-            <span class="update-time">最后更新：{{ resource.updateTime }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref } from 'vue'
 import router from '../../router'
-
-const showDropdown = ref(false)
 
 interface resource {
   id: number
@@ -139,14 +68,140 @@ const resources = ref<resource[]> ([
   }
 ])
 
+const dialogVisible = ref(false); // 控制弹窗显示
+const knowledgeForm = ref({
+  type: '文本', // 默认类型
+  name: '',
+  description: '',
+});
+
+// 打开弹窗
+function createKnowledge() {
+  dialogVisible.value = true;
+}
+
+// 提交表单
+function submitKnowledge() {
+  console.log('知识库信息:', knowledgeForm.value);
+  // 在这里处理提交逻辑，例如发送到后端
+  dialogVisible.value = false; // 关闭弹窗
+}
+
 function createWorkflow() {
   router.push('/workflow')
 }
-function createKnowledge() {
-  // 处理创建知识库的逻辑
-  console.log('创建知识库')
-} 
 </script>
+
+<template>
+  <div class="content">
+    <!-- 顶部标题栏 -->
+    <div class="header">
+      <h2>资源库</h2>
+      <el-dropdown>
+        <button class="create-btn">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          创建资源
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <div>
+            <el-dropdown-item class="dropdown-item" @click="createWorkflow">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+              </svg>
+              <span>工作流</span>
+            </el-dropdown-item>
+          </div>
+            <el-dropdown-item @click="createKnowledge">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+              </svg>
+              <span>知识库</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+
+    <!-- 知识库创建弹窗 -->
+    <el-dialog v-model="dialogVisible" title="创建知识库" width="500px" class="custom-dialog">
+      <div class="dialog-body">
+        <!-- 类型 -->
+        <div class="form-row">
+          <label class="form-label">类型</label>
+          <el-select v-model="knowledgeForm.type" placeholder="请选择类型" class="form-input">
+            <el-option label="文本" value="文本"></el-option>
+            <el-option label="表格" value="表格"></el-option>
+            <el-option label="图像" value="图像"></el-option>
+          </el-select>
+        </div>
+
+        <!-- 名称 -->
+        <div class="form-row">
+          <label class="form-label">名称</label>
+          <el-input v-model="knowledgeForm.name" placeholder="请输入知识库名称" class="form-input" />
+        </div>
+
+        <!-- 描述 -->
+        <div class="form-row">
+          <label class="form-label">描述</label>
+          <el-input
+            v-model="knowledgeForm.description"
+            type="textarea"
+            placeholder="请输入知识库描述"
+            rows="4"
+            class="form-input"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitKnowledge">创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <select class="filter-select">
+        <option value="create-time">按创建时间排序</option>
+        <option value="name">按名称排序</option>
+        <option value="modify-time">按修改时间排序</option>
+      </select>
+      <select class="filter-select">
+        <option value="all">全部</option>
+        <option value="workflow">工作流</option>
+        <option value="plugin">插件</option>
+        <option value="knowledge">知识库</option>
+      </select>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+        <input type="text" placeholder="搜索资源...">
+      </div>
+    </div>
+
+    <!-- 资源列表 -->
+    <div class="resource-list">
+      <div v-for="resource in resources" :key="resource.id" class="resource-card">
+        <div class="resource-icon">
+          <img :src="resource.icon" :alt="resource.name">
+          <div class="resource-type">{{ resource.type }}</div>
+        </div>
+        <div class="resource-info">
+          <h3>{{ resource.name }}</h3>
+          <p>{{ resource.description }}</p>
+          <div class="resource-meta">
+            <span class="update-time">最后更新：{{ resource.updateTime }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .content {
@@ -187,36 +242,6 @@ function createKnowledge() {
 
 .create-btn:hover {
   background: #34495e;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: white;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  min-width: 160px;
-  z-index: 1000;
-  margin-top: 4px;
-}
-
-.dropdown-item {
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #2c3e50;
-  transition: background-color 0.3s;
-}
-
-.dropdown-item:hover {
-  background: #f8f9fa;
-}
-
-.dropdown-item svg {
-  color: #666;
 }
 
 .filter-bar {
@@ -334,4 +359,41 @@ function createKnowledge() {
   color: #95a5a6;
   font-size: 11px;
 }
-</style> 
+
+/* 自定义弹窗样式 */
+.custom-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.custom-dialog .el-dialog__header {
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+  font-size: 18px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.dialog-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* 表单项之间的间距 */
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.form-input {
+  width: 100%;
+  border-radius: 6px;
+}
+</style>

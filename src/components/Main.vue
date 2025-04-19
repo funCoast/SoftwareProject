@@ -1,22 +1,36 @@
 <script setup lang="ts">
-import { ref, onBeforeMount } from 'vue'
+import { ref, onBeforeMount, provide } from 'vue'
 import router from '../router'
 import axios from 'axios'
 
 const avatar = ref('')
-onBeforeMount(() => {
+function refreshAvatar(newOne: string) {
+  avatar.value = newOne
+}
+provide('avatar', avatar)
+provide('refreshAvatar', refreshAvatar)
+
+function getAvatar() {
   axios({
     method: 'get',
     url: 'user/getAvatar',
     params: {
-      id: sessionStorage.getItem('uid')
+      uid: sessionStorage.getItem('uid')
     }
   }).then(function (response) {
-    avatar.value = response.data.avatar
+    if (response.data.code === 0) {
+      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar
+    } else {
+      alert(response.data.message)
+    }
   })
+}
+
+onBeforeMount(() => {
+  document.body.style.margin = '0'
+  getAvatar()
 })
 
-// 类型声明
 interface NavItem {
   path: string
   label: string
@@ -70,7 +84,7 @@ function handleProfileNavigation() {
           <span class="message-badge">3</span>
         </div>
       </div>
-      
+
       <!-- 导航菜单 -->
       <nav>
         <ul>
@@ -84,7 +98,7 @@ function handleProfileNavigation() {
 
     <!-- 主要内容区域 -->
     <div class="main-content">
-      <router-view></router-view>
+      <router-view :avatar="avatar"></router-view>
     </div>
   </div>
 </template>
@@ -258,7 +272,7 @@ nav ul li.active .nav-icon {
   .side-nav {
     width: 180px;
     padding: 15px;
-    
+
     nav ul li {
       padding: 12px 15px;
     }

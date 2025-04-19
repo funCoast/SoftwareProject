@@ -11,7 +11,7 @@ app.use(router)
 
 sessionStorage.clear()
 
-axios.defaults.baseURL = '/api/backend'
+axios.defaults.baseURL = '/api/linksoul'
 
 // 每次请求都带上token
 axios.interceptors.request.use(function (config) {

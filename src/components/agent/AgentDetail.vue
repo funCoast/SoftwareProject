@@ -1,234 +1,3 @@
-<template>
-  <div class="agent-detail">
-    <!-- 左侧智能体展示区 -->
-    <div class="agent-preview">
-      <div class="agent-chat-window">
-        <!-- 聊天头部 -->
-        <div class="chat-header">
-          <div class="chat-header-left">
-            <img src="https://api.iconify.design/material-symbols:robot.svg" alt="智能体" class="agent-icon">
-            <div class="agent-status">
-              <span class="agent-name">智能写作助手</span>
-              <span class="status-badge online">在线</span>
-            </div>
-          </div>
-          <div class="chat-actions">
-            <button class="action-btn" title="清空对话">
-              <img src="https://api.iconify.design/material-symbols:delete-outline.svg" alt="清空" class="action-icon">
-            </button>
-            <button class="action-btn" title="导出对话">
-              <img src="https://api.iconify.design/material-symbols:download.svg" alt="导出" class="action-icon">
-            </button>
-          </div>
-        </div>
-
-        <!-- 聊天内容区 -->
-        <div class="chat-content">
-          <div class="chat-day-divider">今天</div>
-          
-          <!-- 系统消息 -->
-          <div class="message system">
-            <div class="message-content">
-              我是你的智能写作助手，可以帮你：
-              <ul>
-                <li>优化文章结构和表达</li>
-                <li>检查语法和用词</li>
-                <li>生成创意内容</li>
-                <li>提供写作建议</li>
-              </ul>
-              让我们开始创作吧！
-            </div>
-          </div>
-
-          <!-- 用户消息 -->
-          <div class="message user">
-            <div class="message-avatar">
-              <img src="https://picsum.photos/40/40?random=1" alt="用户头像">
-            </div>
-            <div class="message-content">
-              帮我写一篇关于人工智能对未来教育影响的文章，要求：
-              1. 1500字左右
-              2. 包含具体案例
-              3. 重点讨论利弊
-            </div>
-            <div class="message-time">14:23</div>
-          </div>
-
-          <!-- 助手消息 -->
-          <div class="message assistant">
-            <div class="message-avatar">
-              <img src="https://api.iconify.design/material-symbols:robot.svg" alt="助手头像">
-            </div>
-            <div class="message-content">
-              好的，我来帮你写一篇关于人工智能对未来教育影响的文章。以下是文章大纲：
-
-              <div class="outline-block">
-                <div class="outline-title">文章大纲：</div>
-                <div class="outline-content">
-                  1. 引言：AI 教育变革的时代背景
-                  2. AI 在教育中的应用现状
-                  3. AI 教育的优势分析
-                  4. 潜在的挑战和风险
-                  5. 案例分析
-                  6. 未来展望和建议
-                </div>
-              </div>
-
-              需要我按这个大纲展开写作吗？
-            </div>
-            <div class="message-time">14:24</div>
-          </div>
-
-          <!-- 用户消息 -->
-          <div class="message user">
-            <div class="message-avatar">
-              <img src="https://picsum.photos/40/40?random=1" alt="用户头像">
-            </div>
-            <div class="message-content">
-              好的，请帮我完整写出这篇文章
-            </div>
-            <div class="message-time">14:24</div>
-          </div>
-
-          <!-- 助手消息（带进度条） -->
-          <div class="message assistant">
-            <div class="message-avatar">
-              <img src="https://api.iconify.design/material-symbols:robot.svg" alt="助手头像">
-            </div>
-            <div class="message-content">
-              <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-              </div>
-              <div class="progress-bar">
-                <div class="progress" style="width: 65%"></div>
-              </div>
-              <div class="progress-text">正在生成文章...</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 输入区域 -->
-        <div class="chat-input-area">
-          <div class="input-container">
-            <textarea 
-              placeholder="输入消息..." 
-              rows="1"
-              class="chat-input"
-            ></textarea>
-            <div class="input-actions">
-              <button class="action-btn" title="上传文件">
-                <img src="https://api.iconify.design/material-symbols:attach-file.svg" alt="上传" class="action-icon">
-              </button>
-              <button class="send-btn" title="发送">
-                <img src="https://api.iconify.design/material-symbols:send.svg" alt="发送" class="action-icon">
-              </button>
-            </div>
-          </div>
-          <div class="input-tips">
-            Shift + Enter 换行 &nbsp;|&nbsp; Enter 发送
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 右侧信息区 -->
-    <div class="agent-info">
-      <!-- 基本信息板块 -->
-      <div class="info-panel basic-info">
-        <div class="agent-header">
-          <img src="https://picsum.photos/100/100?random=2" alt="智能体图片" class="agent-photo">
-          <div class="agent-meta">
-            <h2>智能写作助手</h2>
-            <p class="description">专业的AI写作助手，帮助你创作高质量文章，优化文章结构，改进表达方式。支持多种写作风格，让你的文章更具感染力。</p>
-            <div class="stats">
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:bar-chart.svg" alt="使用量" class="stat-icon">
-                <span>使用量 12,345</span>
-              </div>
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="stat-icon">
-                <span>点赞 2,456</span>
-              </div>
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="stat-icon">
-                <span>收藏 1,234</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="author-info">
-          <img src="https://picsum.photos/40/40?random=3" alt="作者头像" class="author-avatar">
-          <div class="author-meta">
-            <span class="author-name">创新实验室</span>
-            <span class="author-id">@innovation_lab</span>
-          </div>
-          <button class="follow-btn">
-            <img src="https://api.iconify.design/material-symbols:person-add-outline.svg" alt="关注" class="action-icon">
-            <span>关注</span>
-          </button>
-        </div>
-
-        <div class="action-buttons">
-          <button class="action-btn primary">
-            <img src="https://api.iconify.design/material-symbols:favorite-outline.svg" alt="点赞" class="action-icon">
-            <span>点赞</span>
-          </button>
-          <button class="action-btn primary">
-            <img src="https://api.iconify.design/material-symbols:bookmark-outline.svg" alt="收藏" class="action-icon">
-            <span>收藏</span>
-          </button>
-          <button class="action-btn secondary">
-            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
-            <span>复制</span>
-          </button>
-          <button class="action-btn secondary">
-            <img src="https://api.iconify.design/material-symbols:flag.svg" alt="举报" class="action-icon">
-            <span>举报</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 评论区板块 -->
-      <div class="info-panel comments-section">
-        <h3>评论区</h3>
-        <div class="comments-list">
-          <div v-for="comment in comments" :key="comment.id" class="comment-card">
-            <div class="comment-header">
-              <div class="comment-user">
-                <img :src="comment.avatar" :alt="comment.name" class="comment-avatar">
-                <div class="user-info">
-                  <span class="comment-name">{{ comment.name }}</span>
-                  <span class="comment-id">{{ comment.userId }}</span>
-                </div>
-              </div>
-              <span class="comment-time">{{ comment.time }}</span>
-            </div>
-            <p class="comment-text">{{ comment.content }}</p>
-          </div>
-        </div>
-        
-        <!-- 发布评论区域 -->
-        <div class="comment-publish">
-          <div class="publish-content">
-            <textarea 
-              placeholder="写下你的评论..." 
-              class="comment-textarea"
-              v-model="newComment"
-              rows="1"
-            ></textarea>
-            <button class="publish-btn">
-              <img src="https://api.iconify.design/material-symbols:send.svg" alt="发布" class="action-icon">
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref } from 'vue'
 
@@ -356,14 +125,245 @@ const comments = ref<commnet[]> ([
   },
   {
     id: 15,
-    name: 'HerryOnJourney',
-    userId: '17754985138@163.com',
+    name: '广告文案',
+    userId: '@copywriter',
     avatar: 'https://picsum.photos/40/40?random=18',
-    content: '不错！',
-    time: '2025-04-13 15:00'
+    content: '文案创作效果很好，能抓住重点，文字简洁有力。',
+    time: '2024-03-14 15:00'
   }
 ])
 </script>
+
+<template>
+  <div class="agent-detail">
+    <!-- 左侧智能体展示区 -->
+    <div class="agent-preview">
+      <div class="agent-chat-window">
+        <!-- 聊天头部 -->
+        <div class="chat-header">
+          <div class="chat-header-left">
+            <img src="https://api.iconify.design/material-symbols:robot.svg" alt="智能体" class="agent-icon">
+            <div class="agent-status">
+              <span class="agent-name">智能写作助手</span>
+              <span class="status-badge online">在线</span>
+            </div>
+          </div>
+          <div class="chat-actions">
+            <button class="action-btn" title="清空对话">
+              <img src="https://api.iconify.design/material-symbols:delete-outline.svg" alt="清空" class="action-icon">
+            </button>
+            <button class="action-btn" title="导出对话">
+              <img src="https://api.iconify.design/material-symbols:download.svg" alt="导出" class="action-icon">
+            </button>
+          </div>
+        </div>
+
+        <!-- 聊天内容区 -->
+        <div class="chat-content">
+          <div class="chat-day-divider">今天</div>
+
+          <!-- 系统消息 -->
+          <div class="message system">
+            <div class="message-content">
+              我是你的智能写作助手，可以帮你：
+              <ul>
+                <li>优化文章结构和表达</li>
+                <li>检查语法和用词</li>
+                <li>生成创意内容</li>
+                <li>提供写作建议</li>
+              </ul>
+              让我们开始创作吧！
+            </div>
+          </div>
+
+          <!-- 用户消息 -->
+          <div class="message user">
+            <div class="message-avatar">
+              <img src="https://picsum.photos/40/40?random=1" alt="用户头像">
+            </div>
+            <div class="message-content">
+              帮我写一篇关于人工智能对未来教育影响的文章，要求：
+              1. 1500字左右
+              2. 包含具体案例
+              3. 重点讨论利弊
+            </div>
+            <div class="message-time">14:23</div>
+          </div>
+
+          <!-- 助手消息 -->
+          <div class="message assistant">
+            <div class="message-avatar">
+              <img src="https://api.iconify.design/material-symbols:robot.svg" alt="助手头像">
+            </div>
+            <div class="message-content">
+              好的，我来帮你写一篇关于人工智能对未来教育影响的文章。以下是文章大纲：
+
+              <div class="outline-block">
+                <div class="outline-title">文章大纲：</div>
+                <div class="outline-content">
+                  1. 引言：AI 教育变革的时代背景
+                  2. AI 在教育中的应用现状
+                  3. AI 教育的优势分析
+                  4. 潜在的挑战和风险
+                  5. 案例分析
+                  6. 未来展望和建议
+                </div>
+              </div>
+
+              需要我按这个大纲展开写作吗？
+            </div>
+            <div class="message-time">14:24</div>
+          </div>
+
+          <!-- 用户消息 -->
+          <div class="message user">
+            <div class="message-avatar">
+              <img src="https://picsum.photos/40/40?random=1" alt="用户头像">
+            </div>
+            <div class="message-content">
+              好的，请帮我完整写出这篇文章
+            </div>
+            <div class="message-time">14:24</div>
+          </div>
+
+          <!-- 助手消息（带进度条） -->
+          <div class="message assistant">
+            <div class="message-avatar">
+              <img src="https://api.iconify.design/material-symbols:robot.svg" alt="助手头像">
+            </div>
+            <div class="message-content">
+              <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+              </div>
+              <div class="progress-bar">
+                <div class="progress" style="width: 65%"></div>
+              </div>
+              <div class="progress-text">正在生成文章...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="chat-input-area">
+          <div class="input-container">
+            <textarea
+                placeholder="输入消息..."
+                rows="1"
+                class="chat-input"
+            ></textarea>
+            <div class="input-actions">
+              <button class="action-btn" title="上传文件">
+                <img src="https://api.iconify.design/material-symbols:attach-file.svg" alt="上传" class="action-icon">
+              </button>
+              <button class="send-btn" title="发送">
+                <img src="https://api.iconify.design/material-symbols:send.svg" alt="发送" class="action-icon">
+              </button>
+            </div>
+          </div>
+          <div class="input-tips">
+            Shift + Enter 换行 &nbsp;|&nbsp; Enter 发送
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧信息区 -->
+    <div class="agent-info">
+      <!-- 基本信息板块 -->
+      <div class="info-panel basic-info">
+        <div class="agent-header">
+          <img src="https://picsum.photos/100/100?random=2" alt="智能体图片" class="agent-photo">
+          <div class="agent-meta">
+            <h2>智能写作助手</h2>
+            <p class="description">专业的AI写作助手，帮助你创作高质量文章，优化文章结构，改进表达方式。支持多种写作风格，让你的文章更具感染力。</p>
+            <div class="stats">
+              <div class="stat-item">
+                <img src="https://api.iconify.design/material-symbols:bar-chart.svg" alt="使用量" class="stat-icon">
+                <span>使用量 12,345</span>
+              </div>
+              <div class="stat-item">
+                <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="stat-icon">
+                <span>点赞 2,456</span>
+              </div>
+              <div class="stat-item">
+                <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="stat-icon">
+                <span>收藏 1,234</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="author-info">
+          <img src="https://picsum.photos/40/40?random=3" alt="作者头像" class="author-avatar">
+          <div class="author-meta">
+            <span class="author-name">创新实验室</span>
+            <span class="author-id">@innovation_lab</span>
+          </div>
+          <button class="follow-btn">
+            <img src="https://api.iconify.design/material-symbols:person-add-outline.svg" alt="关注" class="action-icon">
+            <span>关注</span>
+          </button>
+        </div>
+
+        <div class="action-buttons">
+          <button class="action-btn primary">
+            <img src="https://api.iconify.design/material-symbols:favorite-outline.svg" alt="点赞" class="action-icon">
+            <span>点赞</span>
+          </button>
+          <button class="action-btn primary">
+            <img src="https://api.iconify.design/material-symbols:bookmark-outline.svg" alt="收藏" class="action-icon">
+            <span>收藏</span>
+          </button>
+          <button class="action-btn secondary">
+            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
+            <span>复制</span>
+          </button>
+          <button class="action-btn secondary">
+            <img src="https://api.iconify.design/material-symbols:flag.svg" alt="举报" class="action-icon">
+            <span>举报</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 评论区板块 -->
+      <div class="info-panel comments-section">
+        <h3>评论区</h3>
+        <div class="comments-list">
+          <div v-for="comment in comments" :key="comment.id" class="comment-card">
+            <div class="comment-header">
+              <div class="comment-user">
+                <img :src="comment.avatar" :alt="comment.name" class="comment-avatar">
+                <div class="user-info">
+                  <span class="comment-name">{{ comment.name }}</span>
+                  <span class="comment-id">{{ comment.userId }}</span>
+                </div>
+              </div>
+              <span class="comment-time">{{ comment.time }}</span>
+            </div>
+            <p class="comment-text">{{ comment.content }}</p>
+          </div>
+        </div>
+
+        <!-- 发布评论区域 -->
+        <div class="comment-publish">
+          <div class="publish-content">
+            <textarea
+                placeholder="写下你的评论..."
+                class="comment-textarea"
+                v-model="newComment"
+                rows="1"
+            ></textarea>
+            <button class="publish-btn">
+              <img src="https://api.iconify.design/material-symbols:send.svg" alt="发布" class="action-icon">
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .agent-detail {

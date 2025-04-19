@@ -1,81 +1,89 @@
-import Login from './components/login/Login.vue';
-import Main from './components/Main.vue';
-import { createRouter, createWebHashHistory } from 'vue-router'
-import Home from './components/home/Home.vue';
-import Workspace from './components/workspace/Workspace.vue';
-import Community from './components/community/Community.vue';
-import AgentDetail from './components/agent/AgentDetail.vue';
-import Profile from './components/profile/Profile.vue';
-import EditProfile from './components/profile/EditProfile.vue';
-import WorkflowCanvas from './components/workflow/WorkflowCanvas.vue';
-import AgentDevelopment from './components/workspace/AgentDevelopment.vue';
-import ResourceLibrary from './components/workspace/ResourceLibrary.vue';
+import { createRouter, createWebHashHistory } from 'vue-router';
 
-const authRequired = false
+const authRequired = true; // 是否需要登录
+
 const routes = [
-    { 
+    {
         path: '/login',
         name: 'Login',
-        meta: {authReq: false},
-        component: Login 
+        meta: { authReq: false },
+        component: () => import('./components/login/Login.vue'),
     },
     {
         path: '/',
         name: 'Main',
         redirect: '/home',
-        meta: {authReq: authRequired},
-        component: Main,
+        meta: { authReq: authRequired },
+        component: () => import('./components/Main.vue'),
         children: [
-        {
-            path: 'home',
-            name: 'Home',
-            component: Home
-        },
-        {
-            path: 'workspace',
-            name: 'Workspace',
-            redirect: '/workspace/agentDevelopment',
-            component: Workspace,
-            children: [
             {
-                path: 'agentDevelopment',
-                name: 'AgentDevelopment',
-                component: AgentDevelopment
+                path: 'home',
+                name: 'Home',
+                component: () => import('./components/home/Home.vue'),
             },
             {
-                path: 'resourceLibrary',
-                name: 'ResourceLibrary',
-                component: ResourceLibrary
-            }
-            ]
-        },
-        {
-            path: 'community',
-            name: 'Community',
-            component: Community
-        },
-        {
-            path: 'agentDetail',
-            name: 'AgentDetail',
-            component: AgentDetail
-        },
-        {
-            path: 'profile',
-            name: 'Profile',
-            component: Profile
-        },
-        {
-            path: 'editProfile',
-            name: 'EditProfile',
-            component: EditProfile
-        }
-        ]
+                path: 'workspace',
+                name: 'Workspace',
+                redirect: '/workspace/agentDevelopment',
+                component: () => import('./components/workspace/Workspace.vue'),
+                children: [
+                    {
+                        path: 'agentDevelopment',
+                        name: 'AgentDevelopment',
+                        component: () => import('./components/workspace/AgentDevelopment.vue'),
+                    },
+                    {
+                        path: 'resourceLibrary',
+                        name: 'ResourceLibrary',
+                        component: () => import('./components/workspace/ResourceLibrary.vue'),
+                    },
+                    {
+                        path: 'pictureBase/:id',
+                        name: 'PictureBase',
+                        component: () => import('./components/knowledgeBase/PictureBase.vue'),
+                        meta: { authReq: authRequired },
+                    },
+                    {
+                        path: 'textBase/:id',
+                        name: 'TextBase',
+                        component: () => import('./components/knowledgeBase/TextBase.vue'),
+                        meta: { authReq: authRequired },
+                    },
+                    {
+                        path: 'tableBase/:id',
+                        name: 'TableBase',
+                        component: () => import('./components/knowledgeBase/TableBase.vue'),
+                        meta: { authReq: authRequired },
+                    },
+                ],
+            },
+            {
+                path: 'community',
+                name: 'Community',
+                component: () => import('./components/community/Community.vue'),
+            },
+            {
+                path: 'agentDetail',
+                name: 'AgentDetail',
+                component: () => import('./components/agent/AgentDetail.vue'),
+            },
+            {
+                path: 'profile',
+                name: 'Profile',
+                component: () => import('./components/profile/Profile.vue'),
+            },
+            {
+                path: 'editProfile',
+                name: 'EditProfile',
+                component: () => import('./components/profile/EditProfile.vue'),
+            },
+        ],
     },
     {
         path: '/workflow',
         name: 'WorkflowCanvas',
-        component: WorkflowCanvas
-    }
+        component: () => import('./components/workflow/WorkflowCanvas.vue'),
+    },
 ];
 
 const router = createRouter({
@@ -84,23 +92,20 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-    console.log('from:');
-    console.log(from);
+    console.log('from:', from);
+    console.log('to:', to);
 
-    console.log('to:');
-    console.log(to);
-    // 此路由是否需要登录
+    // 检查是否需要登录
     if (to.meta.authReq === true) {
-        // 检查是否登录
         if (sessionStorage.getItem('token')) {
             next();
         } else {
             alert("请登录！");
-            next({
-                name: 'Login',
-            })
+            next({ name: 'Login' });
         }
-    } else next();
+    } else {
+        next();
+    }
 });
 
 export default router;

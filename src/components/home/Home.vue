@@ -1,58 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import axios from 'axios'
+import { ref, computed, watch, onBeforeMount } from 'vue'
+import moment from 'moment'
 
-const currentNoticeTab = ref<string>('review')
 const currentAgentTab = ref<string>('hot')
 const currentPage = ref(1)
 const itemsPerPage = ref(6)
 
-interface notice {
+interface announcement {
   id: number
   title: string
   content: string
-  time: string
+  time: Date
 }
-const reviewNotices = ref<notice[]> ([
-  {
-    id: 1,
-    title: '智能体审核通过',
-    content: '您的智能体"AI助手"已通过审核，现已上线智能体市场。该智能体具有强大的自然语言处理能力，支持多轮对话和上下文理解，可以为用户提供智能问答、任务规划、信息检索等服务。系统对其进行了全面的安全性和稳定性测试，确保其能够安全可靠地为用户提供服务。',
-    time: '2024-03-15 14:30'
-  },
-  {
-    id: 2,
-    title: '智能体更新提醒',
-    content: '您的智能体"数据分析师"需要更新到最新版本。新版本增加了更多强大的数据分析功能，包括高级数据可视化、预测分析、机器学习模型训练等。同时优化了用户界面，提升了操作体验。建议您及时更新以获取最新功能和性能提升。',
-    time: '2024-03-14 16:45'
-  },
-  {
-    id: 3,
-    title: '新智能体上线',
-    content: '您的智能体"创意写作助手"已成功上线。该智能体采用最新的GPT模型，支持多种文体和风格，可以生成高质量的文章、故事、诗歌等。它能够理解用户的需求，提供个性化的写作建议，并支持多语言创作。欢迎广大用户体验新功能，提供宝贵意见。',
-    time: '2024-03-13 09:15'
-  }
-])
-const systemNotices = ref<notice[]> ([
-  {
-    id: 1,
-    title: '系统维护通知',
-    content: '系统将于今晚22:00-23:00进行例行维护。维护期间部分功能可能暂时无法使用，包括智能体发布等。我们将在维护完成后第一时间恢复服务，给您带来的不便敬请谅解。',
-    time: '2025-04-13 9:37'
-  },
-  {
-    id: 2,
-    title: '新功能上线',
-    content: '智能体市场新增智能体克隆功能。用户可以将模板智能体直接克隆到个人工作空间进行二次创作。',
-    time: '2025-04-13 9:43'
-  },
-  {
-    id: 3,
-    title: '社区活动',
-    content: '智能体开发者社区将于下周二举办线下分享会。欢迎广大开发者积极参与，共同探讨智能体技术的发展方向。',
-    time: '2025-04-13 9:45'
-  }
-])
-  
+
+const announcements = ref<announcement[]>([])
+
 interface agent {
   id: number
   name: string
@@ -68,6 +31,21 @@ interface agent {
     avatar: string
   }
 }
+
+onBeforeMount (() => {
+  axios({
+    method: 'get',
+    url: 'anno/get',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+    if(response.data.code === 0) {
+      announcements.value=response.data.announcements
+    }
+  })
+})
+
 const hotAgents = ref<agent[]> ([
   {
     id: 1,
@@ -345,101 +323,101 @@ const followingAgents = ref<agent[]> ([
 ])
 
 const favoriteAgents = ref<agent[]> ([
-{
-  id: 1,
-  name: '翻译助手',
-  category: '语言工具',
-  description: '多语言翻译，支持多种语言互译和实时翻译',
-  icon: 'fas fa-language',
-  image: 'https://picsum.photos/300/300?random=13',
-  usage: '900',
-  likes: '567',
-  favorites: '345',
-  author: {
-    name: '语言专家',
-    avatar: 'https://picsum.photos/50/50?random=13'
+  {
+    id: 1,
+    name: '翻译助手',
+    category: '语言工具',
+    description: '多语言翻译，支持多种语言互译和实时翻译',
+    icon: 'fas fa-language',
+    image: 'https://picsum.photos/300/300?random=13',
+    usage: '900',
+    likes: '567',
+    favorites: '345',
+    author: {
+      name: '语言专家',
+      avatar: 'https://picsum.photos/50/50?random=13'
+    }
+  },
+  {
+    id: 2,
+    name: '音乐创作',
+    category: '音乐工具',
+    description: 'AI音乐创作助手，支持作曲和编曲',
+    icon: 'fas fa-music',
+    image: 'https://picsum.photos/300/300?random=14',
+    usage: '720',
+    likes: '480',
+    favorites: '280',
+    author: {
+      name: '音乐人',
+      avatar: 'https://picsum.photos/50/50?random=14'
+    }
+  },
+  {
+    id: 3,
+    name: '视频剪辑',
+    category: '视频工具',
+    description: '智能视频剪辑助手，提供视频编辑建议',
+    icon: 'fas fa-video',
+    image: 'https://picsum.photos/300/300?random=15',
+    usage: '850',
+    likes: '520',
+    favorites: '310',
+    author: {
+      name: '视频专家',
+      avatar: 'https://picsum.photos/50/50?random=15'
+    }
+  },
+  {
+    id: 4,
+    name: '3D建模',
+    category: '设计工具',
+    description: 'AI辅助3D建模，提供建模建议和优化',
+    icon: 'fas fa-cube',
+    image: 'https://picsum.photos/300/300?random=16',
+    usage: '680',
+    likes: '420',
+    favorites: '250',
+    author: {
+      name: '设计专家',
+      avatar: 'https://picsum.photos/50/50?random=16'
+    }
+  },
+  {
+    id: 5,
+    name: '法律顾问',
+    category: '法律服务',
+    description: '智能法律咨询助手，提供法律建议和解释',
+    icon: 'fas fa-gavel',
+    image: 'https://picsum.photos/300/300?random=17',
+    usage: '750',
+    likes: '450',
+    favorites: '270',
+    author: {
+      name: '法律专家',
+      avatar: 'https://picsum.photos/50/50?random=17'
+    }
+  },
+  {
+    id: 6,
+    name: '心理咨询',
+    category: '心理服务',
+    description: 'AI心理咨询助手，提供心理建议和疏导',
+    icon: 'fas fa-brain',
+    image: 'https://picsum.photos/300/300?random=18',
+    usage: '820',
+    likes: '490',
+    favorites: '290',
+    author: {
+      name: '心理专家',
+      avatar: 'https://picsum.photos/50/50?random=18'
+    }
   }
-},
-{
-  id: 2,
-  name: '音乐创作',
-  category: '音乐工具',
-  description: 'AI音乐创作助手，支持作曲和编曲',
-  icon: 'fas fa-music',
-  image: 'https://picsum.photos/300/300?random=14',
-  usage: '720',
-  likes: '480',
-  favorites: '280',
-  author: {
-    name: '音乐人',
-    avatar: 'https://picsum.photos/50/50?random=14'
-  }
-},
-{
-  id: 3,
-  name: '视频剪辑',
-  category: '视频工具',
-  description: '智能视频剪辑助手，提供视频编辑建议',
-  icon: 'fas fa-video',
-  image: 'https://picsum.photos/300/300?random=15',
-  usage: '850',
-  likes: '520',
-  favorites: '310',
-  author: {
-    name: '视频专家',
-    avatar: 'https://picsum.photos/50/50?random=15'
-  }
-},
-{
-  id: 4,
-  name: '3D建模',
-  category: '设计工具',
-  description: 'AI辅助3D建模，提供建模建议和优化',
-  icon: 'fas fa-cube',
-  image: 'https://picsum.photos/300/300?random=16',
-  usage: '680',
-  likes: '420',
-  favorites: '250',
-  author: {
-    name: '设计专家',
-    avatar: 'https://picsum.photos/50/50?random=16'
-  }
-},
-{
-  id: 5,
-  name: '法律顾问',
-  category: '法律服务',
-  description: '智能法律咨询助手，提供法律建议和解释',
-  icon: 'fas fa-gavel',
-  image: 'https://picsum.photos/300/300?random=17',
-  usage: '750',
-  likes: '450',
-  favorites: '270',
-  author: {
-    name: '法律专家',
-    avatar: 'https://picsum.photos/50/50?random=17'
-  }
-},
-{
-  id: 6,
-  name: '心理咨询',
-  category: '心理服务',
-  description: 'AI心理咨询助手，提供心理建议和疏导',
-  icon: 'fas fa-brain',
-  image: 'https://picsum.photos/300/300?random=18',
-  usage: '820',
-  likes: '490',
-  favorites: '290',
-  author: {
-    name: '心理专家',
-    avatar: 'https://picsum.photos/50/50?random=18'
-  }
-}
 ])
 
 const currentAgents =  computed(() => {
   switch (currentAgentTab.value) {
-    case 'hot': 
+    case 'hot':
       return hotAgents.value
     case 'following':
       return followingAgents.value
@@ -449,6 +427,7 @@ const currentAgents =  computed(() => {
       return hotAgents.value
   }
 })
+
 const totalPages =  computed(() => {
   return Math.ceil(currentAgents.value.length / itemsPerPage.value)
 })
@@ -459,10 +438,10 @@ const paginatedAgents = computed(()=> {
 })
 
 watch (
-  () => currentAgentTab,
-  () => {
-    currentPage.value = 1
-  }
+    () => currentAgentTab,
+    () => {
+      currentPage.value = 1
+    }
 )
 </script>
 
@@ -473,35 +452,15 @@ watch (
       <div class="notice-section">
         <div class="section-header">
           <h2>公告</h2>
-          <div class="tab-switch">
-            <span 
-              :class="{ active: currentNoticeTab === 'review' }" 
-              @click="currentNoticeTab = 'review'"
-            >审核通知</span>
-            <span 
-              :class="{ active: currentNoticeTab === 'system' }" 
-              @click="currentNoticeTab = 'system'"
-            >系统公告</span>
-          </div>
         </div>
         <div class="notice-content">
-          <div v-if="currentNoticeTab === 'review'" class="notice-list">
-            <div v-for="notice in reviewNotices" :key="notice.id" class="notice-item">
+          <div class="notice-list">
+            <div v-for="announcement in announcements" :key="announcement.id" class="notice-item">
               <i class="fas fa-check-circle"></i>
               <div class="notice-text">
-                <h4>{{ notice.title }}</h4>
-                <p>{{ notice.content }}</p>
-                <span class="notice-time">{{ notice.time }}</span>
-              </div>
-            </div>
-          </div>
-          <div v-else class="notice-list">
-            <div v-for="notice in systemNotices" :key="notice.id" class="notice-item">
-              <i class="fas fa-bullhorn"></i>
-              <div class="notice-text">
-                <h4>{{ notice.title }}</h4>
-                <p>{{ notice.content }}</p>
-                <span class="notice-time">{{ notice.time }}</span>
+                <h4>{{ announcement.title }}</h4>
+                <p>{{ announcement.content }}</p>
+                <span class="notice-time">{{ moment(announcement.time).format('YYYY-MM-DD hh:mm:ss') }}</span>
               </div>
             </div>
           </div>
@@ -513,17 +472,17 @@ watch (
         <div class="section-header">
           <h2>智能体推荐</h2>
           <div class="tab-switch">
-            <span 
-              :class="{ active: currentAgentTab === 'hot' }" 
-              @click="currentAgentTab = 'hot'"
+            <span
+                :class="{ active: currentAgentTab === 'hot' }"
+                @click="currentAgentTab = 'hot'"
             >热度推荐</span>
-            <span 
-              :class="{ active: currentAgentTab === 'following' }" 
-              @click="currentAgentTab = 'following'"
+            <span
+                :class="{ active: currentAgentTab === 'following' }"
+                @click="currentAgentTab = 'following'"
             >关注用户智能体</span>
-            <span 
-              :class="{ active: currentAgentTab === 'favorite' }" 
-              @click="currentAgentTab = 'favorite'"
+            <span
+                :class="{ active: currentAgentTab === 'favorite' }"
+                @click="currentAgentTab = 'favorite'"
             >收藏智能体</span>
           </div>
         </div>
@@ -568,18 +527,18 @@ watch (
           </div>
           <!-- 分页控件 -->
           <div class="pagination">
-            <button 
-              :disabled="currentPage === 1"
-              @click="currentPage--"
+            <button
+                :disabled="currentPage === 1"
+                @click="currentPage--"
             >
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
               </svg>
             </button>
             <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
-            <button 
-              :disabled="currentPage === totalPages"
-              @click="currentPage++"
+            <button
+                :disabled="currentPage === totalPages"
+                @click="currentPage++"
             >
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
