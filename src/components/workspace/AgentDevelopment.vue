@@ -72,6 +72,15 @@ const agents = ref<agent[]> ([
     updateTime: '2024-03-10'
   }
 ])
+
+const isCreateAgentVisible = ref(false)
+
+const onCreateAgent = () => {
+  isCreateAgentVisible.value = true
+}
+const offCreateAgent = () => {
+  isCreateAgentVisible.value = false
+}
 </script>
 
 <template>
@@ -79,7 +88,7 @@ const agents = ref<agent[]> ([
     <!-- 顶部标题栏 -->
     <div class="header">
       <h1>智能体开发</h1>
-      <button class="create-btn">
+      <button class="create-btn" @click="onCreateAgent">
         <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
           <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
         </svg>
@@ -121,6 +130,32 @@ const agents = ref<agent[]> ([
             <span class="category">{{ agent.category }}</span>
             <span class="update-time">最后更新：{{ agent.updateTime }}</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 创建智能体的弹窗 -->
+    <div v-if="isCreateAgentVisible" class="create-agent-box">
+      <div class="create-agent-content">
+        <div class="create-agent-header">
+          <h2>创建智能体</h2>
+          <button class="close-btn" @click="offCreateAgent">×</button>
+        </div>
+        <div class="create-agent-body">
+          <div class="form-group">
+            <label>智能体名称 <span class="required">*</span></label>
+            <input type="text" placeholder="给智能体起一个独一无二的名字" maxlength="20">
+            <span class="char-count">0/20</span>
+          </div>
+          <div class="form-group">
+            <label>智能体功能介绍</label>
+            <textarea placeholder="介绍智能体的功能，将会展示给智能体的用户" maxlength="500"></textarea>
+            <span class="char-count">0/500</span>
+          </div>
+        </div>
+        <div class="create-agent-footer">
+          <button class="cancel-btn" @click="offCreateAgent">取消</button>
+          <button class="confirm-btn">确认</button>
         </div>
       </div>
     </div>
@@ -284,4 +319,145 @@ const agents = ref<agent[]> ([
   padding: 2px 8px;
   border-radius: 12px;
 }
-</style> 
+
+.create-agent-box {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.create-agent-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 500px;
+  overflow: hidden;
+}
+
+.create-agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.create-agent-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #2c3e50;
+}
+
+.create-agent-body {
+  padding: 20px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  background: #f8f9fa;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #666;
+}
+
+.mode-btn.active {
+  background: white;
+  color: #2c3e50;
+  font-weight: bold;
+  border: 1px solid #e9ecef;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.required {
+  color: red;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 95%;
+  padding: 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  color: #2c3e50;
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #95a5a6;
+}
+
+.icon-preview {
+  display: flex;
+  gap: 10px;
+}
+
+.icon-placeholder {
+  width: 60px;
+  height: 60px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.create-agent-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 20px 20px;
+  gap: 10px;
+}
+
+.cancel-btn,
+.confirm-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  color: #2c3e50;
+}
+
+.confirm-btn {
+  background: #95a5a6;
+  border: none;
+  color: white;
+}
+</style>
