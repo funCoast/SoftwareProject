@@ -297,7 +297,7 @@ function getActiveConnectionPath(): string {
 
 // 右键菜单相关函数
 function showContextMenu(node: any, event: MouseEvent) {
-  if (node.type === 'start' || node.type === 'end') return
+  if (node.type === 'start') return
   const canvas = document.querySelector('.canvas-area')
   if (!canvas) return
   const canvasRect = canvas.getBoundingClientRect()
@@ -345,6 +345,13 @@ function copyNode() {
 function deleteNode() {
   if (!contextMenu.value.node) return
   const nodeId = contextMenu.value.node.id
+  // 找到所有结束节点（即 nextWorkflowNodeIds.length === 0）
+  const endNodes = props.nodes.filter(n => n.type === 'end')
+  // 如果该节点是唯一的结束节点，不允许删除
+  if (endNodes.length === 1 && endNodes[0].id === nodeId) {
+    hideContextMenu()
+    return
+  }
   // 删除节点
   const updatedNodes = props.nodes.filter(n => n.id !== nodeId)
   for (const node of updatedNodes) {

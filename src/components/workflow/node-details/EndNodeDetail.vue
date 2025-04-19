@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+
+interface Input {
+  id: number
+  name: string,
+  type: string,
+  value?: {
+    type: number // 1: 上游节点的输出变量
+    nodeId: number
+    outputId: number
+  }
+}
 
 const props = defineProps<{
   node: {
@@ -8,39 +20,137 @@ const props = defineProps<{
     label: string
     x: number
     y: number
-    data?: any
+    inputs: Input[]
   }
+  allNodes: any[]
 }>()
 
 const emit = defineEmits<{
   (e: 'update:node', node: any): void
 }>()
 
-// 运行节点
-async function run() {
-  return {
-    success: true,
-    data: {
-      message: '结束节点执行成功'
+// 获取所有上游节点
+const allUpstreamNodes = computed(() => {
+  return getAllUpstreamNodes(props.node, props.allNodes)
+})
+
+// 初始化输出列表
+const inputs = ref<Input[]>(props.node.inputs || [])
+
+// 监听输出变化并更新节点
+watch(inputs, () => {
+  emit('update:node', {
+    ...props.node,
+    inputs: inputs.value,
+    outputs: inputs.value
+  })
+}, { deep: true })
+
+// 添加新输出
+function addInput() {
+  const newId = inputs.value.length
+    ? Math.max(...inputs.value.map(o => o.id)) + 1
+    : 0
+  
+  inputs.value.push({
+    id: newId,
+    name: '',
+    type: '',
+    value: {
+      type: 1,
+      nodeId: -1,
+      outputId: -1
     }
+  })
+}
+
+// 删除输出
+function removeInput(id: number) {
+  const index = inputs.value.findIndex(o => o.id === id)
+  if (index !== -1) {
+    inputs.value.splice(index, 1)
   }
 }
 
-defineExpose({
-  run
-})
+// 用于保持 select 的 value 绑定正确
+function generateSelectValue(val: any) {
+  if (val?.type === 1 && val?.nodeId !== -1 && val?.outputId !== -1) {
+    return `${val.nodeId}|${val.outputId}`
+  }
+  return ''
+}
+
+// 处理上游输出选择变化
+function onSelectChange(val: string, input: Input) {
+  const [nodeId, outputId] = val.split('|')
+  input.value = {
+    type: 1,
+    nodeId: parseInt(nodeId),
+    outputId: parseInt(outputId)
+  }
+  input.type = getUpstreamOutputType(parseInt(nodeId), parseInt(outputId))
+}
+
+// 获取上游节点输出的类型
+function getUpstreamOutputType(nodeId: number, outputId: number): string {
+  const node = allUpstreamNodes.value.find(n => n.id === nodeId)
+  if (!node?.outputs?.[outputId]) return '未知类型'
+  return node.outputs[outputId].type || '未知类型'
+}
 </script>
 
 <template>
   <div class="end-node-detail">
-    <div class="info-section">
-      <div class="info-item">
-        <label>节点类型</label>
-        <span>结束节点</span>
+    <div class="outputs-section">
+      <div class="section-header">
+        <h4>输出变量</h4>
+        <el-button type="primary" size="small" @click="addInput">
+          添加变量
+        </el-button>
       </div>
-      <div class="info-item">
-        <label>节点说明</label>
-        <p class="description">工作流的结束节点，标志着工作流的结束。</p>
+
+      <div v-if="inputs.length === 0" class="empty-state">
+        <p>暂无输出变量，点击"添加变量"创建</p>
+      </div>
+
+      <div v-else class="output-list">
+        <div v-for="input in inputs" :key="input.id" class="output-item">
+          <div class="output-row">
+            <el-input
+              v-model="input.name"
+              placeholder="变量名称"
+              size="small"
+              class="name-input"
+            />
+            <el-select
+              :model-value="generateSelectValue(input.value)"
+              placeholder="选择上游输出"
+              size="small"
+              class="type-select"
+              @change="val => onSelectChange(val, input)"
+            >
+              <template v-for="node in allUpstreamNodes" :key="node.id">
+                <el-option
+                  v-for="(nodeOutput, idx) in node.outputs"
+                  :key="`${node.id}-${idx}`"
+                  :label="`${node.name}: ${nodeOutput.name} (${nodeOutput.type})`"
+                  :value="`${node.id}|${idx}`"
+                />
+              </template>
+            </el-select>
+            <el-button
+              type="danger"
+              size="small"
+              @click="removeInput(input.id)"
+              class="remove-btn"
+            >
+              删除
+            </el-button>
+          </div>
+          <div v-if="input.value?.nodeId !== -1" class="output-type">
+            类型: {{ getUpstreamOutputType(input.value.nodeId, input.value.outputId) }}
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -51,37 +161,67 @@ defineExpose({
   padding: 16px;
 }
 
-.info-section {
-  background: #f8f9fa;
+.outputs-section {
+  background: #fff;
   border-radius: 8px;
   padding: 16px;
 }
 
-.info-item {
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
 }
 
-.info-item:last-child {
-  margin-bottom: 0;
-}
-
-.info-item label {
-  display: block;
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.info-item span {
-  font-size: 14px;
-  color: #2c3e50;
-  font-weight: 500;
-}
-
-.description {
-  font-size: 14px;
-  color: #2c3e50;
-  line-height: 1.5;
+.section-header h4 {
   margin: 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: #666;
+}
+
+.output-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.output-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.output-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.name-input {
+  flex: 2;
+}
+
+.type-select {
+  flex: 2;
+}
+
+.remove-btn {
+  flex-shrink: 0;
+}
+
+.output-type {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  padding-left: 4px;
 }
 </style> 

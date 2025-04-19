@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { usePersistentRef } from '../../utils/usePersistentRef'
+import {computed, onMounted, ref} from 'vue'
+import {usePersistentRef} from '../../utils/usePersistentRef'
 import ClassifierNodeDetail from './node-details/ClassifierNodeDetail.vue'
 import CodeNodeDetail from "./node-details/CodeNodeDetail.vue"
 import ConditionNodeDetail from "./node-details/ConditionNodeDetail.vue"
@@ -20,6 +20,7 @@ import WorkflowNodeManager from "./WorkflowNodeManager.vue";
 import StartNodeDetail from './node-details/StartNodeDetail.vue'
 import EndNodeDetail from './node-details/EndNodeDetail.vue'
 import {useRouter} from "vue-router";
+
 const router = useRouter()
 
 interface nodeType {
@@ -197,12 +198,22 @@ const isAddingNode = ref(false)
 const isDraggingCanvas = ref(false)
 // 记录按下鼠标时的鼠标位置
 const lastMousePosition = ref({ x: 0, y: 0 })
-// 运行状态
-const isNodeRunning = ref(false)
 // 运行节点
 const nodeComponentRefs = new Map<number, any>()
 // 添加节点还是添加插件
 const selectorPage = ref<'nodes' | 'plugins'>('nodes')
+
+// 试运行相关
+const showRunDialog = ref(false)
+const runInputs = ref<Record<string, any>>({})
+const runStatus = ref<'running' | 'success' | 'error' | null>(null)
+const runResult = ref<any>(null)
+const runError = ref<string | null>(null)
+
+// 获取开始节点
+const startNode = computed(() => {
+  return workflowNodes.value.find(node => node.type === 'start')
+})
 
 onMounted(() => {
   if (workflowNodes.value.length === 0) {
@@ -394,8 +405,59 @@ function updateConnections(newConnections: Connection[]) {
   connections.value = newConnections
 }
 
+// 打开试运行弹窗
 function runTest() {
-  // 试运行逻辑
+  if (!startNode.value) {
+    alert('未找到开始节点')
+    return
+  }
+  // 初始化输入值
+  runInputs.value = {}
+  showRunDialog.value = true
+}
+
+// 执行试运行
+async function executeRun() {
+  startNode.value.inputs = startNode.value.outputs.map(output => ({
+    id: output.id,
+    name: output.name,
+    type: output.type,
+    value: {
+      type: 0,
+      text: runInputs.value[output.name] || '',
+      nodeId: -1,
+      outputId: -1
+    }
+  }))
+  console.log("nodes:", workflowNodes.value)
+  console.log("connections: ", connections.value)
+  runStatus.value = 'running'
+  runResult.value = null
+  runError.value = null
+  try {
+    const response = await fetch('/workflow/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        nodes: workflowNodes.value,
+        edges: connections.value,
+      })
+    })
+    const data = await response.json()
+    console.log("data: ", data)
+    if (data.success) {
+      runResult.value = data.result
+      runStatus.value = 'success'
+    } else {
+      runStatus.value = 'error'
+      runError.value = data.error || '执行失败'
+    }
+  } catch (e: any) {
+    runStatus.value = 'error'
+    runError.value = e.message || String(e)
+  }
 }
 
 function debug() {
@@ -610,7 +672,7 @@ const clearWorkflowCacheAndGoBack = () => {
           <button 
             class="action-btn run-btn" 
             @click="runSelectedNode"
-            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end'"
+            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end' && selectedNode.type !== 'extract'"
             title="运行节点">
             <img 
               src="https://api.iconify.design/material-symbols:play-circle.svg"
@@ -656,6 +718,93 @@ const clearWorkflowCacheAndGoBack = () => {
         />
       </div>
     </div>
+
+    <!-- 试运行弹窗 -->
+    <el-dialog
+      v-model="showRunDialog"
+      title="试运行工作流"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <div class="run-dialog-content">
+        <!-- 输入配置 -->
+        <div class="input-config-section">
+          <h4>输入配置</h4>
+          <div v-if="!startNode?.outputs.length" class="empty-state">
+            <p>开始节点未配置输出变量</p>
+          </div>
+          <div v-else class="input-list">
+            <div v-for="output in startNode.outputs" :key="output.id" class="input-item">
+              <label>{{ output.name }}</label>
+              <div class="input-field">
+                <template v-if="output.type === 'string'">
+                  <el-input
+                    v-model="runInputs[output.name]"
+                    :placeholder="`请输入${output.name}`"
+                    type="textarea"
+                    :rows="3"
+                  />
+                </template>
+                <template v-else-if="output.type === 'number'">
+                  <el-input-number
+                    v-model="runInputs[output.name]"
+                    :placeholder="`请输入${output.name}`"
+                    :controls="true"
+                  />
+                </template>
+                <template v-else-if="output.type === 'Array[File]'">
+                  <el-upload
+                    action="/api/upload"
+                    multiple
+                    :on-success="(res) => runInputs[output.name] = [...(runInputs[output.name] || []), res.file]"
+                    :on-remove="(file) => runInputs[output.name] = runInputs[output.name].filter(f => f.id !== file.id)"
+                  >
+                    <el-button type="primary">上传文件</el-button>
+                  </el-upload>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 运行结果 -->
+        <div v-if="runStatus" class="run-result-section">
+          <div class="run-result-header">
+            <h4>运行结果</h4>
+            <span :class="['status-badge', runStatus]">
+              {{ runStatus === 'running' ? '运行中' : 
+                 runStatus === 'success' ? '成功' : '失败' }}
+            </span>
+          </div>
+          
+          <div v-if="runStatus === 'success' && runResult" 
+               class="result-content success">
+            <pre>{{ JSON.stringify(runResult, null, 2) }}</pre>
+          </div>
+          
+          <div v-if="runStatus === 'error' && runError" 
+               class="result-content error">
+            <pre>{{ runError }}</pre>
+          </div>
+          
+          <div v-if="runStatus === 'running'" class="result-content loading">
+            <div class="loading-spinner"></div>
+            <span>正在运行中...</span>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showRunDialog = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="runStatus === 'running'"
+          @click="executeRun"
+        >
+          运行
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -1191,5 +1340,49 @@ const clearWorkflowCacheAndGoBack = () => {
 .edit-textarea {
   resize: vertical;
   min-height: 60px;
+}
+
+.run-dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.input-config-section {
+  margin-bottom: 24px;
+}
+
+.input-config-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.input-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-item label {
+  font-size: 14px;
+  color: #666;
+}
+
+.input-field {
+  width: 100%;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: #666;
 }
 </style> 

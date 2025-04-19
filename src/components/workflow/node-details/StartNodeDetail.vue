@@ -45,7 +45,6 @@ function addOutput() {
   const newId = outputs.value.length 
     ? Math.max(...outputs.value.map(o => o.id)) + 1 
     : 0
-  
   outputs.value.push({
     id: newId,
     name: '',
@@ -64,17 +63,6 @@ function removeOutput(id: number) {
 
 <template>
   <div class="start-node-detail">
-    <div class="info-section">
-      <div class="info-item">
-        <label>节点类型</label>
-        <span>开始节点</span>
-      </div>
-      <div class="info-item">
-        <label>节点说明</label>
-        <p class="description">工作流的起始节点，定义工作流的输入参数。</p>
-      </div>
-    </div>
-
     <div class="outputs-section">
       <div class="section-header">
         <h4>输出变量</h4>
@@ -82,11 +70,9 @@ function removeOutput(id: number) {
           添加变量
         </el-button>
       </div>
-
       <div v-if="outputs.length === 0" class="empty-state">
         <p>暂无输出变量，点击"添加变量"创建</p>
       </div>
-
       <div v-else class="output-list">
         <div v-for="output in outputs" :key="output.id" class="output-item">
           <div class="output-row">
@@ -129,21 +115,6 @@ function removeOutput(id: number) {
   padding: 16px;
 }
 
-.info-section {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 24px;
-}
-
-.info-item {
-  margin-bottom: 16px;
-}
-
-.info-item:last-child {
-  margin-bottom: 0;
-}
-
 .info-item label {
   display: block;
   font-size: 14px;
@@ -155,13 +126,6 @@ function removeOutput(id: number) {
   font-size: 14px;
   color: #2c3e50;
   font-weight: 500;
-}
-
-.description {
-  font-size: 14px;
-  color: #2c3e50;
-  line-height: 1.5;
-  margin: 0;
 }
 
 .outputs-section {
