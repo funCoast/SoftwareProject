@@ -10,7 +10,15 @@ class CurrentTimePlugin(BasePlugin):
         super().__init__(
             name="CurrentTimePlugin",
             version="1.0",
-            description="获取当前时间"
+            description="获取当前时间",
+            intent="Query_the_current_time_of_given_timezone",
+            param_description= {
+                "timezone": "The timezone for which the current time is requested. "
+                            "default: None. "
+                            "Format: A string representing a timezone, e.g., \"Asia/Tokyo\", \"America/New_York\".",
+                "time_format": "The format in which the time should be returned. "
+                               "default: \"%Y-%m-%d %H:%M:%S\"."
+            }
         )
 
     def execute(self, *args, **kwargs):

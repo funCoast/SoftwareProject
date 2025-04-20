@@ -10,7 +10,15 @@ class TimestampTransformPlugin(BasePlugin):
         super().__init__(
             name="TimestampTransformPlugin",
             version="1.0",
-            description="时间戳转换为时间"
+            description="时间戳转换为时间",
+            intent="Calculate_the_time_based_on_the_timestamp",
+            param_description= {
+                "timezone": "The timezone for which the current time is requested. "
+                            "default: None. "
+                            "Format: A string representing a timezone, e.g., \"Asia/Tokyo\", \"America/New_York\".",
+                "timestamp": "The timestamp to be converted. "
+                             "Format: A numeric value representing the timestamp."
+            }
         )
 
     def execute(self, *args, **kwargs):

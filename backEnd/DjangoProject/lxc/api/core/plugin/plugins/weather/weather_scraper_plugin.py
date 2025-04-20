@@ -14,8 +14,14 @@ class WeatherScraperPlugin(BasePlugin):
         super().__init__(
             name="WeatherScraperPlugin",
             version="1.0",
-            description="得到天气"
+            description="得到天气",
+            intent="Check_the_weather_according_to_the_city",
+            param_description={
+                "city": "the city for which weather information is requested."
+                        "default: None"
+            }
         )
+
 
     def execute(self, *args, **kwargs):
         try:

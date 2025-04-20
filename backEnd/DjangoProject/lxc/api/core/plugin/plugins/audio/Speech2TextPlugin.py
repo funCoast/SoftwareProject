@@ -3,12 +3,20 @@ from pydub import AudioSegment
 import os
 import uuid
 
-class SpeechToTextPlugin:
-    def __init__(self):
-        self.name = "SpeechToTextPlugin"
-        self.version = "1.0"
-        self.description = "将语音音频转换为文本"
+from api.core.plugin.plugins.base_plugin import BasePlugin
 
+
+class SpeechToTextPlugin(BasePlugin):
+    def __init__(self):
+        super().__init__(
+            name = "SpeechToTextPlugin",
+            version = "1.0",
+            description = "将语音音频转换为文本",
+            intent="Convert_voice_audio_to_text",
+            param_description={
+                "audio_path": "path_to_audio"
+            }
+        )
 
     def convert_audio_to_wav(self, audio_path):
         if audio_path.endswith('.mp3'):

@@ -5,15 +5,15 @@ from api.core.plugin.plugins.time.timestamp_pulgin import TimestampPlugin
 from api.core.plugin.plugins.time.timestamp_transform_plugin import TimestampTransformPlugin
 from api.core.plugin.plugins.time.timezoen_switch_plugin import TimezoneSwitchPlugin
 from api.core.plugin.plugins.time.weekday_calculator_plugin import WeekdayCalculatorPlugin
-from api.core.plugin.plugins.weather.WeatherForecastPlugin import WeatherScraperPlugin
+from api.core.plugin.plugins.weather.weather_scraper_plugin import WeatherScraperPlugin
 
 
 def register_plugins(plugin_manager):
-    plugin_manager.register_plugin(CurrentTimePlugin())
-    plugin_manager.register_plugin(TimestampPlugin())
-    plugin_manager.register_plugin(TimestampTransformPlugin())
-    plugin_manager.register_plugin(TimezoneSwitchPlugin())
-    plugin_manager.register_plugin(WeekdayCalculatorPlugin())
-    plugin_manager.register_plugin(CodeRunPlugin())
-    plugin_manager.register_plugin(SpeechToTextPlugin())
-    plugin_manager.register_plugin(WeatherScraperPlugin())
+    plugin_manager.register_plugin(CurrentTimePlugin)
+    plugin_manager.register_plugin(TimestampPlugin)
+    plugin_manager.register_plugin(TimestampTransformPlugin)
+    plugin_manager.register_plugin(TimezoneSwitchPlugin)
+    plugin_manager.register_plugin(WeekdayCalculatorPlugin)
+    plugin_manager.register_plugin(CodeRunPlugin)
+    plugin_manager.register_plugin(SpeechToTextPlugin)
+    plugin_manager.register_plugin(WeatherScraperPlugin)

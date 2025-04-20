@@ -6,15 +6,25 @@ import math
 import datetime
 import json
 
+from api.core.plugin.plugins.base_plugin import BasePlugin
+
+
 class Args:
     def __init__(self, params: dict):
         self.params = params
 
-class CodeRunPlugin:
+class CodeRunPlugin(BasePlugin):
     def __init__(self):
-        self.name = "CodeRunPlugin"
-        self.version = "1.0"
-        self.description = "执行代码并返回输出"
+        super().__init__(
+            name="CodeRunPlugin",
+            version="1.0",
+            description="执行代码并返回输出",
+            intent="Run_the_code",
+            param_description={
+                "code": "print(\"Hellow, world!\")"
+            }
+        )
+
 
     def execute(self, *args, **kwargs):
         code = kwargs['code']
