@@ -1,7 +1,6 @@
 import uuid
 import random
 from smtplib import SMTPException
-
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.core.validators import validate_email
@@ -10,7 +9,7 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from backend.models import User, PrivateMessage, Announcement
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk
 from django.db.models import Q
 import json
 # backend/views.py
@@ -18,10 +17,24 @@ from django.conf import settings
 import redis
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser
 from rest_framework import status
 import os
 from django.utils.crypto import get_random_string
+from backend.utils.parser import parse_file
+from backend.utils.chunker import split_text
+from .utils.segmenter import auto_clean_and_split, custom_split, split_by_headings
+from .utils.tree import build_chunk_tree
 
+from .utils.vector_store import search_agent_chunks
+from .utils.qa import ask_llm
+from .utils.vector_store import add_chunks_to_agent_index
+
+from .models import Announcement
+from django.utils import timezone
+# workflow
+from ..api.core.workflow.executor import Executor
 # Redis 客户端配置
 redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
 
@@ -644,3 +657,173 @@ def user_update_password(request):
         'code': 0,
         'message': '更新成功'
     })
+
+
+class UploadKnowledgeFileView(APIView):
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, kb_id):
+        uploaded_file = request.FILES['file']
+        segment_mode = request.data.get('segment_mode', 'auto')
+        agent_id = request.data.get('agent_id')
+
+        if not agent_id:
+            return Response({'error': '请提供 agent_id'}, status=400)
+
+        try:
+            kb = KnowledgeBase.objects.get(pk=kb_id)
+        except KnowledgeBase.DoesNotExist:
+            return Response({'error': '知识库不存在'}, status=404)
+
+        # 保存文件信息
+        file = KnowledgeFile.objects.create(
+            kb=kb,
+            file=uploaded_file,
+            name=uploaded_file.name,
+            segment_mode=segment_mode
+        )
+
+        abs_path = file.file.path
+        text = parse_file(abs_path)
+
+        # 参数读取（仅 custom 模式用）
+        max_len = int(request.data.get('max_len', 300))
+        overlap = int(request.data.get('overlap', 30))
+        clean = request.data.get('clean', 'true') == 'true'
+
+        chunk_objs = []
+
+        if segment_mode == 'auto':
+            chunks = auto_clean_and_split(text)
+            for i, chunk_text in enumerate(chunks):
+                chunk = KnowledgeChunk.objects.create(
+                    kb=kb,
+                    file=file,
+                    content=chunk_text,
+                    order=i
+                )
+                chunk_objs.append(chunk)
+
+        elif segment_mode == 'custom':
+            chunks = custom_split(text, max_len=max_len, overlap=overlap, clean=clean)
+            for i, chunk_text in enumerate(chunks):
+                chunk = KnowledgeChunk.objects.create(
+                    kb=kb,
+                    file=file,
+                    content=chunk_text,
+                    order=i
+                )
+                chunk_objs.append(chunk)
+
+        elif segment_mode == 'hierarchical':
+            parts = split_by_headings(text)
+            chunk_map = {}
+
+            for i, part in enumerate(parts):
+                parent_chunk = chunk_map.get(id(part['parent'])) if part['parent'] else None
+                chunk = KnowledgeChunk.objects.create(
+                    kb=kb,
+                    file=file,
+                    content=part['content'],
+                    order=i,
+                    parent=parent_chunk
+                )
+                chunk_map[id(part)] = chunk
+                chunk_objs.append(chunk)
+
+        else:
+            return Response({'error': 'Invalid segment_mode'}, status=400)
+
+        # ✅ 加入 Agent 专属向量索引
+        try:
+            add_chunks_to_agent_index(agent_id=agent_id, chunks=chunk_objs)
+        except Exception as e:
+            return Response({'error': f'构建向量索引失败: {str(e)}'}, status=500)
+
+        return Response({
+            'file_id': file.id,
+            'chunk_count': len(chunk_objs),
+            'segment_mode': segment_mode
+        })
+
+
+class ChunkTreeView(APIView):
+    def get(self, request, kb_id, file_id):
+        try:
+            chunks = KnowledgeChunk.objects.filter(
+                kb_id=kb_id,
+                file_id=file_id
+            ).order_by('order')
+            tree = build_chunk_tree(chunks)
+            return Response(tree)
+        except KnowledgeFile.DoesNotExist:
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ChunkListView(APIView):
+    def get(self, request, kb_id, file_id):
+        mode = request.query_params.get('mode', 'auto')  # 默认为自动
+        try:
+            chunks = KnowledgeChunk.objects.filter(
+                kb_id=kb_id,
+                file_id=file_id,
+                parent=None if mode != 'hierarchical' else None
+            ).order_by('order')
+
+            if mode == 'hierarchical':
+                return Response({'error': 'Use /tree/ endpoint for hierarchical'}, status=400)
+
+            chunk_list = [
+                {
+                    'id': chunk.id,
+                    'content': chunk.content,
+                    'order': chunk.order
+                }
+                for chunk in chunks
+            ]
+            return Response(chunk_list)
+
+        except KnowledgeChunk.DoesNotExist:
+            return Response({'error': 'Chunks not found'}, status=404)
+
+
+class VectorSearchView(APIView):
+    def post(self, request):
+        query = request.data.get('query')
+        if not query:
+            return Response({'error': 'Missing query'}, status=400)
+
+        results = search_agent_chunks(query)
+        return Response(results)
+
+
+@api_view(['POST'])
+def ask_question(request):
+    query = request.data.get("query")
+    agent_id = request.data.get("agent_id")
+
+    if not query or not agent_id:
+        return Response({"error": "请提供 query 和 agent_id"}, status=400)
+
+    # 检索专属 Agent 的向量库
+    related_chunks = search_agent_chunks(agent_id, query)
+
+    try:
+        answer = ask_llm(query, related_chunks)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+    return Response({
+        "question": query,
+        "answer": answer,
+        "context": related_chunks
+    })
+def workflow_run(request):
+    nodes = request.data.get("nodes", [])
+    edges = request.data.get("edges", [])
+    user_id = request.user.id
+    workflow_id = request.data.get("workflowId")
+
+    executor = Executor(user_id, workflow_id, nodes, edges)
+    result = executor.execute()
+    return JsonResponse({"result": result})

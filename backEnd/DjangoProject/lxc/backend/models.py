@@ -10,7 +10,7 @@ class User(models.Model):
     password = models.CharField(max_length=128)
     email = models.EmailField(max_length=100, unique=True)
     is_banned = models.BooleanField(default=False)  # 0-正常，1-封禁
-    can_post = models.BooleanField(default=True)    # 0-无发布权限，1-可发布
+    can_post = models.BooleanField(default=True)  # 0-无发布权限，1-可发布
     ban_expire = models.DateTimeField(null=True, blank=True)
     post_expire = models.DateTimeField(null=True, blank=True)
     fans_count = models.PositiveIntegerField(default=0)
@@ -18,8 +18,10 @@ class User(models.Model):
     registered_at = models.DateTimeField(auto_now_add=True)
     avatar_url = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+
     def __str__(self):
         return self.username
+
 
 # 2. 管理员表（Administrator）
 class Administrator(models.Model):
@@ -29,6 +31,7 @@ class Administrator(models.Model):
 
     def __str__(self):
         return self.account
+
 
 # 3. 关注关系表（Follow Relationship）
 class FollowRelationship(models.Model):
@@ -42,6 +45,7 @@ class FollowRelationship(models.Model):
     def __str__(self):
         return f"{self.follower.username} follows {self.followee.username}"
 
+
 # 4. 私信表（Private Message）
 class PrivateMessage(models.Model):
     message_id = models.BigAutoField(primary_key=True)
@@ -50,8 +54,10 @@ class PrivateMessage(models.Model):
     content = models.TextField()
     send_time = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
+
     def __str__(self):
         return f"Msg {self.message_id} from {self.sender.username} to {self.receiver.username}"
+
 
 # 5. 管理员日志表（Admin Log）
 class AdminLog(models.Model):
@@ -65,6 +71,7 @@ class AdminLog(models.Model):
     def __str__(self):
         return f"Log {self.log_id} by {self.admin.account}"
 
+
 # 6. 敏感词表（Sensitive Words）
 class SensitiveWord(models.Model):
     word_id = models.AutoField(primary_key=True)
@@ -73,6 +80,7 @@ class SensitiveWord(models.Model):
 
     def __str__(self):
         return self.word_content
+
 
 # 7. 评论表（Comment）
 # 由于评论中需要关联到智能体，因此在 Agent 模型定义之后再建立外键引用
@@ -86,6 +94,7 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment {self.comment_id} by {self.user.username}"
+
 
 # 8. 公告表（Announcement）
 class Announcement(models.Model):
@@ -101,8 +110,8 @@ class Announcement(models.Model):
 # 9. 工作流表（Workflow）
 class Workflow(models.Model):
     workflow_id = models.AutoField(primary_key=True)
-    nodes = models.TextField()    # 存储 JSON 或其他格式数据
-    edges = models.TextField()    # 存储 JSON 或其他格式数据
+    nodes = models.TextField()  # 存储 JSON 或其他格式数据
+    edges = models.TextField()  # 存储 JSON 或其他格式数据
     user = models.ForeignKey(User, on_delete=models.CASCADE)  # 创建者
     is_builtin = models.BooleanField(default=False)  # 0-用户创建，1-系统内置
     workflow_data = models.TextField()
@@ -110,6 +119,7 @@ class Workflow(models.Model):
 
     def __str__(self):
         return f"Workflow {self.workflow_id}"
+
 
 # 知识库表（Knowledge Base）
 class KnowledgeBase(models.Model):
@@ -125,6 +135,49 @@ class KnowledgeBase(models.Model):
     def __str__(self):
         return self.kb_name
 
+
+class KnowledgeItem(models.Model):
+    kb = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='items')
+    content = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Item for KB {self.kb.kb_name}"
+
+
+class KnowledgeFile(models.Model):
+    kb = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='knowledge/')
+    name = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    SEGMENT_MODE_CHOICES = [
+        ('auto', '自动分段'),
+        ('custom', '自定义分段'),
+        ('hierarchical', '按层级结构分段'),
+    ]
+    segment_mode = models.CharField(
+        max_length=20,
+        choices=SEGMENT_MODE_CHOICES,
+        default='auto'
+    )
+
+    def __str__(self):
+        return self.name
+
+
+class KnowledgeChunk(models.Model):
+    chunk_id = models.AutoField(primary_key=True)
+    kb = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE)
+    file = models.ForeignKey('KnowledgeFile', on_delete=models.CASCADE)
+    content = models.TextField()
+    order = models.IntegerField(default=0)
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)  # 层级结构支持
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Chunk {self.chunk_id} in KB {self.kb.kb_name}"
+
+
 # 知识条目表（Agent 与 KB 的关联）
 class AgentKnowledgeEntry(models.Model):
     agent = models.ForeignKey('Agent', on_delete=models.CASCADE)
@@ -136,6 +189,7 @@ class AgentKnowledgeEntry(models.Model):
 
     def __str__(self):
         return f"KnowledgeEntry: Agent {self.agent.agent_id} - KB {self.kb.kb_id}"
+
 
 # 12. 智能体表（Agent）
 class Agent(models.Model):
@@ -154,6 +208,7 @@ class Agent(models.Model):
     def __str__(self):
         return self.agent_name
 
+
 # 13. 智能体工作流关系表（Agent-Workflow Relation）
 class AgentWorkflowRelation(models.Model):
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
@@ -165,18 +220,20 @@ class AgentWorkflowRelation(models.Model):
     def __str__(self):
         return f"Agent {self.agent.agent_id} - Workflow {self.workflow.workflow_id}"
 
+
 # 14. 用户交互表（User Interaction）
 class UserInteraction(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
-    is_liked = models.BooleanField(default=False)      # 0-未点赞，1-已点赞
-    is_favorited = models.BooleanField(default=False)    # 0-未收藏，1-已收藏
+    is_liked = models.BooleanField(default=False)  # 0-未点赞，1-已点赞
+    is_favorited = models.BooleanField(default=False)  # 0-未收藏，1-已收藏
 
     class Meta:
         unique_together = ('user', 'agent')
 
     def __str__(self):
         return f"UserInteraction: {self.user.username} - {self.agent.agent_name}"
+
 
 # 15. 对话历史表（Dialogue History）
 class DialogueHistory(models.Model):

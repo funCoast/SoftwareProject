@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pymysql
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -153,3 +154,11 @@ EMAIL_USE_SSL = True
 EMAIL_HOST_USER = 'lingxiaicommunity@163.com'
 EMAIL_HOST_PASSWORD = 'NRcppyJk5vLu5qyL'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+DASHSCOPE_API_KEY = 'sk-dd9eafc179c14d5bb9dd25b8d1268ef5'
+
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+    }
