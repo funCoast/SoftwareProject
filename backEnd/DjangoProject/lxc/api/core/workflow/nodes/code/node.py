@@ -1,7 +1,7 @@
 import subprocess
 import json
 import tempfile
-
+from api.core.workflow.registry import register_node
 def safe_exec_javascript(code: str, inputs: dict, output_vars: list[str]) -> dict:
     try:
         # 自动生成解构语句
@@ -28,8 +28,11 @@ try {{
 
             process = subprocess.run(["node", f.name], capture_output=True, text=True, timeout=5)
             output = process.stdout.strip()
-
-            return json.loads(output)
+            parsed = json.loads(output)
+            if "result" in parsed:
+                return parsed["result"]
+            else:
+                return {"error": parsed.get("error", "Unknown error")}
     except Exception as e:
         return {"error": str(e)}
 
@@ -52,10 +55,10 @@ def safe_exec_python(code: str, inputs: dict, output_vars: list[str]) -> dict:
             else:
                 outputs[var] = None  # 或 raise Exception(f"{var} 未定义")
 
-        return {"result": outputs}
+        return outputs
 
     except Exception as e:
-        return {"error": str(e)}
+        return {"error":str(e)}
 def safe_exec(code: str, inputs: dict, output_vars: list[str], language: str = "python") -> dict:
     """
     支持多语言的动态代码执行器。
@@ -71,6 +74,21 @@ def safe_exec(code: str, inputs: dict, output_vars: list[str], language: str = "
         return safe_exec_javascript(code, inputs, output_vars)
     else:
         return {"error": f"不支持的语言类型：{language}"}
+@register_node("code")
+def run_code_node(node,input):
+    input_map = {inp["name"]: inp["value"] for inp in inputs}
+    # 获取用户代码和语言类型
+    code = node.get("data", {}).get("code", "")
+    language = node.get("data", {}).get("language", "python")
+    output_vars = [out["name"] for out in node.get("outputs", [])]
+    result = safe_exec(code,input_map,output_vars,language)
+    outputs = {}
+    i = 0
+    for output in node.get("outputs", []):
+        id = output["id"]
+        outputs[id] = result[i]  # 所有输出都给一样的结果（你也可以按 name 分别生成）
+        i = i + 1
+    return outputs
 
 
 code = """
