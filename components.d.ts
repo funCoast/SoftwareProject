@@ -56,6 +56,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     TableBase: typeof import('./src/components/knowledgeBase/TableBase.vue')['default']
     TextBase: typeof import('./src/components/knowledgeBase/TextBase.vue')['default']
+    WeekdayCalculatorPlugin: typeof import('./src/components/workflow/node-details/WeekdayCalculatorPlugin.vue')['default']
     WorkflowCanvas: typeof import('./src/components/workflow/WorkflowCanvas.vue')['default']
     WorkflowNodeDetail: typeof import('./src/components/workflow/node-details/WorkflowNodeDetail.vue')['default']
     WorkflowNodeManager: typeof import('./src/components/workflow/WorkflowNodeManager.vue')['default']
