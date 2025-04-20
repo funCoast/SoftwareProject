@@ -114,9 +114,10 @@ class Workflow(models.Model):
     edges = models.TextField()  # 存储 JSON 或其他格式数据
     user = models.ForeignKey(User, on_delete=models.CASCADE)  # 创建者
     is_builtin = models.BooleanField(default=False)  # 0-用户创建，1-系统内置
-    workflow_data = models.TextField()
     view_points = models.TextField(null=True, blank=True)
-
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    icon_url = models.URLField(max_length=500, null=True, blank=True)
     def __str__(self):
         return f"Workflow {self.workflow_id}"
 

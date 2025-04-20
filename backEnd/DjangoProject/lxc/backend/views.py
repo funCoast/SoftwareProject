@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk,Workflow
 from django.db.models import Q
 import json
 # backend/views.py
@@ -997,3 +997,127 @@ def workflow_run(request):
     executor = Executor(user_id, workflow_id, nodes, edges)
     result = executor.execute()
     return JsonResponse({"result": result})
+
+def workflow_create(request):
+    try:
+        uid = request.POST.get('uid')
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        icon = request.FILES.get('icon')  # 上传的文件
+
+        # 查找用户
+        try:
+            user = User.objects.get(user_id=uid)
+        except User.DoesNotExist:
+            return JsonResponse({
+                "code": -1,
+                "message": "用户不存在",
+                "workflow_id": None
+            })
+
+        # 初始化 icon_url
+        icon_url = None
+
+        if icon:
+            # 构建图标存储路径
+            icon_dir = os.path.join(settings.MEDIA_ROOT, 'workflow_icons')
+            os.makedirs(icon_dir, exist_ok=True)
+
+            # 构造唯一文件名
+            _, ext = os.path.splitext(icon.name)
+            filename = f"{uuid.uuid4().hex}{ext}"
+            filepath = os.path.join(icon_dir, filename)
+
+            # 写入图标文件
+            with open(filepath, 'wb+') as destination:
+                for chunk in icon.chunks():
+                    destination.write(chunk)
+
+            # 构建 icon 的 URL
+            icon_url = f"/media/workflow_icons/{filename}"
+
+        # 创建 Workflow 实例
+        workflow = Workflow.objects.create(
+            user=user,
+            name=name,
+            description=description,
+            icon_url=icon_url  # URLField 中保存图标路径
+        )
+
+        return JsonResponse({
+            "code": 0,
+            "message": "创建成功",
+            "workflow_id": workflow.workflow_id
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": f"服务器错误：{str(e)}",
+            "workflow_id": None
+        })
+def workflow_fetch(request):
+    uid = request.GET.get('uid')
+    workflow_id = request.GET.get('workflow_id')
+
+    if not uid or not workflow_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "参数缺失",
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在",
+        })
+
+    try:
+        workflow = Workflow.objects.get(workflow_id=workflow_id, user=user)
+    except Workflow.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "工作流不存在",
+        })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "nodes": json.loads(workflow.nodes),
+        "edges": json.loads(workflow.edges),
+        "icon": workflow.icon_url,
+        "name": workflow.name,
+        "descript": workflow.description
+    })
+def workflow_save(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+
+        uid = data.get("uid")
+        workflow_id = data.get("workflow_id")
+        nodes = json.dumps(data.get("nodes"))
+        edges = json.dumps(data.get("edges"))
+
+        if not uid or not workflow_id:
+            return JsonResponse({"code": -1, "message": "uid 或 workflow_id 缺失"})
+
+        try:
+            user = User.objects.get(user_id=uid)
+        except User.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "用户不存在"})
+
+        try:
+            workflow = Workflow.objects.get(workflow_id=workflow_id, user=user)
+        except Workflow.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "工作流不存在"})
+
+        workflow.nodes = nodes
+        workflow.edges = edges
+        workflow.save()
+
+        return JsonResponse({"code": 0, "message": "保存成功"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"服务器错误：{str(e)}"})

@@ -35,5 +35,8 @@ urlpatterns = [
     path('api/vector/search/', views.VectorSearchView.as_view(), name='vector-search'),
     path('api/agent/ask/', views.ask_question, name='agent-ask'),
     # 工作流
-    path('workflow/run',views.workflow_run, name='workflow_run')
+    path('workflow/run',views.workflow_run, name='workflow_run'),
+    path('workflow/create',views.workflow_create, name='workflow_create'),
+    path('workflow/fetch',views.workflow_fetch, name='workflow_fetch'),
+    path('workflow/save',views.workflow_save, name='workflow_save')
 ]
