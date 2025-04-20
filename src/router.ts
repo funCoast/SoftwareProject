@@ -22,6 +22,11 @@ const routes = [
         component: () => import("./components/home/Home.vue"),
       },
       {
+        path: "message",
+        name: "Message",
+        component: () => import("./components/message/Message.vue"),
+      },
+      {
         path: "workspace",
         name: "Workspace",
         redirect: "/workspace/agentDevelopment",

@@ -50,6 +50,7 @@ declare module 'vue' {
     Login: typeof import('./src/components/login/Login.vue')['default']
     LoopNodeDetail: typeof import('./src/components/workflow/node-details/LoopNodeDetail.vue')['default']
     Main: typeof import('./src/components/Main.vue')['default']
+    Message: typeof import('./src/components/message/Message.vue')['default']
     ModelNodeDetail: typeof import('./src/components/workflow/node-details/ModelNodeDetail.vue')['default']
     PictureBase: typeof import('./src/components/knowledgeBase/PictureBase.vue')['default']
     Profile: typeof import('./src/components/profile/Profile.vue')['default']
