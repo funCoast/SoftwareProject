@@ -19,10 +19,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('linksoul/', include("backend.urls")),
 
     path('linksoul/plugins/', include('api.core.plugin.api.urls')),
+    path('linksoul/agent/', include('api.core.agent.chat_bot.urls')),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

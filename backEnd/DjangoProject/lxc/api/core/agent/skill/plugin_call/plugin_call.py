@@ -11,24 +11,28 @@ def execute(plugin: BasePlugin):
     return plugin.execute()
 
 
-def choose_and_run(input_text: str):
+def plugin_choose_and_run(input_text: str):
     text = translate_to_english(input_text)
-    print("英文文本：", text)
 
     # 意图识别
     intent = intent_recognition(text, list(plugin_manager.intent_dict.keys()))
-    print("意图识别结果：", intent.split(" "))
     intents = intent.split(" ")
 
+    called_plugins = []
+    call_results = []
+
     for intent in intents:
-        kwargs = json.loads(extract_parameters_by_model(text, tools[intent]))
-        print(kwargs)
-        print(plugin_manager.intent_dict[intent]().execute(**kwargs))
+        if intent in tools.keys():
+            kwargs = json.loads(extract_parameters_by_model(text, tools[intent]))
+            llm_response = plugin_manager.intent_dict[intent]().execute(**kwargs)
+            called_plugins.append(plugin_manager.intent_dict[intent]().name)
+            if llm_response and llm_response["status"] == 'success':
+                call_results.append({intent: llm_response["result"]})
 
-
+    return called_plugins, call_results
 
 if __name__ == '__main__':
-    choose_and_run("北京现在几点")
+    print(plugin_choose_and_run("北京现在几点"))
 
 
 

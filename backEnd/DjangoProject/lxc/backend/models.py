@@ -251,3 +251,15 @@ class DialogueHistory(models.Model):
 
     def __str__(self):
         return f"Dialogue {self.dialog_id} ({self.sender})"
+
+class Conversation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class Message(models.Model):
+    conversation = models.ForeignKey(Conversation, related_name='messages', on_delete=models.CASCADE)
+    content = models.TextField()
+    is_user = models.BooleanField()  # True为用户消息，False为AI回复
+    timestamp = models.DateTimeField(auto_now_add=True)
