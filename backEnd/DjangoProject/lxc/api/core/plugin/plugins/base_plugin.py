@@ -4,7 +4,7 @@ class BasePlugin:
         self.version = version
         self.description = description
         self.intent = intent
-        self.param_description = {}
+        self.param_description = param_description
 
     def execute(self, *args, **kwargs):
         raise NotImplementedError("Each plugin must implement the execute method.")
