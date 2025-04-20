@@ -9,6 +9,9 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from pycparser import parse_file
+
+from api.core.workflow.executor import Executor
 from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk
 from django.db.models import Q
 import json
@@ -24,17 +27,17 @@ import os
 from django.utils.crypto import get_random_string
 from backend.utils.parser import extract_text_from_file
 from backend.utils.chunker import split_text
-from backend.utils.segmenter import auto_clean_and_split, custom_split, split_by_headings
-from backend.utils.tree import build_chunk_tree
+from .utils.segmenter import auto_clean_and_split, custom_split, split_by_headings
+from .utils.tree import build_chunk_tree
 
-from backend.utils.vector_store import search_agent_chunks
-from backend.utils.qa import ask_llm
-from backend.utils.vector_store import add_chunks_to_agent_index
+from .utils.vector_store import search_agent_chunks
+from .utils.qa import ask_llm
+from .utils.vector_store import add_chunks_to_agent_index
 
-from backend.models import Announcement
+from .models import Announcement
 from django.utils import timezone
 # workflow
-from api.core.workflow.executor import Executor
+
 # Redis 客户端配置
 redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
 
