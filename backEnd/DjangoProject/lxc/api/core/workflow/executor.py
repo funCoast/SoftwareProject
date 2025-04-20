@@ -56,7 +56,7 @@ class Executor:
         inputs = []
         for input_item in node.get("inputs", []):
             val = input_item["value"]
-            input_type = input_item["type"]
+            input_type = val["type"]
             input_name = input_item["name"]
 
             if val["type"] == 0:
