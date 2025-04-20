@@ -2,7 +2,10 @@ import subprocess
 import json
 import tempfile
 from api.core.workflow.registry import register_node
-def safe_exec_javascript(code: str, inputs: dict, output_vars: list[str]) -> dict:
+# 修改为（兼容 Python 3.8）：
+from typing import Dict, List  # 在文件顶部添加
+
+def safe_exec_javascript(code: str, inputs: Dict, output_vars: List[str]) -> Dict:
     try:
         # 自动生成解构语句
         destructure = f"const {{{', '.join(inputs.keys())}}} = input;"
@@ -36,7 +39,7 @@ try {{
     except Exception as e:
         return {"error": str(e)}
 
-def safe_exec_python(code: str, inputs: dict, output_vars: list[str]) -> dict:
+def safe_exec_python(code: str, inputs: dict, output_vars: List[str]) -> Dict:
     """
     执行用户提供的 Python 代码，用户可自定义变量名和输出变量。
     :param code: 用户代码（任意 Python）
@@ -59,7 +62,7 @@ def safe_exec_python(code: str, inputs: dict, output_vars: list[str]) -> dict:
 
     except Exception as e:
         return {"error":str(e)}
-def safe_exec(code: str, inputs: dict, output_vars: list[str], language: str = "python") -> dict:
+def safe_exec(code: str, inputs: dict, output_vars: List[str], language: str = "python") -> Dict:
     """
     支持多语言的动态代码执行器。
     :param code: 用户提供的代码
