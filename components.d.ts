@@ -10,6 +10,9 @@ declare module 'vue' {
   export interface GlobalComponents {
     AgentDetail: typeof import('./src/components/agent/AgentDetail.vue')['default']
     AgentDevelopment: typeof import('./src/components/workspace/AgentDevelopment.vue')['default']
+    AgentEdit: typeof import('./src/components/agent/AgentEdit.vue')['default']
+    AgentMiddleColumn: typeof import('./src/components/agent/AgentMiddleColumn.vue')['default']
+    AgentRightColumn: typeof import('./src/components/agent/AgentRightColumn.vue')['default']
     ByCode: typeof import('./src/components/login/ByCode.vue')['default']
     ByPassword: typeof import('./src/components/login/ByPassword.vue')['default']
     ClassifierNodeDetail: typeof import('./src/components/workflow/node-details/ClassifierNodeDetail.vue')['default']

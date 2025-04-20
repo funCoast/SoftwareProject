@@ -81,6 +81,12 @@ const onCreateAgent = () => {
 const offCreateAgent = () => {
   isCreateAgentVisible.value = false
 }
+
+import { useRouter } from 'vue-router';
+const router = useRouter();
+const jumpAgent = () => {
+  router.push('/agentEdit');
+}
 </script>
 
 <template>
@@ -155,7 +161,7 @@ const offCreateAgent = () => {
         </div>
         <div class="create-agent-footer">
           <button class="cancel-btn" @click="offCreateAgent">取消</button>
-          <button class="confirm-btn">确认</button>
+          <button class="confirm-btn" @click="jumpAgent">确认</button>
         </div>
       </div>
     </div>
