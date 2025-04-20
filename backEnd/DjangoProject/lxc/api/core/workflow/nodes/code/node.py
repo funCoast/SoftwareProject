@@ -82,11 +82,12 @@ def run_code_node(node,input):
     language = node.get("data", {}).get("language", "python")
     output_vars = [out["name"] for out in node.get("outputs", [])]
     result = safe_exec(code,input_map,output_vars,language)
+    result_value = [value for value in result.values()]
     outputs = {}
     i = 0
     for output in node.get("outputs", []):
         id = output["id"]
-        outputs[id] = result[i]  # 所有输出都给一样的结果（你也可以按 name 分别生成）
+        outputs[id] = result_value[i]  # 所有输出都给一样的结果（你也可以按 name 分别生成）
         i = i + 1
     return outputs
 
