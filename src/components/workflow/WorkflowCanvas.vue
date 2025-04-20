@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import {computed, onMounted, ref} from 'vue'
+import {usePersistentRef} from '../../utils/usePersistentRef'
 import ClassifierNodeDetail from './node-details/ClassifierNodeDetail.vue'
 import CodeNodeDetail from "./node-details/CodeNodeDetail.vue"
 import ConditionNodeDetail from "./node-details/ConditionNodeDetail.vue"
@@ -8,129 +9,174 @@ import HttpNodeDetail from "./node-details/HttpNodeDetail.vue"
 import KnowledgeNodeDetail from "./node-details/KnowledgeNodeDetail.vue"
 import LoopNodeDetail from "./node-details/LoopNodeDetail.vue"
 import ModelNodeDetail from './node-details/ModelNodeDetail.vue'
-import PluginNodeDetail from './node-details/PluginNodeDetail.vue'
 import WorkflowNodeDetail from './node-details/WorkflowNodeDetail.vue'
+import CodeExplainPlugin from "./node-details/CodeExplainPlugin.vue";
+import CurrentTimePlugin from "./node-details/CurrentTimePlugin.vue";
+import TimestampPlugin from "./node-details/TimestampPlugin.vue";
+import TimestampTransformPlugin from "./node-details/TimestampTransformPlugin.vue";
+import TimezoneSwitchPlugin from "./node-details/TimezoneSwitchPlugin.vue";
+import WeekdayCalculatorPlugin from "./node-details/WeekdayCalculatorPlugin.vue";
+import WorkflowNodeManager from "./WorkflowNodeManager.vue";
+import StartNodeDetail from './node-details/StartNodeDetail.vue'
+import EndNodeDetail from './node-details/EndNodeDetail.vue'
+import {useRouter} from "vue-router";
+import axios from "axios";
 
-const lastCanvasMousePos = ref({ x: 0, y: 0 })
-const canvasEl = ref<HTMLElement>()
-const canvasPosition = ref({ scrollLeft: 0, scrollTop: 0 })
-const canvasRect = ref<DOMRect>()
-const draggingNodeType = ref<string>()
-
-const zoom = ref(1)
-const showNodeSelector = ref(false)
-const nodes = ref([
-  { id: 1, name: '开始', icon: 'fas fa-play' },
-  { id: 2, name: '结束', icon: 'fas fa-stop' },
-  { id: 3, name: '大模型', icon: 'fas fa-brain' },
-  { id: 4, name: '插件', icon: 'fas fa-puzzle-piece' },
-  { id: 5, name: '工作流', icon: 'fas fa-project-diagram' },
-  { id: 6, name: 'HTTP请求', icon: 'fas fa-network-wired' },
-  { id: 7, name: '代码', icon: 'fas fa-code' },
-  { id: 8, name: '条件分支', icon: 'fas fa-code-branch' },
-  { id: 9, name: '循环', icon: 'fas fa-redo' },
-  { id: 10, name: '意图识别', icon: 'fas fa-bullseye' },
-  { id: 11, name: '知识库检索', icon: 'fas fa-book' }
-])
+const router = useRouter()
 
 interface nodeType {
   type: string
   label: string
-  icon: string
   description: string
   image: string
-  draggable: boolean
+  isPlugin: boolean
 }
+
 const nodeTypes = ref<nodeType[]>([
   { 
-    type: 'model',
+    type: 'llm',
     label: '大模型',
-    icon: 'fas fa-brain',
     description: '使用AI大模型处理任务',
     image: 'https://api.iconify.design/carbon:machine-learning-model.svg',
-    draggable: true
-  },
-  { 
-    type: 'plugin',
-    label: '插件',
-    icon: 'fas fa-puzzle-piece',
-    description: '使用自定义插件扩展功能',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    draggable: true
+    isPlugin: false
   },
   { 
     type: 'workflow',
     label: '工作流',
-    icon: 'fas fa-project-diagram',
     description: '嵌套调用其他工作流',
     image: 'https://api.iconify.design/material-symbols:account-tree.svg',
-    draggable: true,
+    isPlugin: false
   },
   { 
     type: 'http',
     label: 'HTTP请求',
-    icon: 'fas fa-globe',
     description: '发送HTTP请求获取数据',
     image: 'https://api.iconify.design/material-symbols:api.svg',
-    draggable: true
+    isPlugin: false
   },
   { 
     type: 'code',
     label: '代码',
-    icon: 'fas fa-code',
     description: '执行自定义代码逻辑',
     image: 'https://api.iconify.design/material-symbols:code.svg',
-    draggable: true
+    isPlugin: false
   },
   { 
     type: 'condition',
     label: '条件分支',
-    icon: 'fas fa-code-branch',
     description: '根据条件选择执行路径',
     image: 'https://api.iconify.design/material-symbols:fork-right.svg',
-    draggable: true
+    isPlugin: false
   },
   { 
     type: 'loop',
     label: '循环',
-    icon: 'fas fa-redo',
     description: '重复执行特定任务',
     image: 'https://api.iconify.design/material-symbols:repeat.svg',
-    draggable: true
+    isPlugin: false
   },
   { 
     type: 'classifier',
     label: '问题分类器',
-    icon: 'fas fa-tags',
     description: '对输入内容进行分类',
     image: 'https://api.iconify.design/material-symbols:category.svg',
-    draggable: true
+    isPlugin: false
   },
   { 
     type: 'knowledge',
     label: '知识库检索',
-    icon: 'fas fa-database',
     description: '从知识库中检索信息',
     image: 'https://api.iconify.design/material-symbols:database.svg',
-    draggable: true
+    isPlugin: false
   },
   { 
     type: 'extract',
     label: '提取文档',
-    icon: 'fas fa-file-alt',
     description: '从文档中提取关键信息',
     image: 'https://api.iconify.design/material-symbols:description.svg',
-    draggable: true
+    isPlugin: false
+  },
+  {
+    type: 'current-time',
+    label: '获取当前时间',
+    description: '获取当前时间，支持多种格式和时区',
+    image: 'https://api.iconify.design/material-symbols:extension.svg',
+    isPlugin: true
+  },
+  {
+    type: 'timezone-switch',
+    label: '时区转换',
+    description: '计算世界各个时区的时差，获取目标时区当前时间',
+    image: 'https://api.iconify.design/material-symbols:extension.svg',
+    isPlugin: true
+  },
+  {
+    type: 'timestamp',
+    label: '时间转时间戳',
+    description: '将当前时间转换为时间戳',
+    image: 'https://api.iconify.design/material-symbols:extension.svg',
+    isPlugin: true
+  },
+  {
+    type: 'timestamp-transform',
+    label: '时间戳转时间',
+    description: '将当前时间戳转换为时间',
+    image: 'https://api.iconify.design/material-symbols:extension.svg',
+    isPlugin: true
+  },
+  {
+    type: 'weekday-calculator',
+    label: '星期计算',
+    description: '计算所给日期对应的星期',
+    image: 'https://api.iconify.design/material-symbols:extension.svg',
+    isPlugin: true
+  },
+  {
+    type: 'code-explain',
+    label: '代码解释器',
+    description: '执行自定义代码逻辑',
+    image: 'https://api.iconify.design/material-symbols:extension.svg',
+    isPlugin: true
   }
 ])
+
+const filteredNodeTypes = computed(() => nodeTypes.value.filter(n => !n.isPlugin))
+const pluginNodeTypes = computed(() => nodeTypes.value.filter(n => n.isPlugin))
 
 interface WorkflowNode {
   id: number
   type: string
   label: string
+  name: string
+  description: string
+  image: string
   x: number
   y: number
+  beforeWorkflowNodeIds: number[]
+  nextWorkflowNodeIds: number[]
+  inputs: Input[]
+  outputs: Output[]
   data?: any
+  runResult?: any
+}
+
+interface Input {
+  id: number
+  name: string
+  type: string
+  value?: {
+    type: number //0:用户输入 1:上游节点的输出变量
+    text: string //用户输入
+    nodeId: number //上游节点id
+    outputId: number //上游节点的输出变量id
+  }
+}
+
+interface Output {
+  id: number
+  name: string
+  type: string
+  value?: any
 }
 
 interface Connection {
@@ -141,74 +187,212 @@ interface Connection {
   targetType: 'left' | 'right'
 }
 
-const workflowNodes = ref<WorkflowNode[]>([])
-const connections = ref<Connection[]>([])
-const nextNodeId = ref(1)
-const nextConnectionId = ref(1)
+const canvasEl = ref<HTMLElement>()
+const zoom = ref(1)
 
-// 选中的节点
-const selectedNode = ref<any>(null)
-
-const isAddingNode = ref(false)
+const workflowNodes = usePersistentRef<WorkflowNode[]>('workflowNodes', [])
+const connections = usePersistentRef<Connection[]>('connections', [])
 const tempNode = ref<WorkflowNode | null>(null)
+const selectedNode = ref<WorkflowNode | null>(null)
 
+const showNodeSelector = ref(false)
+const isAddingNode = ref(false)
 const isDraggingCanvas = ref(false)
-const isDraggingNode = ref(false)
+// 记录按下鼠标时的鼠标位置
 const lastMousePosition = ref({ x: 0, y: 0 })
-const dragStartTimeout = ref<number | null>(null)
-const LONG_PRESS_DURATION = 200 // 长按触发时间（毫秒）
+// 运行节点
+const nodeComponentRefs = new Map<number, any>()
+// 添加节点还是添加插件
+const selectorPage = ref<'nodes' | 'plugins'>('nodes')
 
-function handleDrop(e: DragEvent) {
-  if (!draggingNodeType.value || !canvasRect.value) return
+// 试运行相关
+const showRunDialog = ref(false)
+const runInputs = ref<Record<string, any>>({})
+const runStatus = ref<'running' | 'success' | 'error' | null>(null)
 
-  const scale = zoom.value
-  const rect = canvasRect.value
+// 获取开始节点
+const startNode = computed(() => {
+  return workflowNodes.value.find(node => node.type === 'start')
+})
 
-  // 计算精确位置
-  const x = (e.clientX - rect.left + canvasPosition.value.scrollLeft) / scale
-  const y = (e.clientY - rect.top + canvasPosition.value.scrollTop) / scale
-
-  addNode(draggingNodeType.value, x, y)
-  draggingNodeType.value = undefined
-}
-
-function updateCanvasPosition(el: HTMLElement) {
-  canvasRect.value = el.getBoundingClientRect()
-  canvasPosition.value = {
-    scrollLeft: el.scrollLeft,
-    scrollTop: el.scrollTop
+onMounted(() => {
+  if (workflowNodes.value.length === 0) {
+    workflowNodes.value.push(
+        {
+          id: 1,
+          type: 'start',
+          label: '开始节点',
+          name: '开始节点',
+          description: '',
+          image: 'https://api.iconify.design/material-symbols:play-circle.svg',
+          x: 200,
+          y: 300,
+          beforeWorkflowNodeIds: [],
+          nextWorkflowNodeIds: [],
+          inputs: [],
+          outputs: [],
+        },
+        {
+          id: 2,
+          type: 'end',
+          label: '结束节点',
+          name: '结束节点',
+          description: '',
+          image: 'https://api.iconify.design/material-symbols:stop-circle.svg',
+          x: 1200,
+          y: 300,
+          beforeWorkflowNodeIds: [],
+          nextWorkflowNodeIds: [],
+          inputs: [],
+          outputs: [],
+        }
+    )
   }
-}
+  console.log('nodes:', workflowNodes.value)
+  console.log('connections:', connections.value)
+})
 
-// 处理拖拽添加
-function handleDragOver(e: DragEvent) {
-  updateCanvasPosition(e.currentTarget as HTMLElement)
-}
-
-function getNodeImage(type: string): string {
+// 添加节点
+function addNode(type: string, x: number, y: number) {
+  const rect = canvasEl.value?.getBoundingClientRect()
   const nodeType = nodeTypes.value.find(nt => nt.type === type)
-  return nodeType?.image || ''
-}
-
-function addNode(type: string, x?: number, y?:number) {
-  const nodeType = nodeTypes.value.find(nt => nt.type === type)
-  if (!nodeType) return
-
-  const initX = x !== undefined ? x : lastCanvasMousePos.value.x
-  const initY = y !== undefined ? y : lastCanvasMousePos.value.y
-
+  if (!nodeType || !rect) return
   isAddingNode.value = true
   tempNode.value = {
-    id: nextNodeId.value++,
+    id: 0,
     type: type,
     label: nodeType.label,
-    x: initX,
-    y: initY
+    name: nodeType.label,
+    description: '',
+    image: nodeType.image,
+    x: x - rect.left,
+    y: y - rect.top,
+    beforeWorkflowNodeIds: [],
+    nextWorkflowNodeIds: [],
+    inputs: [],
+    outputs: [],
   }
   showNodeSelector.value = false
 }
 
-// 更新节点
+// 放下临时节点
+function handleTempNodeClick(e: MouseEvent) {
+  e.stopPropagation() // 阻止事件冒泡，防止点击临时节点时触发外层的 click 事件
+  if (tempNode.value) {
+    const newNode = {
+      ...tempNode.value,
+      id: Date.now()
+    } as WorkflowNode
+    workflowNodes.value.push(newNode) // 把节点添加到正式工作流中
+    isAddingNode.value = false // 标记添加过程结束
+    tempNode.value = null // 清空临时节点
+  }
+}
+
+// 在画布上按下鼠标
+function handleCanvasMouseDown(e: MouseEvent) {
+  // 检查是否点击了画布背景
+  const target = e.target as HTMLElement
+  const isClickingCanvas = target.classList.contains('grid-background')
+  // 鼠标左键 && 点击的是画布背景
+  if (e.button === 0 && isClickingCanvas) {
+    isDraggingCanvas.value = true
+    lastMousePosition.value = {
+      x: e.clientX,
+      y: e.clientY
+    }
+  }
+}
+
+// 鼠标在画布上移动
+function handleCanvasMouseMove(e: MouseEvent) {
+  const rect = canvasEl.value?.getBoundingClientRect()
+  // 拖动添加的节点
+  if (isAddingNode.value && tempNode.value) {
+    tempNode.value.x = e.clientX - rect.left
+    tempNode.value.y = e.clientY - rect.top
+  }
+  // 拖动画布
+  if (isDraggingCanvas.value) {
+    const deltaX = e.clientX - lastMousePosition.value.x
+    const deltaY = e.clientY - lastMousePosition.value.y
+    const currentTransform = new DOMMatrix(getComputedStyle(canvasEl.value!).transform)
+    const newTransform = currentTransform.translate(deltaX, deltaY)
+    canvasEl.value!.style.transform = newTransform.toString()
+    // 更新所有节点的位置以保持连线同步
+    const translateX = newTransform.e - currentTransform.e
+    const translateY = newTransform.f - currentTransform.f
+    workflowNodes.value = workflowNodes.value.map(node => ({
+      ...node,
+      x: node.x + translateX / zoom.value,
+      y: node.y + translateY / zoom.value
+    }))
+    lastMousePosition.value = {
+      x: e.clientX,
+      y: e.clientY
+    }
+  }
+}
+
+// 在画布上按下鼠标后松开鼠标
+function handleCanvasMouseUp() {
+  if (isDraggingCanvas.value) {
+    // 拖拽结束时，将 transform 的位移应用到节点位置上
+    const transform = new DOMMatrix(getComputedStyle(canvasEl.value!).transform)
+    const translateX = transform.e
+    const translateY = transform.f
+    // 更新节点位置
+    workflowNodes.value = workflowNodes.value.map(node => ({
+      ...node,
+      x: node.x + translateX / zoom.value,
+      y: node.y + translateY / zoom.value
+    }))
+    // 重置画布 transform
+    canvasEl.value!.style.transform = `scale(${zoom.value})`
+  }
+  isDraggingCanvas.value = false
+}
+
+// 点击节点时显示详情面板
+function handleNodeClick(node: WorkflowNode) {
+  selectedNode.value = node
+}
+
+// 打开运行面板
+function runSelectedNode() {
+  if (!selectedNode.value) return
+  const nodeId = selectedNode.value.id
+  const componentInstance = nodeComponentRefs.get(nodeId)
+  if (!componentInstance) {
+    console.error(`节点 ${nodeId} 没有渲染组件实例`)
+    return
+  }
+  if (typeof componentInstance.openRunPanel === 'function') {
+    componentInstance.openRunPanel()
+  } else {
+    console.error(`节点 ${nodeId} 没有暴露 openRunPanel()`)
+  }
+}
+
+// 通过详情面板更新节点数据
+function updateNode(updatedNode: WorkflowNode) {
+  const index = workflowNodes.value.findIndex(n => n.id === updatedNode.id)
+  if (index !== -1) {
+    const currentNode = workflowNodes.value[index]
+    workflowNodes.value[index] = {
+      ...updatedNode,
+      x: currentNode.x,
+      y: currentNode.y
+    }
+  }
+}
+
+// 关闭详情面板
+function closeDetailPanel() {
+  selectedNode.value = null
+}
+
+// 通过复制、删除更新节点数量
 function updateNodes(newNodes: WorkflowNode[]) {
   workflowNodes.value = newNodes;
   if (selectedNode.value && !newNodes.find(n => n.id === selectedNode.value!.id)) {
@@ -221,17 +405,93 @@ function updateConnections(newConnections: Connection[]) {
   connections.value = newConnections
 }
 
+// 打开试运行弹窗
 function runTest() {
-  // 试运行逻辑
+  if (!startNode.value) {
+    alert('未找到开始节点')
+    return
+  }
+  // 初始化输入值
+  runInputs.value = {}
+  showRunDialog.value = true
+}
+
+// 执行试运行
+async function executeRun() {
+  if (!startNode.value) return
+  startNode.value.inputs = startNode.value.outputs.map(output => ({
+    id: output.id,
+    name: output.name,
+    type: output.type,
+    value: {
+      type: 0,
+      text: runInputs.value[output.name] || '',
+      nodeId: -1,
+      outputId: -1
+    }
+  }))
+  console.log("nodes:", workflowNodes.value)
+  console.log("connections: ", connections.value)
+  runStatus.value = 'running'
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'workflow/run',
+      data: {
+        nodes: workflowNodes.value,
+        edges: connections.value,
+        user_id: Date.now(),
+        workflow_id: Date.now()
+      }
+    })
+    console.log("response: ", response.data)
+    const results = response.data['result']
+    console.log(results)
+    workflowNodes.value = workflowNodes.value.map(node => {
+      if (results[node.id]) {
+        return {
+          ...node,
+          runResult: results[node.id]["0"]
+        }
+      }
+      return {
+        ...node,
+        runResult: null
+      }
+    })
+    runStatus.value = 'success'
+    showRunDialog.value = false
+  } catch (error) {
+    console.error("Error:", error)
+    runStatus.value = 'error'
+    showRunDialog.value = false
+  }
 }
 
 function debug() {
   // 调试逻辑
 }
 
+// 保存工作流
+function saveWorkflow() {
+  console.log("workflowNodes: ", workflowNodes.value)
+  console.log("connections ", connections.value)
+}
+
+function setNodeComponentRef(id: number) {
+  return (el: any) => {
+    if (el) nodeComponentRefs.set(id, el)
+    else nodeComponentRefs.delete(id)
+  }
+}
+
 // 获取节点详情组件
 function getNodeDetailComponent(type: string) {
   switch (type) {
+    case 'start':
+      return StartNodeDetail
+    case 'end':
+      return EndNodeDetail
     case 'classifier':
       return ClassifierNodeDetail
     case 'code':
@@ -246,162 +506,41 @@ function getNodeDetailComponent(type: string) {
       return KnowledgeNodeDetail
     case 'loop':
       return LoopNodeDetail
-    case 'model':
+    case 'llm':
       return ModelNodeDetail
-    case 'plugin':
-      return PluginNodeDetail
     case 'workflow':
       return WorkflowNodeDetail
+    case 'current-time':
+      return CurrentTimePlugin
+    case 'timezone-switch':
+      return TimezoneSwitchPlugin
+    case 'timestamp':
+      return TimestampPlugin
+    case 'timestamp-transform':
+      return TimestampTransformPlugin
+    case 'weekday-calculator':
+      return WeekdayCalculatorPlugin
+    case 'code-explain':
+      return CodeExplainPlugin
     default:
       return null
   }
 }
 
-// 点击节点时显示详情面板
-function handleNodeClick(node: any) {
-  selectedNode.value = node
+const clearWorkflowCacheAndGoBack = () => {
+  // 清除 localStorage 缓存
+  localStorage.removeItem('workflowNodes')
+  localStorage.removeItem('connections')
+  // 返回上一页
+  router.go(-1)
 }
-
-// 关闭详情面板
-function closeDetailPanel() {
-  selectedNode.value = null
-}
-
-// 更新节点数据
-function updateNode(updatedNode: any) {
-  const index = nodes.value.findIndex(n => n.id === updatedNode.id)
-  if (index !== -1) {
-    nodes.value[index] = updatedNode
-  }
-}
-
-const handleCanvasMouseDown = (e: MouseEvent) => {
-  // 检查是否点击了画布背景
-  const target = e.target as HTMLElement
-  const isClickingCanvas = target.classList.contains('grid-background')
-  
-  if (e.button === 0 && !isDraggingNode.value && isClickingCanvas) {
-    isDraggingCanvas.value = true
-    lastMousePosition.value = {
-      x: e.clientX,
-      y: e.clientY
-    }
-  }
-}
-
-const handleCanvasMouseMove = (e: MouseEvent) => {
-  const rect = canvasEl.value?.getBoundingClientRect()
-  if (!rect) return
-
-  // 统一计算鼠标在画布逻辑坐标中的位置（非像素）
-  const posX = (e.clientX - rect.left)
-  const posY = (e.clientY - rect.top)
-
-  // 无论是否在添加节点，都记录最后的逻辑坐标（供点击添加使用）
-  lastCanvasMousePos.value = { x: posX, y: posY }
-
-  // 添加节点时更新预览位置
-  if (isAddingNode.value && tempNode.value) {
-    tempNode.value.x = posX
-    tempNode.value.y = posY
-  }
-
-  // 拖动画布逻辑不变
-  if (isDraggingCanvas.value && !isDraggingNode.value) {
-    const deltaX = e.clientX - lastMousePosition.value.x
-    const deltaY = e.clientY - lastMousePosition.value.y
-
-    const currentTransform = new DOMMatrix(getComputedStyle(canvasEl.value!).transform)
-    const newTransform = currentTransform.translate(deltaX, deltaY)
-    canvasEl.value!.style.transform = newTransform.toString()
-
-    // 更新所有节点的位置以保持连线同步
-    const translateX = newTransform.e - currentTransform.e
-    const translateY = newTransform.f - currentTransform.f
-    
-    workflowNodes.value = workflowNodes.value.map(node => ({
-      ...node,
-      x: node.x + translateX / zoom.value,
-      y: node.y + translateY / zoom.value
-    }))
-
-    lastMousePosition.value = {
-      x: e.clientX,
-      y: e.clientY
-    }
-  }
-}
-
-const handleCanvasMouseUp = () => {
-  if (isDraggingCanvas.value) {
-    // 拖拽结束时，将 transform 的位移应用到节点位置上
-    const transform = new DOMMatrix(getComputedStyle(canvasEl.value!).transform)
-    const translateX = transform.e
-    const translateY = transform.f
-    
-    // 更新节点位置
-    workflowNodes.value = workflowNodes.value.map(node => ({
-      ...node,
-      x: node.x + translateX / zoom.value,
-      y: node.y + translateY / zoom.value
-    }))
-    
-    // 重置画布 transform
-    canvasEl.value!.style.transform = `scale(${zoom.value})`
-  }
-  isDraggingCanvas.value = false
-}
-
-const handleCanvasClick = (e: MouseEvent) => {
-  if (isAddingNode.value && tempNode.value) {
-    // 确保拿到最新的 rect
-    const rect = canvasEl.value!.getBoundingClientRect()  // :contentReference[oaicite:1]{index=1}
-
-    // 先加上 scroll，再除以缩放
-    const x = (e.clientX - rect.left + canvasPosition.value.scrollLeft) / zoom.value
-    const y = (e.clientY - rect.top  + canvasPosition.value.scrollTop ) / zoom.value
-
-    const newNode = { ...tempNode.value, x, y }
-    workflowNodes.value.push(newNode)
-
-    isAddingNode.value = false
-    tempNode.value = null
-  }
-}
-
-const handleTempNodeClick = (e: MouseEvent) => {
-  e.stopPropagation()
-  if (tempNode.value) {
-    const newNode = { ...tempNode.value }
-    workflowNodes.value.push(newNode)
-    isAddingNode.value = false
-    tempNode.value = null
-  }
-}
-
-const handleNodeDragStart = () => {
-  isDraggingNode.value = true
-  if (dragStartTimeout.value) {
-    clearTimeout(dragStartTimeout.value)
-    dragStartTimeout.value = null
-  }
-}
-
-const handleNodeDragEnd = () => {
-  isDraggingNode.value = false
-}
-
-// 初始化画布位置
-onMounted(() => {
-  updateCanvasPosition(canvasEl.value!)
-})
 </script>
 
 <template>
   <div class="workflow-container">
     <!-- 上侧导航栏 -->
     <div class="top-navbar">
-      <button class="back-btn" @click="$router.go(-1)">
+      <button class="back-btn" @click="clearWorkflowCacheAndGoBack">
         <i class="fas fa-arrow-left"></i>
         返回
       </button>
@@ -420,27 +559,23 @@ onMounted(() => {
     <!-- 中间画布区域 -->
     <div class="canvas-area"
          ref="canvasEl"
-         @scroll.passive="updateCanvasPosition($event.target as HTMLElement)"
-         @dragover.prevent="handleDragOver"
-         @drop="handleDrop"
-         @mousemove="handleCanvasMouseMove"
          @mousedown="handleCanvasMouseDown"
+         @mousemove="handleCanvasMouseMove"
          @mouseup="handleCanvasMouseUp"
          @mouseleave="handleCanvasMouseUp"
-         @click="handleCanvasClick"
          :style="{ transform: `scale(${zoom})`, cursor: isDraggingCanvas ? 'grabbing' : 'default' }">
       <div class="grid-background"></div>
 
       <WorkflowNodeManager
           :nodes="workflowNodes"
+          :selectedNode="selectedNode"
           :connections="connections"
           :nodeTypes="nodeTypes"
           :zoom="zoom"
           @update:nodes="updateNodes"
           @update:connections="updateConnections"
           @node-click="handleNodeClick"
-          @node-drag-start="handleNodeDragStart"
-          @node-drag-end="handleNodeDragEnd"
+          @run-node="runSelectedNode"
       />
 
       <!-- 临时节点 -->
@@ -457,8 +592,7 @@ onMounted(() => {
       >
         <div class="node-content">
           <div class="node-icon">
-            <img v-if="getNodeImage(tempNode.type)" :src="getNodeImage(tempNode.type)" :alt="tempNode.label">
-            <i v-else :class="nodeTypes.find(nt => nt.type === tempNode.type)?.icon"></i>
+            <img :src="tempNode.image" :alt="tempNode.label">
           </div>
           <div class="node-title">{{ tempNode.label }}</div>
         </div>
@@ -470,6 +604,10 @@ onMounted(() => {
       <button class="tool-btn primary" @click="showNodeSelector = true">
         <img src="https://api.iconify.design/material-symbols:add-box.svg" alt="添加" class="tool-btn-icon">
         添加节点
+      </button>
+      <button class="tool-btn secondary" @click="saveWorkflow">
+        <img src="https://api.iconify.design/material-symbols:save.svg" alt="保存" class="tool-btn-icon">
+        保存工作流
       </button>
       <button class="tool-btn secondary" @click="debug">
         <img src="https://api.iconify.design/material-symbols:bug-report.svg" alt="调试" class="tool-btn-icon">
@@ -485,18 +623,45 @@ onMounted(() => {
     <div class="node-selector-modal" v-if="showNodeSelector" @click.self="showNodeSelector = false">
       <div class="node-selector-content">
         <div class="node-selector-header">
-          <h3>选择节点类型</h3>
-          <button class="close-btn" @click="showNodeSelector = false">
-            <i class="fas fa-times"></i>
-          </button>
+          <h3>{{ selectorPage === 'nodes' ? '选择节点类型' : '选择插件' }}</h3>
+          <div class="selector-tabs">
+            <button 
+              :class="['tab-btn', { active: selectorPage === 'nodes' }]"
+              @click="selectorPage = 'nodes'"
+            >
+              节点类型
+            </button>
+            <button 
+              :class="['tab-btn', { active: selectorPage === 'plugins' }]"
+              @click="selectorPage = 'plugins'"
+            >
+              插件
+            </button>
+          </div>
         </div>
-        <div class="node-types-grid">
-          <div v-for="node in nodeTypes" :key="node.type" 
+        
+        <!-- 节点类型网格 -->
+        <div v-if="selectorPage === 'nodes'" class="node-types-grid">
+          <div v-for="node in filteredNodeTypes" :key="node.type"
                class="node-type-item"
-               @click="addNode(node.type)">
+               @click="addNode(node.type, $event.x, $event.y)">
             <div class="node-icon">
-              <img v-if="node.image" :src="node.image" :alt="node.label">
-              <i v-else :class="node.icon"></i>
+              <img :src="node.image" :alt="node.label">
+            </div>
+            <div class="node-info">
+              <span class="node-label">{{ node.label }}</span>
+              <span class="node-desc">{{ node.description }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 插件类型网格 -->
+        <div v-if="selectorPage === 'plugins'" class="node-types-grid">
+          <div v-for="node in pluginNodeTypes" :key="node.type"
+               class="node-type-item"
+               @click="addNode(node.type, $event.x, $event.y)">
+            <div class="node-icon">
+              <img :src="node.image" :alt="node.label">
             </div>
             <div class="node-info">
               <span class="node-label">{{ node.label }}</span>
@@ -510,18 +675,129 @@ onMounted(() => {
     <!-- 节点详情面板 -->
     <div v-if="selectedNode" class="node-detail-panel">
       <div class="node-detail-header">
-        <h3>{{ selectedNode.label || '节点详情' }}</h3>
-        <button @click="closeDetailPanel" class="close-btn">×</button>
+        <h3>{{ selectedNode.label }}</h3>
+        <div class="header-actions">
+          <button 
+            class="action-btn run-btn" 
+            @click="runSelectedNode"
+            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end' && selectedNode.type !== 'extract'"
+            title="运行节点">
+            <img 
+              src="https://api.iconify.design/material-symbols:play-circle.svg"
+              alt="运行" 
+              class="action-icon">
+          </button>
+          <button @click="closeDetailPanel" class="action-btn close-btn" title="关闭">×</button>
+        </div>
       </div>
       
       <div class="node-detail-content">
+        <!-- 添加名称和描述编辑区域 -->
+        <div class="edit-section">
+          <div class="edit-item">
+            <label>节点名称</label>
+            <input 
+              type="text" 
+              v-model="selectedNode.name"
+              @input="updateNode(selectedNode)"
+              placeholder="请输入节点名称"
+              class="edit-input"
+            >
+          </div>
+          <div class="edit-item">
+            <label>节点描述</label>
+            <textarea 
+              v-model="selectedNode.description"
+              @input="updateNode(selectedNode)"
+              placeholder="请输入节点描述"
+              class="edit-textarea"
+              rows="3"
+            ></textarea>
+          </div>
+        </div>
+        
         <component
           :is="getNodeDetailComponent(selectedNode.type)"
           :node="selectedNode"
+          :allNodes="workflowNodes"
+          :key="selectedNode?.id"
+          :ref="setNodeComponentRef(selectedNode.id)"
           @update:node="updateNode"
         />
       </div>
     </div>
+
+    <!-- 试运行弹窗 -->
+    <el-dialog
+      v-model="showRunDialog"
+      title="试运行工作流"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <div class="run-dialog-content">
+        <!-- 输入配置 -->
+        <div class="input-config-section">
+          <h4>输入配置</h4>
+          <div v-if="!startNode?.outputs.length" class="empty-state">
+            <p>开始节点未配置输出变量</p>
+          </div>
+          <div v-else class="input-list">
+            <div v-for="output in startNode.outputs" :key="output.id" class="input-item">
+              <label>{{ output.name }}</label>
+              <div class="input-field">
+                <template v-if="output.type === 'string'">
+                  <el-input
+                    v-model="runInputs[output.name]"
+                    :placeholder="`请输入${output.name}`"
+                    type="textarea"
+                    :rows="3"
+                  />
+                </template>
+                <template v-else-if="output.type === 'number'">
+                  <el-input-number
+                    v-model="runInputs[output.name]"
+                    :placeholder="`请输入${output.name}`"
+                    :controls="true"
+                  />
+                </template>
+                <template v-else-if="output.type === 'Array[File]'">
+                  <el-upload
+                    action="/api/upload"
+                    multiple
+                    :on-success="(res) => runInputs[output.name] = [...(runInputs[output.name] || []), res.file]"
+                    :on-remove="(file) => runInputs[output.name] = runInputs[output.name].filter(f => f.id !== file.id)"
+                  >
+                    <el-button type="primary">上传文件</el-button>
+                  </el-upload>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 运行结果 -->
+        <div v-if="runStatus" class="run-result-section">
+          <div class="run-result-header">
+            <h4>运行结果</h4>
+            <span :class="['status-badge', runStatus]">
+              {{ runStatus === 'running' ? '运行中' : 
+                 runStatus === 'success' ? '成功' : '失败' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showRunDialog = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="runStatus === 'running'"
+          @click="executeRun"
+        >
+          运行
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -531,6 +807,13 @@ onMounted(() => {
   flex-direction: column;
   height: 100vh;
   background: #f8f9fa;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .top-navbar {
@@ -540,6 +823,9 @@ onMounted(() => {
   background: white;
   padding: 10px 20px;
   border-bottom: 1px solid #eee;
+  position: relative;
+  z-index: 1001;
+  margin: 0;
 }
 
 .back-btn, .publish-btn {
@@ -591,12 +877,12 @@ onMounted(() => {
 .canvas-area {
   flex: 1;
   position: relative;
-  overflow: auto;
   background: white;
   transform-origin: top left;
   user-select: none;
   touch-action: none;
   will-change: transform;
+  z-index: 1;
 }
 
 .canvas-area[data-dragging="true"]::after {
@@ -812,11 +1098,11 @@ onMounted(() => {
   position: fixed;
   top: 0;
   right: 0;
-  width: 300px;
+  width: 550px;
   height: 100vh;
   background: white;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
+  z-index: 1002;
   display: flex;
   flex-direction: column;
 }
@@ -827,6 +1113,47 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.action-btn.run-btn {
+  color: #3498db;
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.close-btn {
+  font-size: 20px;
+  color: #666;
+}
+
+.close-btn:hover {
+  color: #ff6b6b;
 }
 
 .node-detail-content {
@@ -841,18 +1168,6 @@ onMounted(() => {
   color: #2c3e50;
 }
 
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #666;
-}
-
-.close-btn:hover {
-  color: #ff6b6b;
-}
-
 .workflow-node {
   position: relative;
   z-index: 1;
@@ -862,5 +1177,168 @@ onMounted(() => {
 
 .workflow-node:hover {
   opacity: 1 !important;
+}
+
+.run-result-section {
+  margin-top: 16px;
+  border-top: 1px solid #eee;
+  padding-top: 16px;
+}
+
+.run-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.run-result-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.running {
+  background: #e3f2fd;
+  color: #2196f3;
+}
+
+.status-badge.success {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.status-badge.error {
+  background: #ffebee;
+  color: #f44336;
+}
+
+.result-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.selector-tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+  background: #f5f5f5;
+}
+
+.tab-btn.active {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.edit-section {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.edit-item {
+  margin-bottom: 12px;
+}
+
+.edit-item:last-child {
+  margin-bottom: 0;
+}
+
+.edit-item label {
+  display: block;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.edit-input, .edit-textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #2c3e50;
+  background: white;
+}
+
+.edit-input:focus, .edit-textarea:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.edit-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.run-dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.input-config-section {
+  margin-bottom: 24px;
+}
+
+.input-config-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.input-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-item label {
+  font-size: 14px;
+  color: #666;
+}
+
+.input-field {
+  width: 100%;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: #666;
 }
 </style> 

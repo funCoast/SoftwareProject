@@ -161,7 +161,7 @@ const comments = ref<commnet[]> ([
         <!-- 聊天内容区 -->
         <div class="chat-content">
           <div class="chat-day-divider">今天</div>
-          
+
           <!-- 系统消息 -->
           <div class="message system">
             <div class="message-content">
@@ -248,10 +248,10 @@ const comments = ref<commnet[]> ([
         <!-- 输入区域 -->
         <div class="chat-input-area">
           <div class="input-container">
-            <textarea 
-              placeholder="输入消息..." 
-              rows="1"
-              class="chat-input"
+            <textarea
+                placeholder="输入消息..."
+                rows="1"
+                class="chat-input"
             ></textarea>
             <div class="input-actions">
               <button class="action-btn" title="上传文件">
@@ -345,15 +345,15 @@ const comments = ref<commnet[]> ([
             <p class="comment-text">{{ comment.content }}</p>
           </div>
         </div>
-        
+
         <!-- 发布评论区域 -->
         <div class="comment-publish">
           <div class="publish-content">
-            <textarea 
-              placeholder="写下你的评论..." 
-              class="comment-textarea"
-              v-model="newComment"
-              rows="1"
+            <textarea
+                placeholder="写下你的评论..."
+                class="comment-textarea"
+                v-model="newComment"
+                rows="1"
             ></textarea>
             <button class="publish-btn">
               <img src="https://api.iconify.design/material-symbols:send.svg" alt="发布" class="action-icon">

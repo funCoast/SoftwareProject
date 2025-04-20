@@ -40,9 +40,9 @@ onBeforeMount (() => {
       uid: sessionStorage.getItem('uid')
     }
   }).then(function (response) {
-      if(response.data.code === 0) {
-        announcements.value=response.data.announcements
-      }
+    if(response.data.code === 0) {
+      announcements.value=response.data.announcements
+    }
   })
 })
 
@@ -323,101 +323,101 @@ const followingAgents = ref<agent[]> ([
 ])
 
 const favoriteAgents = ref<agent[]> ([
-{
-  id: 1,
-  name: '翻译助手',
-  category: '语言工具',
-  description: '多语言翻译，支持多种语言互译和实时翻译',
-  icon: 'fas fa-language',
-  image: 'https://picsum.photos/300/300?random=13',
-  usage: '900',
-  likes: '567',
-  favorites: '345',
-  author: {
-    name: '语言专家',
-    avatar: 'https://picsum.photos/50/50?random=13'
+  {
+    id: 1,
+    name: '翻译助手',
+    category: '语言工具',
+    description: '多语言翻译，支持多种语言互译和实时翻译',
+    icon: 'fas fa-language',
+    image: 'https://picsum.photos/300/300?random=13',
+    usage: '900',
+    likes: '567',
+    favorites: '345',
+    author: {
+      name: '语言专家',
+      avatar: 'https://picsum.photos/50/50?random=13'
+    }
+  },
+  {
+    id: 2,
+    name: '音乐创作',
+    category: '音乐工具',
+    description: 'AI音乐创作助手，支持作曲和编曲',
+    icon: 'fas fa-music',
+    image: 'https://picsum.photos/300/300?random=14',
+    usage: '720',
+    likes: '480',
+    favorites: '280',
+    author: {
+      name: '音乐人',
+      avatar: 'https://picsum.photos/50/50?random=14'
+    }
+  },
+  {
+    id: 3,
+    name: '视频剪辑',
+    category: '视频工具',
+    description: '智能视频剪辑助手，提供视频编辑建议',
+    icon: 'fas fa-video',
+    image: 'https://picsum.photos/300/300?random=15',
+    usage: '850',
+    likes: '520',
+    favorites: '310',
+    author: {
+      name: '视频专家',
+      avatar: 'https://picsum.photos/50/50?random=15'
+    }
+  },
+  {
+    id: 4,
+    name: '3D建模',
+    category: '设计工具',
+    description: 'AI辅助3D建模，提供建模建议和优化',
+    icon: 'fas fa-cube',
+    image: 'https://picsum.photos/300/300?random=16',
+    usage: '680',
+    likes: '420',
+    favorites: '250',
+    author: {
+      name: '设计专家',
+      avatar: 'https://picsum.photos/50/50?random=16'
+    }
+  },
+  {
+    id: 5,
+    name: '法律顾问',
+    category: '法律服务',
+    description: '智能法律咨询助手，提供法律建议和解释',
+    icon: 'fas fa-gavel',
+    image: 'https://picsum.photos/300/300?random=17',
+    usage: '750',
+    likes: '450',
+    favorites: '270',
+    author: {
+      name: '法律专家',
+      avatar: 'https://picsum.photos/50/50?random=17'
+    }
+  },
+  {
+    id: 6,
+    name: '心理咨询',
+    category: '心理服务',
+    description: 'AI心理咨询助手，提供心理建议和疏导',
+    icon: 'fas fa-brain',
+    image: 'https://picsum.photos/300/300?random=18',
+    usage: '820',
+    likes: '490',
+    favorites: '290',
+    author: {
+      name: '心理专家',
+      avatar: 'https://picsum.photos/50/50?random=18'
+    }
   }
-},
-{
-  id: 2,
-  name: '音乐创作',
-  category: '音乐工具',
-  description: 'AI音乐创作助手，支持作曲和编曲',
-  icon: 'fas fa-music',
-  image: 'https://picsum.photos/300/300?random=14',
-  usage: '720',
-  likes: '480',
-  favorites: '280',
-  author: {
-    name: '音乐人',
-    avatar: 'https://picsum.photos/50/50?random=14'
-  }
-},
-{
-  id: 3,
-  name: '视频剪辑',
-  category: '视频工具',
-  description: '智能视频剪辑助手，提供视频编辑建议',
-  icon: 'fas fa-video',
-  image: 'https://picsum.photos/300/300?random=15',
-  usage: '850',
-  likes: '520',
-  favorites: '310',
-  author: {
-    name: '视频专家',
-    avatar: 'https://picsum.photos/50/50?random=15'
-  }
-},
-{
-  id: 4,
-  name: '3D建模',
-  category: '设计工具',
-  description: 'AI辅助3D建模，提供建模建议和优化',
-  icon: 'fas fa-cube',
-  image: 'https://picsum.photos/300/300?random=16',
-  usage: '680',
-  likes: '420',
-  favorites: '250',
-  author: {
-    name: '设计专家',
-    avatar: 'https://picsum.photos/50/50?random=16'
-  }
-},
-{
-  id: 5,
-  name: '法律顾问',
-  category: '法律服务',
-  description: '智能法律咨询助手，提供法律建议和解释',
-  icon: 'fas fa-gavel',
-  image: 'https://picsum.photos/300/300?random=17',
-  usage: '750',
-  likes: '450',
-  favorites: '270',
-  author: {
-    name: '法律专家',
-    avatar: 'https://picsum.photos/50/50?random=17'
-  }
-},
-{
-  id: 6,
-  name: '心理咨询',
-  category: '心理服务',
-  description: 'AI心理咨询助手，提供心理建议和疏导',
-  icon: 'fas fa-brain',
-  image: 'https://picsum.photos/300/300?random=18',
-  usage: '820',
-  likes: '490',
-  favorites: '290',
-  author: {
-    name: '心理专家',
-    avatar: 'https://picsum.photos/50/50?random=18'
-  }
-}
 ])
 
 const currentAgents =  computed(() => {
   switch (currentAgentTab.value) {
-    case 'hot': 
+    case 'hot':
       return hotAgents.value
     case 'following':
       return followingAgents.value
@@ -438,10 +438,10 @@ const paginatedAgents = computed(()=> {
 })
 
 watch (
-  () => currentAgentTab,
-  () => {
-    currentPage.value = 1
-  }
+    () => currentAgentTab,
+    () => {
+      currentPage.value = 1
+    }
 )
 </script>
 
@@ -472,17 +472,17 @@ watch (
         <div class="section-header">
           <h2>智能体推荐</h2>
           <div class="tab-switch">
-            <span 
-              :class="{ active: currentAgentTab === 'hot' }" 
-              @click="currentAgentTab = 'hot'"
+            <span
+                :class="{ active: currentAgentTab === 'hot' }"
+                @click="currentAgentTab = 'hot'"
             >热度推荐</span>
-            <span 
-              :class="{ active: currentAgentTab === 'following' }" 
-              @click="currentAgentTab = 'following'"
+            <span
+                :class="{ active: currentAgentTab === 'following' }"
+                @click="currentAgentTab = 'following'"
             >关注用户智能体</span>
-            <span 
-              :class="{ active: currentAgentTab === 'favorite' }" 
-              @click="currentAgentTab = 'favorite'"
+            <span
+                :class="{ active: currentAgentTab === 'favorite' }"
+                @click="currentAgentTab = 'favorite'"
             >收藏智能体</span>
           </div>
         </div>
@@ -527,18 +527,18 @@ watch (
           </div>
           <!-- 分页控件 -->
           <div class="pagination">
-            <button 
-              :disabled="currentPage === 1"
-              @click="currentPage--"
+            <button
+                :disabled="currentPage === 1"
+                @click="currentPage--"
             >
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
               </svg>
             </button>
             <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
-            <button 
-              :disabled="currentPage === totalPages"
-              @click="currentPage++"
+            <button
+                :disabled="currentPage === totalPages"
+                @click="currentPage++"
             >
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>

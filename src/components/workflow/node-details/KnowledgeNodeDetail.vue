@@ -1,67 +1,3 @@
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { WorkflowNode } from '@/types/workflow'
-
-const props = defineProps<{
-  node: WorkflowNode
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: WorkflowNode): void
-}>()
-
-const nodeData = ref({
-  knowledgeBaseId: props.node.data?.knowledgeBaseId || '',
-  searchMethod: props.node.data?.searchMethod || 'semantic',
-  similarityThreshold: props.node.data?.similarityThreshold || 0.7,
-  maxResults: props.node.data?.maxResults || 5,
-  useCache: props.node.data?.useCache || true,
-  includeMetadata: props.node.data?.includeMetadata || false,
-  metadataFields: props.node.data?.metadataFields || [],
-  includeContext: props.node.data?.includeContext || false,
-  contextLength: props.node.data?.contextLength || 200
-})
-
-// 可用知识库列表（示例数据）
-const availableKnowledgeBases = ref([
-  { id: '1', name: '产品知识库' },
-  { id: '2', name: '技术文档库' },
-  { id: '3', name: '常见问题库' }
-])
-
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-
-function addMetadataField() {
-  nodeData.value.metadataFields.push({ name: '' })
-  updateNode()
-}
-
-function removeMetadataField(index: number) {
-  nodeData.value.metadataFields.splice(index, 1)
-  updateNode()
-}
-</script>
-
 <template>
   <div class="knowledge-node-detail">
     <div class="form-group">
@@ -175,6 +111,70 @@ function removeMetadataField(index: number) {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+import { WorkflowNode } from '@/types/workflow'
+
+const props = defineProps<{
+  node: WorkflowNode
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: WorkflowNode): void
+}>()
+
+const nodeData = ref({
+  knowledgeBaseId: props.node.data?.knowledgeBaseId || '',
+  searchMethod: props.node.data?.searchMethod || 'semantic',
+  similarityThreshold: props.node.data?.similarityThreshold || 0.7,
+  maxResults: props.node.data?.maxResults || 5,
+  useCache: props.node.data?.useCache || true,
+  includeMetadata: props.node.data?.includeMetadata || false,
+  metadataFields: props.node.data?.metadataFields || [],
+  includeContext: props.node.data?.includeContext || false,
+  contextLength: props.node.data?.contextLength || 200
+})
+
+// 可用知识库列表（示例数据）
+const availableKnowledgeBases = ref([
+  { id: '1', name: '产品知识库' },
+  { id: '2', name: '技术文档库' },
+  { id: '3', name: '常见问题库' }
+])
+
+watch(nodeData, (newData) => {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...newData
+    }
+  }
+  emit('update:node', updatedNode)
+}, { deep: true })
+
+function updateNode() {
+  const updatedNode = {
+    ...props.node,
+    data: {
+      ...props.node.data,
+      ...nodeData.value
+    }
+  }
+  emit('update:node', updatedNode)
+}
+
+function addMetadataField() {
+  nodeData.value.metadataFields.push({ name: '' })
+  updateNode()
+}
+
+function removeMetadataField(index: number) {
+  nodeData.value.metadataFields.splice(index, 1)
+  updateNode()
+}
+</script>
 
 <style scoped>
 .knowledge-node-detail {

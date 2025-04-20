@@ -84,7 +84,7 @@ function handleProfileNavigation() {
           <span class="message-badge">3</span>
         </div>
       </div>
-      
+
       <!-- 导航菜单 -->
       <nav>
         <ul>
@@ -272,7 +272,7 @@ nav ul li.active .nav-icon {
   .side-nav {
     width: 180px;
     padding: 15px;
-    
+
     nav ul li {
       padding: 12px 15px;
     }
