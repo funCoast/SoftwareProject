@@ -666,10 +666,15 @@ def create_kb(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-    user_id = request.POST.get('user_id')
-    kb_name = request.POST.get('kb_name')
-    kb_type = request.POST.get('kb_type', '')
-    kb_description = request.POST.get('kb_description', '')
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"code": -1, "message": "请求体不是有效的 JSON"})
+
+    user_id = data.get('user_id')
+    kb_name = data.get('kb_name')
+    kb_type = data.get('kb_type', '')
+    kb_description = data.get('kb_description', '')
 
     if not user_id or not kb_name:
         return JsonResponse({"code": -1, "message": "缺少 user_id 或 kb_name 参数"})
@@ -688,13 +693,14 @@ def create_kb(request):
         kb_type=kb_type,
         kb_description=kb_description,
     )
+
     return JsonResponse({
         "code": 0,
         "message": "创建成功",
         "kb_id": kb.kb_id,
         "uuid": str(kb.uuid),
     })
-
+    
 ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
 
 @csrf_exempt
