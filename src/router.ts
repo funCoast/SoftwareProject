@@ -1,6 +1,6 @@
 import { createRouter, createWebHashHistory } from "vue-router";
 
-const authRequired = false; // 是否需要登录
+const authRequired = true; // 是否需要登录
 
 const routes = [
   {
