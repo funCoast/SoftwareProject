@@ -10,6 +10,9 @@ declare module 'vue' {
   export interface GlobalComponents {
     AgentDetail: typeof import('./src/components/agent/AgentDetail.vue')['default']
     AgentDevelopment: typeof import('./src/components/workspace/AgentDevelopment.vue')['default']
+    AgentEdit: typeof import('./src/components/agent/AgentEdit.vue')['default']
+    AgentMiddleColumn: typeof import('./src/components/agent/AgentMiddleColumn.vue')['default']
+    AgentRightColumn: typeof import('./src/components/agent/AgentRightColumn.vue')['default']
     ByCode: typeof import('./src/components/login/ByCode.vue')['default']
     ByPassword: typeof import('./src/components/login/ByPassword.vue')['default']
     ClassifierNodeDetail: typeof import('./src/components/workflow/node-details/ClassifierNodeDetail.vue')['default']
@@ -47,6 +50,7 @@ declare module 'vue' {
     Login: typeof import('./src/components/login/Login.vue')['default']
     LoopNodeDetail: typeof import('./src/components/workflow/node-details/LoopNodeDetail.vue')['default']
     Main: typeof import('./src/components/Main.vue')['default']
+    Message: typeof import('./src/components/message/Message.vue')['default']
     ModelNodeDetail: typeof import('./src/components/workflow/node-details/ModelNodeDetail.vue')['default']
     PictureBase: typeof import('./src/components/knowledgeBase/PictureBase.vue')['default']
     Profile: typeof import('./src/components/profile/Profile.vue')['default']
