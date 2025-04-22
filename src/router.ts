@@ -80,7 +80,7 @@ const routes = [
         ],
     },
     {
-        path: '/workflow',
+        path: '/workflow/:id',
         name: 'WorkflowCanvas',
         component: () => import('./components/workflow/WorkflowCanvas.vue'),
     },

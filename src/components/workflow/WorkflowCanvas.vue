@@ -19,10 +19,16 @@ import WeekdayCalculatorPlugin from "./node-details/WeekdayCalculatorPlugin.vue"
 import WorkflowNodeManager from "./WorkflowNodeManager.vue";
 import StartNodeDetail from './node-details/StartNodeDetail.vue'
 import EndNodeDetail from './node-details/EndNodeDetail.vue'
-import {useRouter} from "vue-router";
+import {useRouter, useRoute} from "vue-router";
 import axios from "axios";
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute();
+
+const name = ref('')
+const description = ref('')
+const icon = ref('')
 
 interface nodeType {
   type: string
@@ -215,41 +221,63 @@ const startNode = computed(() => {
   return workflowNodes.value.find(node => node.type === 'start')
 })
 
-onMounted(() => {
-  if (workflowNodes.value.length === 0) {
-    workflowNodes.value.push(
-        {
-          id: 1,
-          type: 'start',
-          label: '开始节点',
-          name: '开始节点',
-          description: '',
-          image: 'https://api.iconify.design/material-symbols:play-circle.svg',
-          x: 200,
-          y: 300,
-          beforeWorkflowNodeIds: [],
-          nextWorkflowNodeIds: [],
-          inputs: [],
-          outputs: [],
-        },
-        {
-          id: 2,
-          type: 'end',
-          label: '结束节点',
-          name: '结束节点',
-          description: '',
-          image: 'https://api.iconify.design/material-symbols:stop-circle.svg',
-          x: 1200,
-          y: 300,
-          beforeWorkflowNodeIds: [],
-          nextWorkflowNodeIds: [],
-          inputs: [],
-          outputs: [],
-        }
-    )
+onMounted(async () => {
+  try {
+    const workflow_id = route.params.id;
+    const uid = sessionStorage.getItem('uid')
+    console.log("uid: ", uid)
+    console.log("workflow_id: ", workflow_id)
+    const response = await axios.get('/workflow/fetch', {
+      params: {
+        uid,
+        workflow_id
+      }
+    })
+    if (response.data.code === 0) {
+      workflowNodes.value = response.data.nodes
+      connections.value = response.data.edges
+      name.value = response.data.name
+      description.value = response.data.description
+      icon.value = "http://122.9.33.84:8000" + response.data.icon
+      console.log("iconUrl: ", icon.value)
+      if (workflowNodes.value.length === 0) {
+        workflowNodes.value.push(
+            {
+              id: 1,
+              type: 'start',
+              label: '开始节点',
+              name: '开始节点',
+              description: '',
+              image: 'https://api.iconify.design/material-symbols:play-circle.svg',
+              x: 200,
+              y: 300,
+              beforeWorkflowNodeIds: [],
+              nextWorkflowNodeIds: [],
+              inputs: [],
+              outputs: [],
+            },
+            {
+              id: 2,
+              type: 'end',
+              label: '结束节点',
+              name: '结束节点',
+              description: '',
+              image: 'https://api.iconify.design/material-symbols:stop-circle.svg',
+              x: 1200,
+              y: 300,
+              beforeWorkflowNodeIds: [],
+              nextWorkflowNodeIds: [],
+              inputs: [],
+              outputs: [],
+            }
+        )
+      }
+    } else {
+      console.error('获取失败:', response.data.message)
+    }
+  } catch (err) {
+    console.error('请求失败', err)
   }
-  console.log('nodes:', workflowNodes.value)
-  console.log('connections:', connections.value)
 })
 
 // 添加节点
@@ -473,9 +501,29 @@ function debug() {
 }
 
 // 保存工作流
-function saveWorkflow() {
+async function saveWorkflow() {
   console.log("workflowNodes: ", workflowNodes.value)
   console.log("connections ", connections.value)
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'workflow/save',
+      data: {
+        'uid': sessionStorage.getItem('uid'),
+        'workflow_id': route.params.id,
+        'nodes': workflowNodes.value,
+        'edges': connections.value
+      },
+    })
+    if (response.data.code === 0) {
+      // ElMessage.success("保存成功")
+      alert("保存成功！")
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error("Error:", error)
+  }
 }
 
 function setNodeComponentRef(id: number) {
@@ -545,10 +593,10 @@ const clearWorkflowCacheAndGoBack = () => {
         返回
       </button>
       <div class="workflow-info">
-        <img src="https://picsum.photos/40/40?random=11" alt="Workflow" class="workflow-image">
+        <img :src="icon" alt="Workflow" class="workflow-image">
         <div class="workflow-details">
-          <h3 class="workflow-name">工作流名称</h3>
-          <p class="workflow-description">这是工作流的描述信息。</p>
+          <h3 class="workflow-name">{{name}}</h3>
+          <p class="workflow-description">{{description}}</p>
         </div>
       </div>
       <button class="publish-btn">
@@ -609,10 +657,10 @@ const clearWorkflowCacheAndGoBack = () => {
         <img src="https://api.iconify.design/material-symbols:save.svg" alt="保存" class="tool-btn-icon">
         保存工作流
       </button>
-      <button class="tool-btn secondary" @click="debug">
-        <img src="https://api.iconify.design/material-symbols:bug-report.svg" alt="调试" class="tool-btn-icon">
-        调试
-      </button>
+<!--      <button class="tool-btn secondary" @click="debug">-->
+<!--        <img src="https://api.iconify.design/material-symbols:bug-report.svg" alt="调试" class="tool-btn-icon">-->
+<!--        调试-->
+<!--      </button>-->
       <button class="tool-btn accent" @click="runTest">
         <img src="https://api.iconify.design/material-symbols:play-circle.svg" alt="运行" class="tool-btn-icon">
         试运行

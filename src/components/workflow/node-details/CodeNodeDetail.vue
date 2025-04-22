@@ -218,6 +218,7 @@ interface Input {
   name: string
   value?: {
     type: number // 1: 上游节点的输出变量
+    text: string
     nodeId: number
     outputId: number
   }
@@ -319,6 +320,7 @@ function addInput() {
     value: {
       type: 1,
       nodeId: -1,
+      text: '',
       outputId: -1
     }
   })

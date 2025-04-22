@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import router from '../../router'
+import axios from "axios";
 
 interface resource {
   id: number
@@ -68,27 +69,84 @@ const resources = ref<resource[]> ([
   }
 ])
 
-const dialogVisible = ref(false); // 控制弹窗显示
+const dialogVisible = ref(false); // 控制知识库弹窗显示
+const workflowDialogVisible = ref(false); // 控制工作流弹窗显示
+
 const knowledgeForm = ref({
   type: '文本', // 默认类型
   name: '',
   description: '',
 });
 
-// 打开弹窗
+const workflowForm = ref({
+  name: '',
+  description: '',
+  icon: ''
+});
+
+const formData = new FormData()
+
+// 打开知识库弹窗
 function createKnowledge() {
   dialogVisible.value = true;
 }
 
-// 提交表单
+// 打开工作流弹窗
+function openWorkflowDialog() {
+  workflowDialogVisible.value = true;
+}
+
+// 提交知识库表单
 function submitKnowledge() {
   console.log('知识库信息:', knowledgeForm.value);
-  // 在这里处理提交逻辑，例如发送到后端
   dialogVisible.value = false; // 关闭弹窗
 }
 
-function createWorkflow() {
-  router.push('/workflow')
+// 提交工作流表单并跳转
+async function submitWorkflow() {
+  formData.append('description', workflowForm.value.description)
+  formData.append('name', workflowForm.value.name)
+  formData.append('uid', sessionStorage.getItem('uid'))
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'workflow/create',
+      data: formData,
+      header: {
+        'Content-Type': 'multipart/form-data',
+      }
+    })
+    if (response.data.code === 0) {
+      console.log(response.data)
+      const workflow_id = response.data.workflow_id
+      localStorage.removeItem('workflowNodes')
+      localStorage.removeItem('connections')
+      await router.push(`/workflow/${workflow_id}`);
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error("Error:", error)
+  }
+}
+
+// 处理图片上传
+function handleImageUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+    // 验证文件大小和类型
+    if (file.size > 2 * 1024 * 1024) {
+      alert('图片大小不能超过2MB')
+      return;
+    }
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      workflowForm.value.icon = e.target?.result as string
+    }
+    formData.append('icon', input.files[0])
+    reader.readAsDataURL(file)
+  }
 }
 </script>
 
@@ -107,13 +165,13 @@ function createWorkflow() {
         <template #dropdown>
           <el-dropdown-menu>
             <div>
-            <el-dropdown-item class="dropdown-item" @click="createWorkflow">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
-              </svg>
-              <span>工作流</span>
-            </el-dropdown-item>
-          </div>
+              <el-dropdown-item class="dropdown-item" @click="openWorkflowDialog">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+                </svg>
+                <span>工作流</span>
+              </el-dropdown-item>
+            </div>
             <el-dropdown-item @click="createKnowledge">
               <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                 <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
@@ -151,7 +209,7 @@ function createWorkflow() {
             v-model="knowledgeForm.description"
             type="textarea"
             placeholder="请输入知识库描述"
-            rows="4"
+            :rows="4"
             class="form-input"
           />
         </div>
@@ -160,6 +218,51 @@ function createWorkflow() {
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" @click="submitKnowledge">创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 工作流创建弹窗 -->
+    <el-dialog v-model="workflowDialogVisible" title="创建工作流" width="500px" class="custom-dialog">
+      <div class="dialog-body">
+        <!-- 名称 -->
+        <div class="form-row">
+          <label class="form-label">名称</label>
+          <el-input v-model="workflowForm.name" placeholder="请输入工作流名称" class="form-input" />
+        </div>
+
+        <!-- 描述 -->
+        <div class="form-row">
+          <label class="form-label">描述</label>
+          <el-input
+            v-model="workflowForm.description"
+            type="textarea"
+            placeholder="请输入工作流描述"
+            :rows="4"
+            class="form-input"
+          />
+        </div>
+
+        <!-- 图片上传 -->
+        <div class="form-row">
+          <label class="form-label">图标</label>
+          <div class="image-upload">
+            <div class="upload-preview" v-if="workflowForm.icon">
+              <img :src="workflowForm.icon" alt="预览图" />
+            </div>
+            <div class="upload-button" :class="{ 'has-image': workflowForm.icon }">
+              <input type="file" accept="image/*" @change="handleImageUpload" class="file-input" />
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
+              </svg>
+              <span>{{ workflowForm.icon ? '更换图片' : '上传图片' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="workflowDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitWorkflow">创建</el-button>
       </template>
     </el-dialog>
 
@@ -395,5 +498,76 @@ function createWorkflow() {
 .form-input {
   width: 100%;
   border-radius: 6px;
+}
+
+.image-upload {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.upload-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+}
+
+.upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-button {
+  position: relative;
+  width: 120px;
+  height: 100px;
+  border: 2px dashed #e9ecef;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-button:hover {
+  border-color: #3498db;
+  color: #3498db;
+}
+
+.upload-button.has-image {
+  width: 100px;
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-button svg {
+  color: #95a5a6;
+}
+
+.upload-button:hover svg {
+  color: #3498db;
+}
+
+.upload-button span {
+  font-size: 12px;
+  color: #95a5a6;
+}
+
+.upload-button:hover span {
+  color: #3498db;
 }
 </style>
