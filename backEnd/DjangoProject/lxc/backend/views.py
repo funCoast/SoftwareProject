@@ -749,16 +749,11 @@ def upload_kb_file(request):
 
 @csrf_exempt
 def get_kb_texts(request):
-    if request.method != 'POST':
-        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"code": -1, "message": "请求体不是有效的 JSON"})
-
-    uid = data.get('uid')
-    kb_id = data.get('kb_id')
+    uid = request.GET.get('uid')
+    kb_id = request.GET.get('kb_id')
 
     if not uid or not kb_id:
         return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
