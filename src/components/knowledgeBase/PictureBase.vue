@@ -2,7 +2,6 @@
 import { ref } from "vue";
 import router from "../../router";
 
-const id = router.currentRoute.value.params.id; // 获取路由参数id
 interface Picture {
   id: number;
   name: string;
@@ -25,7 +24,7 @@ const pictures = ref<Picture[]>([
 
 // 跳转到图像上传界面
 function goToUploadPage() {
-  router.push("/workspace/uploadPicture/" + id);
+  router.push(router.currentRoute.value.path + "/upload");
 };
 </script>
 

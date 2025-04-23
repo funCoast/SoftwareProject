@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import router from '../../router'
+import axios from 'axios'
 
 interface resource {
   id: number
@@ -69,8 +70,8 @@ const resources = ref<resource[]> ([
 ])
 
 const dialogVisible = ref(false); // 控制弹窗显示
-const knowledgeForm = ref({
-  type: '文本', // 默认类型
+const baseInfo = ref({
+  type: 'text', // 默认类型
   name: '',
   description: '',
 });
@@ -82,8 +83,28 @@ function createKnowledge() {
 
 // 提交表单
 function submitKnowledge() {
-  console.log('知识库信息:', knowledgeForm.value);
-  // 在这里处理提交逻辑，例如发送到后端
+  alert('提交知识库信息：' + JSON.stringify(baseInfo.value))
+  axios({
+    method: 'post',
+    url: '/kb/create/',
+    data: {
+      user_id: sessionStorage.getItem('uid'),
+      kb_type: baseInfo.value.type,
+      kb_name: baseInfo.value.name,
+      kb_description: baseInfo.value.description,
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      alert('创建成功！')
+      router.push('/workspace/' + baseInfo.value.type + 'Base/' + response.data.kb_id)
+    } else {
+      alert('创建失败：' + response.data.message)
+      console.log(response.data.message)
+    }
+  }).catch(function (error) {
+    console.error(error)
+    alert("上传失败，请重试！")
+  })
   dialogVisible.value = false; // 关闭弹窗
 }
 
@@ -131,24 +152,24 @@ function createWorkflow() {
         <!-- 类型 -->
         <div class="form-row">
           <label class="form-label">类型</label>
-          <el-select v-model="knowledgeForm.type" placeholder="请选择类型" class="form-input">
-            <el-option label="文本" value="文本"></el-option>
-            <el-option label="表格" value="表格"></el-option>
-            <el-option label="图像" value="图像"></el-option>
+          <el-select v-model="baseInfo.type" placeholder="请选择类型" class="form-input">
+            <el-option label="文本" value="text"></el-option>
+            <el-option label="表格" value="table"></el-option>
+            <el-option label="图像" value="picture"></el-option>
           </el-select>
         </div>
 
         <!-- 名称 -->
         <div class="form-row">
           <label class="form-label">名称</label>
-          <el-input v-model="knowledgeForm.name" placeholder="请输入知识库名称" class="form-input" />
+          <el-input v-model="baseInfo.name" placeholder="请输入知识库名称" class="form-input" />
         </div>
 
         <!-- 描述 -->
         <div class="form-row">
           <label class="form-label">描述</label>
           <el-input
-            v-model="knowledgeForm.description"
+            v-model="baseInfo.description"
             type="textarea"
             placeholder="请输入知识库描述"
             rows="4"
