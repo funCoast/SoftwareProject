@@ -734,20 +734,23 @@ def upload_kb_file(request):
         name=file.name,
         segment_mode=segment_mode
     )
-    # 再获取该文件对应的所有分段，并生成嵌入
-    chunks = KnowledgeChunk.objects.filter(file=saved_file)
-    for chunk in chunks:
-        embedding = get_tongyi_embedding(chunk.content)
-        if embedding:
-            chunk.embedding = embedding
-            chunk.save()
 
     try:
+        # 1. 分段
         segment_file_and_save_chunks(saved_file, segment_mode)
+
+        # 2. 查出分段并生成嵌入
+        chunks = KnowledgeChunk.objects.filter(file=saved_file)
+        for chunk in chunks:
+            embedding = get_tongyi_embedding(chunk.content)
+            if embedding:
+                chunk.embedding = json.dumps(embedding)  # 序列化存入 TextField
+                chunk.save()
+
     except Exception as e:
         return JsonResponse({
             "code": -1,
-            "message": f"上传成功但分段失败: {str(e)}"
+            "message": f"上传成功但分段/嵌入失败: {str(e)}"
         })
 
     return JsonResponse({
@@ -774,7 +777,6 @@ def get_tongyi_embedding(text):
     except Exception as e:
         print(f"[通义嵌入失败] {str(e)}")
         return None
-
 
 @csrf_exempt
 def get_kb_files(request):
