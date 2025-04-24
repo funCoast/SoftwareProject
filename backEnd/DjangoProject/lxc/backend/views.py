@@ -666,16 +666,21 @@ def create_kb(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-    user_id = request.POST.get('user_id')
-    kb_name = request.POST.get('kb_name')
-    kb_type = request.POST.get('kb_type', '')
-    kb_description = request.POST.get('kb_description', '')
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({"code": -1, "message": "请求体不是有效的 JSON"})
 
-    if not user_id or not kb_name:
-        return JsonResponse({"code": -1, "message": "缺少 user_id 或 kb_name 参数"})
+    uid = data.get('uid')
+    kb_name = data.get('kb_name')
+    kb_type = data.get('kb_type', '')
+    kb_description = data.get('kb_description', '')
+
+    if not uid or not kb_name:
+        return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_name 参数"})
 
     try:
-        user = User.objects.get(user_id=user_id)
+        user = User.objects.get(user_id=uid)
     except User.DoesNotExist:
         return JsonResponse({"code": -1, "message": "用户不存在"})
 
@@ -688,13 +693,14 @@ def create_kb(request):
         kb_type=kb_type,
         kb_description=kb_description,
     )
+
     return JsonResponse({
         "code": 0,
         "message": "创建成功",
         "kb_id": kb.kb_id,
         "uuid": str(kb.uuid),
     })
-
+    
 ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
 
 @csrf_exempt
@@ -739,6 +745,35 @@ def upload_kb_file(request):
         "message": "上传成功",
         "id": saved_file.id,
         "name": saved_file.name
+    })
+
+@csrf_exempt
+def get_kb_texts(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    uid = request.GET.get('uid')
+    kb_id = request.GET.get('kb_id')
+
+    if not uid or not kb_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    texts = list(kb.items.values_list('content', flat=True))
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "texts": texts
     })
 
 def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):

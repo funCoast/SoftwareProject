@@ -26,14 +26,15 @@ urlpatterns = [
     path('user/updatePassword', views.user_update_password, name='user_update_password'),
 
     # knowledgeBase
-    path("kb/create/", views.create_kb, name='create_knowledgeBase'),
-    path('textBase/upload/',   views.upload_kb_file, name='upload_kb_file'),
-    path("kb/file/chunks/", views.get_kb_file_chunks, name='get_kb_file_chunks'),
-    path('api/kb/<int:kb_id>/upload/', UploadKnowledgeFileView.as_view()),
-    path('api/kb/<int:kb_id>/file/<int:file_id>/tree/', views.ChunkTreeView.as_view(), name='chunk-tree'),
-    path('api/kb/<int:kb_id>/file/<int:file_id>/chunks/', views.ChunkListView.as_view(), name='chunk-list'),
-    path('api/vector/search/', views.VectorSearchView.as_view(), name='vector-search'),
-    path('api/agent/ask/', views.ask_question, name='agent-ask'),
+    path("kb/create", views.create_kb, name='create_knowledgeBase'),
+    path('textBase/upload',   views.upload_kb_file, name='upload_kb_file'),
+    path("kb/file/chunks", views.get_kb_file_chunks, name='get_kb_file_chunks'),
+    path('kb/getTexts', views.get_kb_texts, name='get_kb_texts'),
+    path('api/kb/<int:kb_id>/upload', UploadKnowledgeFileView.as_view()),
+    path('api/kb/<int:kb_id>/file/<int:file_id>/tree', views.ChunkTreeView.as_view(), name='chunk-tree'),
+    path('api/kb/<int:kb_id>/file/<int:file_id>/chunks', views.ChunkListView.as_view(), name='chunk-list'),
+    path('api/vector/search', views.VectorSearchView.as_view(), name='vector-search'),
+    path('api/agent/ask', views.ask_question, name='agent-ask'),
     # 工作流
     path('workflow/run',views.workflow_run, name='workflow_run'),
     path('workflow/create',views.workflow_create, name='workflow_create'),

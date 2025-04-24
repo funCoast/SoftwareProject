@@ -1,12 +1,5 @@
-import json
-import os
-import openai
 import re
-from django.db.models.expressions import result
 from openai import OpenAI
-
-from api.core.agent.skill.plugin_call.plugin_tools import tools
-from api.core.plugin.api.views import plugin_manager
 
 client = OpenAI(
     #该API-KEY为组内成员(hty)个人所有。
@@ -47,7 +40,7 @@ def remove_noise(text):
     return re.sub(r'\s+', ' ', text).strip()
 
 
-def intent_recognition(text, labels: list[str]):
+def intent_recognition(text, labels):
     # 添加提示信息，明确要求模型返回多个意图标签，用空格隔开
     label_str = "; ".join(labels)
     prompt = f"""
