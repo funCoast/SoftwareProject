@@ -27,9 +27,11 @@ urlpatterns = [
 
     # knowledgeBase
     path("kb/create", views.create_kb, name='create_knowledgeBase'),
-    path('textBase/upload',   views.upload_kb_file, name='upload_kb_file'),
+    path('kb/uploadText',   views.upload_kb_file, name='upload_kb_file'),
     path("kb/file/chunks", views.get_kb_file_chunks, name='get_kb_file_chunks'),
-    path('kb/getTexts', views.get_kb_texts, name='get_kb_texts'),
+    path('kb/getTexts', views.get_kb_files, name='get_kb_texts'),
+    path("kb/getTextContent", views.get_text_content, name='get_text_content'),
+    path('rl/getKnowledgeBases', views.get_knowledge_bases, name='get_knowledge_bases'),
     path('api/kb/<int:kb_id>/upload', UploadKnowledgeFileView.as_view()),
     path('api/kb/<int:kb_id>/file/<int:file_id>/tree', views.ChunkTreeView.as_view(), name='chunk-tree'),
     path('api/kb/<int:kb_id>/file/<int:file_id>/chunks', views.ChunkListView.as_view(), name='chunk-list'),

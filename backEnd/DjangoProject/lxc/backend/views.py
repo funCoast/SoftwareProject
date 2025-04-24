@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk,Workflow
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow
 from django.db.models import Q
 import json
 # backend/views.py
@@ -33,9 +33,7 @@ from .utils.tree import build_chunk_tree
 from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
 from .utils.vector_store import add_chunks_to_agent_index
-
 from .models import Announcement
-from django.utils import timezone
 # workflow
 
 # Redis 客户端配置
@@ -700,7 +698,7 @@ def create_kb(request):
         "kb_id": kb.kb_id,
         "uuid": str(kb.uuid),
     })
-    
+
 ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
 
 @csrf_exempt
@@ -708,19 +706,25 @@ def upload_kb_file(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
+    uid = request.POST.get('uid')
     kb_id = request.POST.get('kb_id')
     segment_mode = request.POST.get('segment_mode', 'auto')
     file = request.FILES.get('file')
 
-    if not kb_id or not file:
-        return JsonResponse({"code": -1, "message": "缺少 kb_id 或 file"})
+    if not uid or not kb_id or not file:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file"})
 
     ext = os.path.splitext(file.name)[-1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         return JsonResponse({"code": -1, "message": "不支持的文件类型"})
 
     try:
-        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=request.user)
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
@@ -730,25 +734,50 @@ def upload_kb_file(request):
         name=file.name,
         segment_mode=segment_mode
     )
+    # 再获取该文件对应的所有分段，并生成嵌入
+    chunks = KnowledgeChunk.objects.filter(file=saved_file)
+    for chunk in chunks:
+        embedding = get_tongyi_embedding(chunk.content)
+        if embedding:
+            chunk.embedding = embedding
+            chunk.save()
 
     try:
         segment_file_and_save_chunks(saved_file, segment_mode)
     except Exception as e:
         return JsonResponse({
             "code": -1,
-            "message": f"上传成功但分段失败: {str(e)}",
-            "file_id": saved_file.id
+            "message": f"上传成功但分段失败: {str(e)}"
         })
 
     return JsonResponse({
         "code": 0,
-        "message": "上传成功",
-        "id": saved_file.id,
-        "name": saved_file.name
+        "message": "上传成功"
     })
 
+
+def get_tongyi_embedding(text):
+    url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+    headers = {
+        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "text-embedding-v1",
+        "input": [text]
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        data = response.json()
+        return data["output"]["embeddings"][0]  # 向量列表
+    except Exception as e:
+        print(f"[通义嵌入失败] {str(e)}")
+        return None
+
+
 @csrf_exempt
-def get_kb_texts(request):
+def get_kb_files(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
@@ -768,12 +797,13 @@ def get_kb_texts(request):
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
-    texts = list(kb.items.values_list('content', flat=True))
+    files = kb.files.all().values('id', 'name')
+    file_list = list(files)
 
     return JsonResponse({
         "code": 0,
         "message": "获取成功",
-        "texts": texts
+        "texts": file_list
     })
 
 def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
@@ -792,7 +822,7 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
         i = 0
         order = 0
         while i < len(words):
-            chunk_text = ' '.join(words[i:i+max_length])
+            chunk_text = ' '.join(words[i:i + max_length])
             KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=chunk_text, order=order)
             i += max_length
             order += 1
@@ -805,10 +835,84 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
             if line.startswith("#"):
                 current_parent = KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order)
             elif line.strip():
-                KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order, parent=current_parent)
+                KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order,
+                                              parent=current_parent)
             order += 1
     else:
         raise ValueError("不支持的分段方式")
+
+
+@csrf_exempt
+def get_text_content(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    uid = request.GET.get('uid')
+    kb_id = request.GET.get('kb_id')
+    text_id = request.GET.get('text_id')
+
+    if not uid or not kb_id or not text_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 text_id 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    try:
+        file = KnowledgeFile.objects.get(id=text_id, kb=kb)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "文件不存在或无权限"})
+
+    chunks = KnowledgeChunk.objects.filter(file=file).order_by('order')
+
+    content_list = [chunk.content for chunk in chunks]
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "content": content_list
+    })
+
+
+@csrf_exempt
+def get_knowledge_bases(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    uid = request.GET.get('uid')
+    if not uid:
+        return JsonResponse({"code": -1, "message": "缺少 uid 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    kb_list = KnowledgeBase.objects.filter(user=user).order_by('-updated_at')
+
+    knowledge_bases = []
+    for kb in kb_list:
+        knowledge_bases.append({
+            "id": kb.kb_id,
+            "type": kb.kb_type,
+            "name": kb.kb_name,
+            "description": kb.kb_description or "",
+            "icon": "kb",  #
+            "updateTime": kb.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "knowledgeBases": knowledge_bases
+    })
+
 
 @csrf_exempt
 def get_kb_file_chunks(request):
@@ -1023,6 +1127,7 @@ def ask_question(request):
         "answer": answer,
         "context": related_chunks
     })
+
 def workflow_run(request):
     nodes = request.data.get("nodes", [])
     edges = request.data.get("edges", [])
@@ -1091,6 +1196,7 @@ def workflow_create(request):
             "message": f"服务器错误：{str(e)}",
             "workflow_id": None
         })
+
 def workflow_fetch(request):
     uid = request.GET.get('uid')
     workflow_id = request.GET.get('workflow_id')
@@ -1126,6 +1232,7 @@ def workflow_fetch(request):
         "name": workflow.name,
         "descript": workflow.description
     })
+
 def workflow_save(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
