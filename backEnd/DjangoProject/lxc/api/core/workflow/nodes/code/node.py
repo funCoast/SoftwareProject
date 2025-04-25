@@ -79,7 +79,6 @@ def safe_exec(code: str, inputs: dict, output_vars: List[str], language: str = "
         return {"error": f"不支持的语言类型：{language}"}
 @register_node("code")
 def run_code_node(node,input):
-    print("inputs =", input)
     input_map = {inp["name"]: inp["value"] for inp in input}
     # 获取用户代码和语言类型
     code = node.get("data", {}).get("code", "")

@@ -42,12 +42,23 @@ def classify_question(question, categories):
 @register_node("classifier")
 def run_classifier_node(node,inputs):
     question = inputs[0]
-    categories = [cls["description"] for cls in node["data"]["classes"]]
-    result = classify_question(question, categories)
+    # 获取分类列表
+    classes = node["data"]["classes"]  # 每项包含 description 和 next_node
+
+    # 构造分类标签列表
+    categories = [cls["description"] for cls in classes]
+
+    # 调用分类函数
+    result = classify_question(question, categories)  # 返回预测分类名称
+
+    # 找到对应的 next_node
+    matched_class = next((cls for cls in classes if cls["description"] == result), None)
+    next_node = matched_class["next_node"] if matched_class else -1
     outputs = {}
     for output in node.get("outputs", []):
         id = output["id"]
         outputs[id] = result  # 所有输出都给一样的结果（你也可以按 name 分别生成）
+    outputs["next_node"] = next_node
     return outputs
 # 示例调用
 if __name__ == '__main__':

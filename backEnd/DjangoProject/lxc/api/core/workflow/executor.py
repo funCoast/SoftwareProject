@@ -58,6 +58,7 @@ class Executor:
             val = input_item["value"]
             input_type = val["type"]
             input_name = input_item["name"]
+            input_id = input_item["id"]
 
             if val["type"] == 0:
                 resolved_value = val["text"]
@@ -69,6 +70,7 @@ class Executor:
                 resolved_value = None
 
             inputs.append({
+                "id": input_id,
                 "name": input_name,
                 "type": input_type,
                 "value": resolved_value
@@ -90,16 +92,56 @@ class Executor:
             raise NodeExecutionError(f"No registered function for node type '{node_type}'")
         return func(node, inputs)
 
+    def execute_from_node(self, start_node_id: int, visited: set):
+        """
+        递归执行从某个节点出发的所有下游节点（跳过已执行的）
+        """
+        if start_node_id in visited:
+            return
+        visited.add(start_node_id)
+
+        node = self.nodes[start_node_id]
+        inputs = self.resolve_inputs(node)
+        outputs = self.run_node(node, inputs)
+        self.outputs[start_node_id] = outputs
+
+        print(f"[Executed] Node {node['name']} (ID: {start_node_id}) -> {outputs}")
+
+        for neighbor in self.graph.get(start_node_id, []):
+            self.execute_from_node(neighbor, visited)
+
     def execute(self) -> Dict[int, Dict[str, Any]]:
         self.build_graph()
         execution_order = self.topological_sort()
 
+        visited = set()
+
         for node_id in execution_order:
+            if node_id in visited:
+                continue
+
             node = self.nodes[node_id]
             inputs = self.resolve_inputs(node)
-            outputs = self.run_node(node, inputs)
-            self.outputs[node_id] = outputs
-            print(f"[Executed] Node {node['name']} (ID: {node_id}) -> {outputs}")
+
+            # 特殊处理 classifier 节点
+            if node["type"] == "classifier" or node["type"] == "if_else":
+                outputs = self.run_node(node, inputs)
+                self.outputs[node_id] = outputs
+                visited.add(node_id)
+
+                print(f"[Executed] Classifier Node {node['name']} (ID: {node_id}) -> {outputs}")
+
+                # 提取 next_node 并从该节点开始递归执行
+                next_node_id = outputs["next_node"]
+
+                if next_node_id != -1 and next_node_id in self.nodes:
+                    self.execute_from_node(next_node_id, visited)
+
+            else:
+                outputs = self.run_node(node, inputs)
+                self.outputs[node_id] = outputs
+                visited.add(node_id)
+                print(f"[Executed] Node {node['name']} (ID: {node_id}) -> {outputs}")
 
         return self.outputs
 

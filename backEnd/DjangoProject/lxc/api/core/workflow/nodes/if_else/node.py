@@ -1,79 +1,79 @@
 from typing import Any, Literal
+from ...registry import register_node
 
+def compare(compare_type:int,input_val,compare_val):
+    match = False
+    if compare_type == 1:  # 包含
+        match = compare_val in input_val
+    elif compare_type == 2:  # 不包含
+        match = compare_val not in input_val
+    elif compare_type == 3:  # 开始是
+        match = input_val.startswith(compare_val)
+    elif compare_type == 4:  # 结束是
+        match = input_val.endswith(compare_val)
+    elif compare_type == 5:  # 是（全等）
+        match = input_val == compare_val
+    elif compare_type == 6:  # 不是（不等）
+        match = input_val != compare_val
+    elif compare_type == 7:  # 为空
+        match = input_val == ""
+    elif compare_type == 8:  # 不为空
+        match = input_val != ""
+    return match
 
-def resolve_variable(variable_selector: list[str], variable_pool: dict[str, dict[str, Any]]) -> Any:
-    """
-    从变量池中解析变量值。
-    :param variable_selector: 变量选择器，例如 ["node_id", "input"]
-    :param variable_pool: 当前执行上下文的变量池
-    :return: 解析得到的变量值
-    """
-    node_id, key = variable_selector
-    return variable_pool.get(node_id, {}).get(key)
+def judge_case(case: dict, inputs: list) -> bool:
+    # 把 inputs 列表转成 dict: {name: value}
+    input_dict = {item["name"]: item["value"] for item in inputs}
 
+    # else 分支直接返回 True
+    if "condition" not in case:
+        return True
 
-def process_condition(
-    condition: dict,
-    variable_pool: dict[str, dict[str, Any]]
-) -> bool:
-    """
-    处理单个条件判断。
-    :param condition: 条件定义 dict
-    :param variable_pool: 当前变量池
-    :return: bool 判断结果
-    """
-    left_value = resolve_variable(condition["variable_selector"], variable_pool)
-    right_value = condition["value"]
-    operator = condition["comparison_operator"]
+    conditions = case["condition"]
+    and_or = case.get("and_or", 1)
+    results = []
 
-    if operator == "is":
-        return left_value == right_value
-    elif operator == "is_not":
-        return left_value != right_value
-    elif operator == "contains":
-        return isinstance(left_value, str) and right_value in left_value
-    elif operator == "not_contains":
-        return isinstance(left_value, str) and right_value not in left_value
+    for cond in conditions:
+        variable = cond.get("variable")
+        compare_value = cond.get("compare_value")
+        compare_type = cond.get("compare_type")
+
+        input_val = input_dict.get(variable, "")
+        result = compare(compare_type, input_val, compare_value)
+        results.append(result)
+
+    # 返回条件组合的最终判断结果
+    if and_or == 1:
+        return all(results)
     else:
-        raise ValueError(f"Unsupported comparison_operator: {operator}")
+        return any(results)
 
 
-def process_conditions_group(
-    conditions: list[dict],
-    operator: Literal["and", "or"],
-    variable_pool: dict[str, dict[str, Any]]
-) -> bool:
-    """
-    处理一组条件与逻辑组合。
-    """
-    results = [process_condition(cond, variable_pool) for cond in conditions]
-    return all(results) if operator == "and" else any(results)
+@register_node("if_else")
+def run_if_else_node(node, inputs):
+    case_list = node.get("data", {}).get("case", [])
 
+    # 预处理 inputs: list -> dict
+    input_dict = {item["name"]: item["value"] for item in inputs}
 
-def evaluate_if_else_node(
-    node_data: dict,
-    variable_pool: dict[str, dict[str, Any]]
-) -> dict:
-    """
-    处理 if-else 节点判断逻辑。
-    :param node_data: 节点配置数据（来自前端 JSON）
-    :param variable_pool: 当前变量池
-    :return: 判断结果，包括是否命中和选择的 case_id
-    """
-    for case in node_data.get("cases", []):
-        conditions = case.get("conditions", [])
-        operator = case.get("logical_operator", "and")
-        passed = process_conditions_group(conditions, operator, variable_pool)
+    for case in case_list:
+        if "condition" not in case:
+            # else 分支
+            return case.get("next_node")
 
-        if passed:
-            return {
-                "result": True,
-                "selected_case_id": case["case_id"],
-                "edge_source_handle": case["case_id"]
-            }
+        conditions = case["condition"]
+        and_or = case.get("and_or", 1)
+        results = []
 
-    return {
-        "result": False,
-        "selected_case_id": "false",
-        "edge_source_handle": "false"
-    }
+        for cond in conditions:
+            variable = cond.get("variable")
+            compare_value = cond.get("compare_value")
+            compare_type = cond.get("compare_type")
+            input_val = input_dict.get(variable, "")
+            result = compare(compare_type, input_val, compare_value)
+            results.append(result)
+
+        if (and_or == 1 and all(results)) or (and_or == 0 and any(results)):
+            return {"next_node":case.get("next_node")}
+
+    return None  # 所有条件都不满足
