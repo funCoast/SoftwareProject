@@ -34,6 +34,7 @@ from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
 from .utils.vector_store import add_chunks_to_agent_index
 from .models import Announcement
+
 # workflow
 
 # Redis 客户端配置
@@ -304,6 +305,7 @@ def user_fetch_profile(request):
 AVATAR_DIR = os.path.join(settings.MEDIA_ROOT, 'avatars')
 AVATAR_URL_BASE = settings.MEDIA_URL + 'avatars/'
 os.makedirs(AVATAR_DIR, exist_ok=True)
+
 
 @csrf_exempt
 def user_update_avatar(request):
@@ -657,6 +659,7 @@ def user_update_password(request):
         'message': '更新成功'
     })
 
+
 @csrf_exempt
 def create_kb(request):
     if request.method != 'POST':
@@ -721,7 +724,9 @@ def create_kb(request):
         "icon": kb.icon
     })
 
+
 ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
+
 
 @csrf_exempt
 def upload_kb_file(request):
@@ -800,6 +805,7 @@ def get_tongyi_embedding(text):
         print(f"[通义嵌入失败] {str(e)}")
         return None
 
+
 @csrf_exempt
 def get_kb_files(request):
     if request.method != 'GET':
@@ -829,6 +835,7 @@ def get_kb_files(request):
         "message": "获取成功",
         "texts": file_list
     })
+
 
 def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
     text = extract_text_from_file(file_obj.file.path)
@@ -895,7 +902,22 @@ def get_text_content(request):
 
     chunks = KnowledgeChunk.objects.filter(file=file).order_by('order')
 
-    content_list = [chunk.content for chunk in chunks]
+    content_list = []
+
+    # 直接通过 parent 字段确定层级
+    for chunk in chunks:
+        if chunk.parent:
+            # 如果有父级，则level为父级的order + 1
+            level = chunk.parent.order + 1
+        else:
+            # 第一层的level是0
+            level = 0
+
+        content_list.append({
+            "id": chunk.chunk_id,
+            "level": level,
+            "content": chunk.content
+        })
 
     return JsonResponse({
         "code": 0,
@@ -935,6 +957,7 @@ def get_knowledge_bases(request):
         "message": "获取成功",
         "knowledgeBases": knowledge_bases
     })
+
 
 @csrf_exempt
 def get_kb_file_chunks(request):
@@ -1150,6 +1173,7 @@ def ask_question(request):
         "context": related_chunks
     })
 
+
 def workflow_run(request):
     nodes = request.data.get("nodes", [])
     edges = request.data.get("edges", [])
@@ -1159,6 +1183,7 @@ def workflow_run(request):
     executor = Executor(user_id, workflow_id, nodes, edges)
     result = executor.execute()
     return JsonResponse({"result": result})
+
 
 def workflow_create(request):
     try:
@@ -1219,6 +1244,7 @@ def workflow_create(request):
             "workflow_id": None
         })
 
+
 def workflow_fetch(request):
     uid = request.GET.get('uid')
     workflow_id = request.GET.get('workflow_id')
@@ -1254,6 +1280,7 @@ def workflow_fetch(request):
         "name": workflow.name,
         "descript": workflow.description
     })
+
 
 def workflow_save(request):
     try:
