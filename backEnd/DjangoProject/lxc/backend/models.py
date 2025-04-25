@@ -130,20 +130,12 @@ class KnowledgeBase(models.Model):
     kb_type = models.CharField(max_length=50)
     kb_description = models.TextField(null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)  # 创建者
+    icon = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.kb_name
-
-
-class KnowledgeItem(models.Model):
-    kb = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='items')
-    content = models.TextField()
-    created_at = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-        return f"Item for KB {self.kb.kb_name}"
 
 
 class KnowledgeFile(models.Model):
@@ -174,6 +166,7 @@ class KnowledgeChunk(models.Model):
     order = models.IntegerField(default=0)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)  # 层级结构支持
     created_at = models.DateTimeField(auto_now_add=True)
+    embedding = models.TextField(null=True, blank=True)  # 存为 JSON 字符串
 
     def __str__(self):
         return f"Chunk {self.chunk_id} in KB {self.kb.kb_name}"

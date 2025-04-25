@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk,Workflow
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow
 from django.db.models import Q
 import json
 # backend/views.py
@@ -33,9 +33,8 @@ from .utils.tree import build_chunk_tree
 from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
 from .utils.vector_store import add_chunks_to_agent_index
-
 from .models import Announcement
-from django.utils import timezone
+
 # workflow
 
 # Redis 客户端配置
@@ -305,7 +304,6 @@ def user_fetch_profile(request):
 
 AVATAR_DIR = os.path.join(settings.MEDIA_ROOT, 'avatars')
 AVATAR_URL_BASE = settings.MEDIA_URL + 'avatars/'
-
 os.makedirs(AVATAR_DIR, exist_ok=True)
 
 
@@ -661,20 +659,17 @@ def user_update_password(request):
         'message': '更新成功'
     })
 
+
 @csrf_exempt
 def create_kb(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"code": -1, "message": "请求体不是有效的 JSON"})
-
-    uid = data.get('uid')
-    kb_name = data.get('kb_name')
-    kb_type = data.get('kb_type', '')
-    kb_description = data.get('kb_description', '')
+    uid = request.POST.get('uid')
+    kb_name = request.POST.get('kb_name')
+    kb_type = request.POST.get('kb_type', '')
+    kb_description = request.POST.get('kb_description', '')
+    kb_icon = request.FILES.get('kb_icon')  # 可选图标
 
     if not uid or not kb_name:
         return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_name 参数"})
@@ -687,6 +682,7 @@ def create_kb(request):
     if KnowledgeBase.objects.filter(kb_name=kb_name, user=user).exists():
         return JsonResponse({"code": 1, "message": "该用户下已存在同名知识库"})
 
+    # 第一步：创建知识库对象（不含图标）
     kb = KnowledgeBase.objects.create(
         user=user,
         kb_name=kb_name,
@@ -694,33 +690,68 @@ def create_kb(request):
         kb_description=kb_description,
     )
 
+    # 第二步：处理图标保存
+    if kb_icon:
+        ICON_DIR = os.path.join(settings.MEDIA_ROOT, 'kb_icons')
+        os.makedirs(ICON_DIR, exist_ok=True)
+
+        _, ext = os.path.splitext(kb_icon.name)
+        filename = f"{kb.kb_id}{ext}"
+        filepath = os.path.join(ICON_DIR, filename)
+
+        with open(filepath, 'wb+') as destination:
+            for chunk in kb_icon.chunks():
+                destination.write(chunk)
+
+        kb.icon = f"/media/kb_icons/{filename}"
+        kb.save()
+    else:
+        # 没上传图标，根据 kb_type 使用默认图标
+        type_to_icon = {
+            "文本": "Text.svg",
+            "表格": "Table.svg",
+            "图片": "Picture.svg",
+        }
+        default_icon_file = type_to_icon.get(kb_type, "Text.svg")
+        kb.icon = f"/media/kb_icons/{default_icon_file}"
+        kb.save()
+
     return JsonResponse({
         "code": 0,
         "message": "创建成功",
         "kb_id": kb.kb_id,
         "uuid": str(kb.uuid),
+        "icon": kb.icon
     })
-    
+
+
 ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
+
 
 @csrf_exempt
 def upload_kb_file(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
+    uid = request.POST.get('uid')
     kb_id = request.POST.get('kb_id')
     segment_mode = request.POST.get('segment_mode', 'auto')
     file = request.FILES.get('file')
 
-    if not kb_id or not file:
-        return JsonResponse({"code": -1, "message": "缺少 kb_id 或 file"})
+    if not uid or not kb_id or not file:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file"})
 
     ext = os.path.splitext(file.name)[-1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         return JsonResponse({"code": -1, "message": "不支持的文件类型"})
 
     try:
-        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=request.user)
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
@@ -732,23 +763,51 @@ def upload_kb_file(request):
     )
 
     try:
+        # 1. 分段
         segment_file_and_save_chunks(saved_file, segment_mode)
+
+        # 2. 查出分段并生成嵌入
+        chunks = KnowledgeChunk.objects.filter(file=saved_file)
+        for chunk in chunks:
+            embedding = get_tongyi_embedding(chunk.content)
+            if embedding:
+                chunk.embedding = json.dumps(embedding)  # 序列化存入 TextField
+                chunk.save()
+
     except Exception as e:
         return JsonResponse({
             "code": -1,
-            "message": f"上传成功但分段失败: {str(e)}",
-            "file_id": saved_file.id
+            "message": f"上传成功但分段/嵌入失败: {str(e)}"
         })
 
     return JsonResponse({
         "code": 0,
-        "message": "上传成功",
-        "id": saved_file.id,
-        "name": saved_file.name
+        "message": "上传成功"
     })
 
+
+def get_tongyi_embedding(text):
+    url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+    headers = {
+        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "text-embedding-v1",
+        "input": [text]
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        data = response.json()
+        return data["output"]["embeddings"][0]  # 向量列表
+    except Exception as e:
+        print(f"[通义嵌入失败] {str(e)}")
+        return None
+
+
 @csrf_exempt
-def get_kb_texts(request):
+def get_kb_files(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
@@ -768,13 +827,15 @@ def get_kb_texts(request):
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
-    texts = list(kb.items.values_list('content', flat=True))
+    files = kb.files.all().values('id', 'name')
+    file_list = list(files)
 
     return JsonResponse({
         "code": 0,
         "message": "获取成功",
-        "texts": texts
+        "texts": file_list
     })
+
 
 def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
     text = extract_text_from_file(file_obj.file.path)
@@ -792,7 +853,7 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
         i = 0
         order = 0
         while i < len(words):
-            chunk_text = ' '.join(words[i:i+max_length])
+            chunk_text = ' '.join(words[i:i + max_length])
             KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=chunk_text, order=order)
             i += max_length
             order += 1
@@ -805,224 +866,99 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
             if line.startswith("#"):
                 current_parent = KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order)
             elif line.strip():
-                KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order, parent=current_parent)
+                KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order,
+                                              parent=current_parent)
             order += 1
     else:
         raise ValueError("不支持的分段方式")
 
+
 @csrf_exempt
-def get_kb_file_chunks(request):
-    file_id = request.GET.get('file_id')
-    if not file_id:
-        return JsonResponse({"code": -1, "message": "缺少 file_id 参数"})
+def get_text_content(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    uid = request.GET.get('uid')
+    kb_id = request.GET.get('kb_id')
+    text_id = request.GET.get('text_id')
+
+    if not uid or not kb_id or not text_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 text_id 参数"})
 
     try:
-        file_obj = KnowledgeFile.objects.get(id=file_id)
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    try:
+        file = KnowledgeFile.objects.get(id=text_id, kb=kb)
     except KnowledgeFile.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "知识文件不存在"})
+        return JsonResponse({"code": -1, "message": "文件不存在或无权限"})
 
-    chunks = KnowledgeChunk.objects.filter(file=file_obj).order_by('order')
+    chunks = KnowledgeChunk.objects.filter(file=file).order_by('order')
 
-    if file_obj.segment_mode == 'hierarchical':
-        # 构建树形结构
-        chunk_dict = {}
-        for chunk in chunks:
-            chunk_dict[chunk.chunk_id] = {
-                "id": chunk.chunk_id,
-                "content": chunk.content,
-                "order": chunk.order,
-                "children": []
-            }
+    content_list = []
 
-        tree = []
-        for chunk in chunks:
-            if chunk.parent_id:
-                chunk_dict[chunk.parent_id]["children"].append(chunk_dict[chunk.chunk_id])
-            else:
-                tree.append(chunk_dict[chunk.chunk_id])
-
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "chunks": tree,
-            "mode": file_obj.segment_mode
-        })
-
-    else:
-        # 普通列表结构（auto / custom）
-        chunk_list = [{
-            "id": chunk.chunk_id,
-            "content": chunk.content,
-            "order": chunk.order
-        } for chunk in chunks]
-
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "chunks": chunk_list,
-            "mode": file_obj.segment_mode
-        })
-
-
-class UploadKnowledgeFileView(APIView):
-    parser_classes = [MultiPartParser]
-
-    def post(self, request, kb_id):
-        uploaded_file = request.FILES['file']
-        segment_mode = request.data.get('segment_mode', 'auto')
-        agent_id = request.data.get('agent_id')
-
-        if not agent_id:
-            return Response({'error': '请提供 agent_id'}, status=400)
-
-        try:
-            kb = KnowledgeBase.objects.get(pk=kb_id)
-        except KnowledgeBase.DoesNotExist:
-            return Response({'error': '知识库不存在'}, status=404)
-
-        # 保存文件信息
-        file = KnowledgeFile.objects.create(
-            kb=kb,
-            file=uploaded_file,
-            name=uploaded_file.name,
-            segment_mode=segment_mode
-        )
-
-        abs_path = file.file.path
-        text = parse_file(abs_path)
-
-        # 参数读取（仅 custom 模式用）
-        max_len = int(request.data.get('max_len', 300))
-        overlap = int(request.data.get('overlap', 30))
-        clean = request.data.get('clean', 'true') == 'true'
-
-        chunk_objs = []
-
-        if segment_mode == 'auto':
-            chunks = auto_clean_and_split(text)
-            for i, chunk_text in enumerate(chunks):
-                chunk = KnowledgeChunk.objects.create(
-                    kb=kb,
-                    file=file,
-                    content=chunk_text,
-                    order=i
-                )
-                chunk_objs.append(chunk)
-
-        elif segment_mode == 'custom':
-            chunks = custom_split(text, max_len=max_len, overlap=overlap, clean=clean)
-            for i, chunk_text in enumerate(chunks):
-                chunk = KnowledgeChunk.objects.create(
-                    kb=kb,
-                    file=file,
-                    content=chunk_text,
-                    order=i
-                )
-                chunk_objs.append(chunk)
-
-        elif segment_mode == 'hierarchical':
-            parts = split_by_headings(text)
-            chunk_map = {}
-
-            for i, part in enumerate(parts):
-                parent_chunk = chunk_map.get(id(part['parent'])) if part['parent'] else None
-                chunk = KnowledgeChunk.objects.create(
-                    kb=kb,
-                    file=file,
-                    content=part['content'],
-                    order=i,
-                    parent=parent_chunk
-                )
-                chunk_map[id(part)] = chunk
-                chunk_objs.append(chunk)
-
+    # 直接通过 parent 字段确定层级
+    for chunk in chunks:
+        if chunk.parent:
+            # 如果有父级，则level为父级的order + 1
+            level = chunk.parent.order + 1
         else:
-            return Response({'error': 'Invalid segment_mode'}, status=400)
+            # 第一层的level是0
+            level = 0
 
-        # ✅ 加入 Agent 专属向量索引
-        try:
-            add_chunks_to_agent_index(agent_id=agent_id, chunks=chunk_objs)
-        except Exception as e:
-            return Response({'error': f'构建向量索引失败: {str(e)}'}, status=500)
-
-        return Response({
-            'file_id': file.id,
-            'chunk_count': len(chunk_objs),
-            'segment_mode': segment_mode
+        content_list.append({
+            "id": chunk.chunk_id,
+            "level": level,
+            "content": chunk.content
         })
 
-
-class ChunkTreeView(APIView):
-    def get(self, request, kb_id, file_id):
-        try:
-            chunks = KnowledgeChunk.objects.filter(
-                kb_id=kb_id,
-                file_id=file_id
-            ).order_by('order')
-            tree = build_chunk_tree(chunks)
-            return Response(tree)
-        except KnowledgeFile.DoesNotExist:
-            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "content": content_list
+    })
 
 
-class ChunkListView(APIView):
-    def get(self, request, kb_id, file_id):
-        mode = request.query_params.get('mode', 'auto')  # 默认为自动
-        try:
-            chunks = KnowledgeChunk.objects.filter(
-                kb_id=kb_id,
-                file_id=file_id,
-                parent=None if mode != 'hierarchical' else None
-            ).order_by('order')
+def get_knowledge_bases(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
-            if mode == 'hierarchical':
-                return Response({'error': 'Use /tree/ endpoint for hierarchical'}, status=400)
-
-            chunk_list = [
-                {
-                    'id': chunk.id,
-                    'content': chunk.content,
-                    'order': chunk.order
-                }
-                for chunk in chunks
-            ]
-            return Response(chunk_list)
-
-        except KnowledgeChunk.DoesNotExist:
-            return Response({'error': 'Chunks not found'}, status=404)
-
-
-class VectorSearchView(APIView):
-    def post(self, request):
-        query = request.data.get('query')
-        if not query:
-            return Response({'error': 'Missing query'}, status=400)
-
-        results = search_agent_chunks(query)
-        return Response(results)
-
-
-@api_view(['POST'])
-def ask_question(request):
-    query = request.data.get("query")
-    agent_id = request.data.get("agent_id")
-
-    if not query or not agent_id:
-        return Response({"error": "请提供 query 和 agent_id"}, status=400)
-
-    # 检索专属 Agent 的向量库
-    related_chunks = search_agent_chunks(agent_id, query)
+    uid = request.GET.get('uid')
+    if not uid:
+        return JsonResponse({"code": -1, "message": "缺少 uid 参数"})
 
     try:
-        answer = ask_llm(query, related_chunks)
-    except Exception as e:
-        return Response({"error": str(e)}, status=500)
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
 
-    return Response({
-        "question": query,
-        "answer": answer,
-        "context": related_chunks
+    kb_list = KnowledgeBase.objects.filter(user=user).order_by('-updated_at')
+
+    knowledge_bases = []
+    for kb in kb_list:
+        knowledge_bases.append({
+            "id": kb.kb_id,
+            "type": kb.kb_type,
+            "name": kb.kb_name,
+            "description": kb.kb_description or "",
+            "icon": kb.icon or "",  # 从数据库读取 icon 路径
+            "updateTime": kb.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+        })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "knowledgeBases": knowledge_bases
     })
+
+
 def workflow_run(request):
     nodes = request.data.get("nodes", [])
     edges = request.data.get("edges", [])
@@ -1032,6 +968,7 @@ def workflow_run(request):
     executor = Executor(user_id, workflow_id, nodes, edges)
     result = executor.execute()
     return JsonResponse({"result": result})
+
 
 def workflow_create(request):
     try:
@@ -1091,6 +1028,8 @@ def workflow_create(request):
             "message": f"服务器错误：{str(e)}",
             "workflow_id": None
         })
+
+
 def workflow_fetch(request):
     uid = request.GET.get('uid')
     workflow_id = request.GET.get('workflow_id')
@@ -1126,6 +1065,8 @@ def workflow_fetch(request):
         "name": workflow.name,
         "descript": workflow.description
     })
+
+
 def workflow_save(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
