@@ -9,16 +9,16 @@ interface Text {
   name: string
 }
 
+interface paragraph {
+  id: number
+  level: number
+  content: string
+}
+
 const texts = ref<Text[]>([])
-
-const contents = ref([
-  { id: 1, content: "从前有一个国王，他有三个儿子。第一段内容。\n第一个儿子……\n第二个儿子……\n第三个儿子……" },
-  { id: 2, content: "从前有一个小女孩，她卖火柴。第一段内容。\n第二段内容。\n第三段内容。" },
-  { id: 3, content: "从前有一个国王，他每天都娶一个新娘。第一段内容。\n第二段内容。\n第三段内容。" },
-])
-
 const searchQuery = ref("") // 搜索框绑定的值
-const selectedText = ref<Text | null>(null) // 存储选中的文本
+const selectedText = ref<Text>() // 存储选中的文本
+const content = ref<paragraph[]>([]) // 存储文本内容
 
 // 计算属性：根据搜索框的输入过滤文本列表
 const filteredTexts = computed(() => {
@@ -27,14 +27,17 @@ const filteredTexts = computed(() => {
   )
 })
 
-// 计算属性：将选中文本的内容分段
-const textParagraphs = computed(() => {
-  const content = contents.value.find(item => item.id === selectedText.value?.id)?.content
-  return content ? content.split("\n") : [] // 按换行符分段
+onMounted(async () => {
+  await getTexts(); // 等待获取文本列表完成
+  if (texts.value.length > 0) {
+    selectedText.value = texts.value[0]; // 选中第一个文本
+    await getTextContent(selectedText.value.id); // 等待获取选中文本内容完成
+  }
 })
 
-onMounted(() => {
-  axios({
+
+async function getTexts() {
+  return axios({
     method: 'get',
     url: '/kb/getTexts',
     params: {
@@ -43,7 +46,6 @@ onMounted(() => {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      console.log(response.data)
       texts.value = response.data.texts
     } else {
       console.log(response.data.message)
@@ -52,14 +54,32 @@ onMounted(() => {
     console.error(error)
     alert(error.message)
   })
-  if (texts.value.length > 0) {
-    selectedText.value = texts.value[0]
-  }
-})
+}
 
 // 处理文本项点击事件
 function selectText(text: Text) {
   selectedText.value = text
+  getTextContent(text.id)
+}
+
+async function getTextContent(id: number) {
+  return axios({
+    method: 'get',
+    url: '/kb/getTextContent',
+    params: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+      text_id: id
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      content.value = response.data.Content
+    } else {
+      console.log(response.data.message)
+    }
+  }).catch(function (error) {
+    console.error(error)
+  })
 }
 
 function goToUploadPage() {
@@ -107,12 +127,13 @@ function goToUploadPage() {
         <!-- 文本内容分段显示 -->
         <el-main class="text-content">
           <div v-if="selectedText">
-            <p 
-              v-for="(paragraph, index) in textParagraphs" 
-              :key="index" 
-              class="text-paragraph">
-              {{ paragraph }}
-            </p>
+            <div
+              v-for="(paragraph, index) in content"
+              :key="index"
+              :class="['text-paragraph', `level-${paragraph.level}`]"
+            >
+              {{ paragraph.content }}
+            </div>
           </div>
           <div v-else class="text-placeholder">
             请选择一个文本以查看内容
@@ -263,5 +284,37 @@ function goToUploadPage() {
 .text-paragraph:hover {
   background-color: #e6f7ff; /* 段落悬停时背景变浅 */
   border-left-color: #66b1ff; /* 段落悬停时左侧边框颜色变化 */
+}
+
+/* Level 1 样式 */
+.level-1 {
+  font-size: 18px;
+  font-weight: bold;
+  color: #2c3e50;
+  border-left-color: #409eff;
+}
+
+/* Level 2 样式 */
+.level-2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #3a8ee6;
+  border-left-color: #66b1ff;
+}
+
+/* Level 3 样式 */
+.level-3 {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5c6bc0;
+  border-left-color: #8c9eff;
+}
+
+/* Level 4 样式 */
+.level-4 {
+  font-size: 13px;
+  font-weight: 400;
+  color: #8d6e63;
+  border-left-color: #bcaaa4;
 }
 </style>

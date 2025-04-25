@@ -8,6 +8,7 @@ import router from "../../router"
 const uploadRef = ref<UploadInstance>()
 const listLength = ref(0)
 const segmentMode = ref("auto")
+const dialogVisible = ref(false)
 
 // 文件上传前的钩子，用于校验文件类型和大小
 function handleChange(file: File, fileList: File[]) {
@@ -23,6 +24,10 @@ function handleRemove(fileList: File[]) {
   listLength.value = fileList.length
 }
 
+function openDialog() {
+  dialogVisible.value = true
+}
+
 function uploadText(file: File) {
   console.log(router.currentRoute.value.path)
   const formData = new FormData()
@@ -33,7 +38,7 @@ function uploadText(file: File) {
 
   axios({
     method: 'post',
-    url: '/textBase/upload/',
+    url: '/kb/upload',
     data: formData,
     headers: {
           'Content-Type': 'multipart/form-data',
@@ -46,7 +51,6 @@ function uploadText(file: File) {
     }
   }).catch(function (error) {
     console.error(error)
-    alert("上传失败，请重试！")
   })
 }
 
@@ -89,10 +93,27 @@ function clear() {
       </el-upload>
 
       <div class="actions">
-        <el-button type="primary" :disabled="!listLength" @click="submitUpload">确认上传</el-button>
+        <el-button type="primary" :disabled="!listLength" @click="openDialog">确认上传</el-button>
         <el-button type="danger" :disabled="!listLength" @click="clear">清空列表</el-button>
       </div>
     </div>
+
+    <!-- 弹窗 -->
+    <el-dialog title="选择分段模式" v-model="dialogVisible" width="30%">
+      <el-form>
+        <el-form-item label="分段模式">
+          <el-radio-group v-model="segmentMode">
+            <el-radio label="auto">自动分段</el-radio>
+            <el-radio label="custom">自定义分段</el-radio>
+            <el-radio label="hierarchical">按层级分段</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitUpload">确认上传</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

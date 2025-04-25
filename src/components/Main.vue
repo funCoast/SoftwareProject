@@ -19,7 +19,7 @@ function getAvatar() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar
+      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar + '?' + Date.now()
     } else {
       alert(response.data.message)
     }

@@ -1,115 +1,134 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import router from '../../router'
 import axios from 'axios'
 
 interface resource {
   id: number
+  type: string
   name: string
   description: string
-  category: string
   icon: string
-  type: string
   updateTime: string
 }
-const resources = ref<resource[]> ([
-  {
-    id: 1,
-    name: '数据分析工作流',
-    description: '完整的数据分析流程，包含数据清洗、转换和可视化',
-    category: '数据分析',
-    icon: 'https://picsum.photos/100/100?random=7',
-    type: '工作流',
-    updateTime: '2024-03-15'
-  },
-  {
-    id: 2,
-    name: '图像处理插件',
-    description: '支持多种图像格式转换和基础处理功能',
-    category: '图像处理',
-    icon: 'https://picsum.photos/100/100?random=8',
-    type: '插件',
-    updateTime: '2024-03-14'
-  },
-  {
-    id: 3,
-    name: '机器学习知识库',
-    description: '包含常用机器学习算法和最佳实践指南',
-    category: '机器学习',
-    icon: 'https://picsum.photos/100/100?random=9',
-    type: '知识库',
-    updateTime: '2024-03-13'
-  },
-  {
-    id: 4,
-    name: '自动化测试工作流',
-    description: '完整的测试流程，包含单元测试和集成测试',
-    category: '测试',
-    icon: 'https://picsum.photos/100/100?random=10',
-    type: '工作流',
-    updateTime: '2024-03-12'
-  },
-  {
-    id: 5,
-    name: '代码格式化插件',
-    description: '支持多种编程语言的代码格式化工具',
-    category: '开发工具',
-    icon: 'https://picsum.photos/100/100?random=11',
-    type: '插件',
-    updateTime: '2024-03-11'
-  },
-  {
-    id: 6,
-    name: '安全开发知识库',
-    description: 'Web应用安全开发指南和最佳实践',
-    category: '安全',
-    icon: 'https://picsum.photos/100/100?random=12',
-    type: '知识库',
-    updateTime: '2024-03-10'
-  }
-])
 
+const resources = ref<resource[]> ([])
 const dialogVisible = ref(false); // 控制弹窗显示
 const baseInfo = ref({
-  type: 'text', // 默认类型
-  name: '',
-  description: '',
+  type: "text", // 默认类型
+  name: "",
+  description: "",
+  icon: null as File | null, // 存储图标文件
 });
+const iconUploader = ref<HTMLInputElement | null>(null); // 文件输入框引用
+const iconUpload = ref(''); // 图标预览 URL
+
+const defaultIcons = {
+  text: 'http://122.9.33.84:8000/media/kb_icons/Text.svg', // 文本类型默认图标
+  table: 'http://122.9.33.84:8000/media/kb_icons/Table.svg', // 表格类型默认图标
+  picture: 'http://122.9.33.84:8000/media/kb_icons/Picture.svg', // 图像类型默认图标
+};
+
+// 计算图标预览 URL
+const iconPreview = computed(() => {
+  return iconUpload.value || defaultIcons[baseInfo.value.type as keyof typeof defaultIcons];
+});
+
+onMounted(() => {
+  getKnowledgeBases()
+})
 
 // 打开弹窗
 function createKnowledge() {
   dialogVisible.value = true;
 }
 
-// 提交表单
-function submitKnowledge() {
-  alert('提交知识库信息：' + JSON.stringify(baseInfo.value))
+function getKnowledgeBases() {
   axios({
-    method: 'post',
-    url: '/kb/create/',
-    data: {
-      user_id: sessionStorage.getItem('uid'),
-      kb_type: baseInfo.value.type,
-      kb_name: baseInfo.value.name,
-      kb_description: baseInfo.value.description,
+    method: 'get',
+    url: '/rl/getKnowledgeBases',
+    params: {
+      uid: sessionStorage.getItem('uid')
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      alert('创建成功！')
-      router.push('/workspace/' + baseInfo.value.type + 'Base/' + response.data.kb_id)
+      resources.value = resources.value.concat(response.data.knowledgeBases)
+      console.log(resources.value)
     } else {
-      alert('创建失败：' + response.data.message)
       console.log(response.data.message)
     }
   }).catch(function (error) {
     console.error(error)
-    alert("上传失败，请重试！")
   })
+}
+
+function triggerFileInput() {
+  iconUploader.value?.click()
+}
+
+// 处理图标上传
+function handleIconChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+
+    // 验证文件大小和类型
+    if (file.size > 5 * 1024 * 1024) {
+      alert("图片大小不能超过5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      iconUpload.value = e.target?.result as string; // 设置预览 URL
+    };
+    baseInfo.value.icon = input.files[0]; // 将文件存储到 baseInfo.icon
+    reader.readAsDataURL(file); // 读取文件内容
+  }
+}
+
+// 提交表单
+function submitKB() {
+  const formData = new FormData();
+  formData.append("uid", sessionStorage.getItem("uid") as string);
+  formData.append("kb_type", baseInfo.value.type);
+  formData.append("kb_name", baseInfo.value.name);
+  formData.append("kb_description", baseInfo.value.description);
+  if (baseInfo.value.icon) {
+    formData.append("kb_icon", baseInfo.value.icon);
+  }
+
+  axios({
+    method: "post",
+    url: "/kb/create",
+    data: formData,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  })
+    .then(function (response) {
+      if (response.data.code === 0) {
+        alert("创建成功！");
+        router.push("/workspace/" + baseInfo.value.type + "Base/" + response.data.kb_id);
+      } else {
+        alert("创建失败：" + response.data.message);
+        console.log(response.data.message);
+      }
+    })
+    .catch(function (error) {
+      console.error(error);
+      alert("上传失败，请重试！");
+    });
+
   dialogVisible.value = false; // 关闭弹窗
 }
 
 function createWorkflow() {
   router.push('/workflow')
+}
+
+function goToResource(resource: resource) {
+  router.push(`/workspace/${resource.type}Base/${resource.id}`)
 }
 </script>
 
@@ -146,6 +165,44 @@ function createWorkflow() {
       </el-dropdown>
     </div>
 
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <select class="filter-select">
+        <option value="create-time">按创建时间排序</option>
+        <option value="name">按名称排序</option>
+        <option value="modify-time">按修改时间排序</option>
+      </select>
+      <select class="filter-select">
+        <option value="all">全部</option>
+        <option value="workflow">工作流</option>
+        <option value="plugin">插件</option>
+        <option value="knowledge">知识库</option>
+      </select>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+        <input type="text" placeholder="搜索资源...">
+      </div>
+    </div>
+
+    <!-- 资源列表 -->
+    <div class="resource-list">
+      <div v-for="resource in resources" :key="resource.id" class="resource-card" @click="goToResource(resource)">
+        <div class="resource-icon">
+          <img :src="'http://122.9.33.84:8000' + resource.icon" :alt="resource.name">
+          <div class="resource-type">{{ resource.type }}</div>
+        </div>
+        <div class="resource-info">
+          <h3>{{ resource.name }}</h3>
+          <p>{{ resource.description }}</p>
+          <div class="resource-meta">
+            <span class="update-time">最后更新：{{ resource.updateTime }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 知识库创建弹窗 -->
     <el-dialog v-model="dialogVisible" title="创建知识库" width="500px" class="custom-dialog">
       <div class="dialog-body">
@@ -176,51 +233,22 @@ function createWorkflow() {
             class="form-input"
           />
         </div>
+
+        <!-- 上传图标 -->
+        <div class="form-row">
+          <label class="form-label">图标</label>
+          <div class="icon-upload">
+            <img :src="iconPreview" alt="图标预览" class="icon-preview" @click="triggerFileInput"/>
+            <input type="file" ref="iconUploader" style="display: none" accept="image/*" @change="handleIconChange"/>
+          </div>
+        </div>
       </div>
 
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitKnowledge">创建</el-button>
+        <el-button type="primary" @click="submitKB">创建</el-button>
       </template>
     </el-dialog>
-
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <select class="filter-select">
-        <option value="create-time">按创建时间排序</option>
-        <option value="name">按名称排序</option>
-        <option value="modify-time">按修改时间排序</option>
-      </select>
-      <select class="filter-select">
-        <option value="all">全部</option>
-        <option value="workflow">工作流</option>
-        <option value="plugin">插件</option>
-        <option value="knowledge">知识库</option>
-      </select>
-      <div class="search-box">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-        </svg>
-        <input type="text" placeholder="搜索资源...">
-      </div>
-    </div>
-
-    <!-- 资源列表 -->
-    <div class="resource-list">
-      <div v-for="resource in resources" :key="resource.id" class="resource-card">
-        <div class="resource-icon">
-          <img :src="resource.icon" :alt="resource.name">
-          <div class="resource-type">{{ resource.type }}</div>
-        </div>
-        <div class="resource-info">
-          <h3>{{ resource.name }}</h3>
-          <p>{{ resource.description }}</p>
-          <div class="resource-meta">
-            <span class="update-time">最后更新：{{ resource.updateTime }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -314,6 +342,7 @@ function createWorkflow() {
   transition: all 0.3s ease;
   display: flex;
   gap: 16px;
+  cursor: pointer;
 }
 
 .resource-card:hover {
@@ -416,5 +445,20 @@ function createWorkflow() {
 .form-input {
   width: 100%;
   border-radius: 6px;
+}
+
+.icon-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style>

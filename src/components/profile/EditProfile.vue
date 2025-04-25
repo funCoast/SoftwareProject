@@ -59,11 +59,12 @@ function uploadAvatar() {
     url: '/user/updateAvatar',
     data: formData,
     headers: {
-          'Content-Type': 'multipart/form-data',
+      'Content-Type': 'multipart/form-data',
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      refreshAvatar('http://122.9.33.84:8000' + response.data.avatar)
+      refreshAvatar('http://122.9.33.84:8000' + response.data.avatar + '?' + Date.now())
+      newAvatar.value = ''
       alert(response.data.message)
     } else {
       alert(response.data.message)
@@ -159,7 +160,7 @@ function goBack() {
           <img :src="showAvatar" alt="用户头像" class="current-avatar">
           <div class="upload-controls">
             <el-button class="upload-btn" @click="triggerFileInput">选择头像</el-button>
-            <el-button :v-if="fileInput?.value!=null" type="primary" @click="uploadAvatar">上传头像</el-button>
+            <el-button :v-if="fileInput?.value!=null" type="primary" @click="uploadAvatar" :disabled="!newAvatar">上传头像</el-button>
             <input type="file" ref="fileInput" style="display: none" accept="image/*" @change="handleAvatarChange"></input>
             <p class="upload-hint">支持 JPG、PNG 格式，文件小于 2MB</p>
           </div>
