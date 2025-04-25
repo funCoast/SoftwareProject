@@ -59,7 +59,7 @@ def run_if_else_node(node, inputs):
     for case in case_list:
         conditions = case["condition"]
         if not conditions:
-            return case.get("next_node")
+            return {"next_node":case.get("next_node")}
         and_or = case.get("and_or", 1)
         results = []
 
