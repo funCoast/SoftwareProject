@@ -38,14 +38,17 @@ class Executor:
                 self.indegree[source] = 0
 
     def topological_sort(self) -> List[int]:
-        queue = deque([nid for nid in self.nodes if self.indegree[nid] == 0])
+        # 🔄 创建 indegree 的副本
+        indegree_copy = dict(self.indegree)
+        queue = deque([nid for nid in self.nodes if indegree_copy[nid] == 0])
         order = []
+
         while queue:
             current = queue.popleft()
             order.append(current)
             for neighbor in self.graph.get(current, []):
-                self.indegree[neighbor] -= 1
-                if self.indegree[neighbor] == 0:
+                indegree_copy[neighbor] -= 1
+                if indegree_copy[neighbor] == 0:
                     queue.append(neighbor)
 
         if len(order) != len(self.nodes):
@@ -93,9 +96,6 @@ class Executor:
         return func(node, inputs)
 
     def execute_from_node(self, start_node_id: int, visited: set):
-        """
-        递归执行从某个节点出发的所有下游节点（跳过已执行的）
-        """
         if start_node_id in visited:
             return
         visited.add(start_node_id)
@@ -107,41 +107,33 @@ class Executor:
 
         print(f"[Executed] Node {node['name']} (ID: {start_node_id}) -> {outputs}")
 
+        # ✅ 特殊处理 if_else
+        if node["type"] == "if_else":
+            next_node_id = outputs.get("next_node")
+            if next_node_id is not None and next_node_id in self.nodes:
+                self.execute_from_node(next_node_id, visited)
+            return  # ❗终止后续 neighbors 遍历
+
+        # ✅ 特殊处理 classifier
+        if node["type"] == "classifier":
+            next_node_id = outputs.get("next_node")
+            if next_node_id is not None and next_node_id in self.nodes:
+                self.execute_from_node(next_node_id, visited)
+            return
+
+        # 🔁 默认递归所有下游
         for neighbor in self.graph.get(start_node_id, []):
             self.execute_from_node(neighbor, visited)
 
     def execute(self) -> Dict[int, Dict[str, Any]]:
         self.build_graph()
-        execution_order = self.topological_sort()
-
+        self.topological_sort()  # 仍然可用于环检测
+        start_nodes = [nid for nid in self.nodes if self.indegree[nid] == 0]
+        print("start_nodes: ", start_nodes)
         visited = set()
 
-        for node_id in execution_order:
-            if node_id in visited:
-                continue
-
-            node = self.nodes[node_id]
-            inputs = self.resolve_inputs(node)
-
-            # 特殊处理 classifier 节点
-            if node["type"] == "classifier" or node["type"] == "if_else":
-                outputs = self.run_node(node, inputs)
-                self.outputs[node_id] = outputs
-                visited.add(node_id)
-
-                print(f"[Executed] Classifier Node {node['name']} (ID: {node_id}) -> {outputs}")
-
-                # 提取 next_node 并从该节点开始递归执行
-                next_node_id = outputs["next_node"]
-
-                if next_node_id != -1 and next_node_id in self.nodes:
-                    self.execute_from_node(next_node_id, visited)
-
-            else:
-                outputs = self.run_node(node, inputs)
-                self.outputs[node_id] = outputs
-                visited.add(node_id)
-                print(f"[Executed] Node {node['name']} (ID: {node_id}) -> {outputs}")
+        for node_id in start_nodes:
+            self.execute_from_node(node_id, visited)
 
         return self.outputs
 

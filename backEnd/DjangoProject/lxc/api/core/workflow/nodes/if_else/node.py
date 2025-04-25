@@ -54,14 +54,12 @@ def run_if_else_node(node, inputs):
     case_list = node.get("data", {}).get("case", [])
 
     # 预处理 inputs: list -> dict
-    input_dict = {item["name"]: item["value"] for item in inputs}
+    input_dict = {item["id"]: item["value"] for item in inputs}
 
     for case in case_list:
-        if "condition" not in case:
-            # else 分支
-            return case.get("next_node")
-
         conditions = case["condition"]
+        if not conditions:
+            return case.get("next_node")
         and_or = case.get("and_or", 1)
         results = []
 
