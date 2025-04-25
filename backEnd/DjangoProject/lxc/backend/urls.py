@@ -32,11 +32,6 @@ urlpatterns = [
     path('kb/getTexts', views.get_kb_files, name='get_kb_texts'),
     path("kb/getTextContent", views.get_text_content, name='get_text_content'),
     path('rl/getKnowledgeBases', views.get_knowledge_bases, name='get_knowledge_bases'),
-    path('api/kb/<int:kb_id>/upload', UploadKnowledgeFileView.as_view()),
-    path('api/kb/<int:kb_id>/file/<int:file_id>/tree', views.ChunkTreeView.as_view(), name='chunk-tree'),
-    path('api/kb/<int:kb_id>/file/<int:file_id>/chunks', views.ChunkListView.as_view(), name='chunk-list'),
-    path('api/vector/search', views.VectorSearchView.as_view(), name='vector-search'),
-    path('api/agent/ask', views.ask_question, name='agent-ask'),
     # 工作流
     path('workflow/run',views.workflow_run, name='workflow_run'),
     path('workflow/create',views.workflow_create, name='workflow_create'),
