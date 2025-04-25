@@ -303,9 +303,7 @@ def user_fetch_profile(request):
 
 AVATAR_DIR = os.path.join(settings.MEDIA_ROOT, 'avatars')
 AVATAR_URL_BASE = settings.MEDIA_URL + 'avatars/'
-
 os.makedirs(AVATAR_DIR, exist_ok=True)
-
 
 @csrf_exempt
 def user_update_avatar(request):
@@ -664,15 +662,11 @@ def create_kb(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"code": -1, "message": "请求体不是有效的 JSON"})
-
-    uid = data.get('uid')
-    kb_name = data.get('kb_name')
-    kb_type = data.get('kb_type', '')
-    kb_description = data.get('kb_description', '')
+    uid = request.POST.get('uid')
+    kb_name = request.POST.get('kb_name')
+    kb_type = request.POST.get('kb_type', '')
+    kb_description = request.POST.get('kb_description', '')
+    kb_icon = request.FILES.get('kb_icon')  # 可选图标
 
     if not uid or not kb_name:
         return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_name 参数"})
@@ -685,6 +679,7 @@ def create_kb(request):
     if KnowledgeBase.objects.filter(kb_name=kb_name, user=user).exists():
         return JsonResponse({"code": 1, "message": "该用户下已存在同名知识库"})
 
+    # 第一步：创建知识库对象（不含图标）
     kb = KnowledgeBase.objects.create(
         user=user,
         kb_name=kb_name,
@@ -692,11 +687,38 @@ def create_kb(request):
         kb_description=kb_description,
     )
 
+    # 第二步：处理图标保存
+    if kb_icon:
+        ICON_DIR = os.path.join(settings.MEDIA_ROOT, 'kb_icons')
+        os.makedirs(ICON_DIR, exist_ok=True)
+
+        _, ext = os.path.splitext(kb_icon.name)
+        filename = f"{kb.kb_id}{ext}"
+        filepath = os.path.join(ICON_DIR, filename)
+
+        with open(filepath, 'wb+') as destination:
+            for chunk in kb_icon.chunks():
+                destination.write(chunk)
+
+        kb.icon = f"/media/kb_icons/{filename}"
+        kb.save()
+    else:
+        # 没上传图标，根据 kb_type 使用默认图标
+        type_to_icon = {
+            "文本": "Text.svg",
+            "表格": "Table.svg",
+            "图片": "Picture.svg",
+        }
+        default_icon_file = type_to_icon.get(kb_type, "Text.svg")
+        kb.icon = f"/media/kb_icons/{default_icon_file}"
+        kb.save()
+
     return JsonResponse({
         "code": 0,
         "message": "创建成功",
         "kb_id": kb.kb_id,
         "uuid": str(kb.uuid),
+        "icon": kb.icon
     })
 
 ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
@@ -882,7 +904,6 @@ def get_text_content(request):
     })
 
 
-@csrf_exempt
 def get_knowledge_bases(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
@@ -905,7 +926,7 @@ def get_knowledge_bases(request):
             "type": kb.kb_type,
             "name": kb.kb_name,
             "description": kb.kb_description or "",
-            "icon": "kb",  #
+            "icon": kb.icon or "",  # 从数据库读取 icon 路径
             "updateTime": kb.updated_at.strftime("%Y-%m-%d %H:%M:%S")
         })
 
@@ -914,7 +935,6 @@ def get_knowledge_bases(request):
         "message": "获取成功",
         "knowledgeBases": knowledge_bases
     })
-
 
 @csrf_exempt
 def get_kb_file_chunks(request):
