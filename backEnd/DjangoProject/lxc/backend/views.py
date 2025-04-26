@@ -959,6 +959,138 @@ def get_knowledge_bases(request):
     })
 
 
+ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
+
+
+@csrf_exempt
+def upload_picture_kb_file(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    uid = request.POST.get('uid')
+    kb_id = request.POST.get('kb_id')
+    file = request.FILES.get('file')
+
+    if not uid or not kb_id or not file:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file 参数"})
+
+    ext = os.path.splitext(file.name)[-1].lower()
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        return JsonResponse({"code": -1, "message": "不支持的文件类型"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    # 保存文件
+    saved_file = KnowledgeFile.objects.create(
+        kb=kb,
+        file=file,
+        name=file.name,
+        segment_mode='auto'  # 图像无需分段，统一标注
+    )
+
+    try:
+        # 生成图像嵌入
+        embedding = get_image_embedding(saved_file.file.path)
+
+        if embedding:
+            # 保存为一个chunk
+            KnowledgeChunk.objects.create(
+                kb=kb,
+                file=saved_file,
+                content=f"图片文件: {saved_file.name}",
+                embedding=json.dumps(embedding),
+                order=0
+            )
+        else:
+            return JsonResponse({
+                "code": -1,
+                "message": "图像嵌入生成失败"
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": f"上传成功但处理失败: {str(e)}"
+        })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "上传成功"
+    })
+
+
+def get_image_embedding(image_path):
+    url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/image-embedding/image-embedding"
+    headers = {
+        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
+        "Content-Type": "application/octet-stream"
+    }
+
+    try:
+        with open(image_path, 'rb') as img_file:
+            response = requests.post(url, headers=headers, data=img_file.read(), timeout=15)
+        data = response.json()
+        # 增加安全性检查，避免空返回或异常结构
+        if "output" in data and "embeddings" in data["output"]:
+            return data["output"]["embeddings"][0]
+        else:
+            print(f"[阿里云图像嵌入异常返回] {data}")
+            return None
+    except Exception as e:
+        print(f"[阿里云图像嵌入失败] {str(e)}")
+        return None
+
+
+@csrf_exempt
+def get_pictures(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    uid = request.GET.get('uid')
+    kb_id = request.GET.get('kb_id')
+
+    if not uid or not kb_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    # 获取该知识库下所有上传的图片文件
+    picture_files = kb.files.all()
+
+    pictures = []
+    for file in picture_files:
+        ext = os.path.splitext(file.name)[-1].lower()
+        if ext in ALLOWED_IMAGE_EXTENSIONS:
+            pictures.append({
+                "id": file.id,
+                "name": file.name,
+                "url": file.file.url,  # Django FileField 自动处理 /media/xxx 路径
+                "description": f"图片文件：{file.name}"
+            })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "pictures": pictures
+    })
+
+
 def workflow_run(request):
     nodes = request.data.get("nodes", [])
     edges = request.data.get("edges", [])

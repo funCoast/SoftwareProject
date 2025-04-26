@@ -2,7 +2,6 @@ from django.db import models
 import uuid
 from django.utils import timezone
 
-
 # 1. 用户表（User）
 class User(models.Model):
     user_id = models.AutoField(primary_key=True)
@@ -22,7 +21,6 @@ class User(models.Model):
     def __str__(self):
         return self.username
 
-
 # 2. 管理员表（Administrator）
 class Administrator(models.Model):
     admin_id = models.AutoField(primary_key=True)
@@ -31,7 +29,6 @@ class Administrator(models.Model):
 
     def __str__(self):
         return self.account
-
 
 # 3. 关注关系表（Follow Relationship）
 class FollowRelationship(models.Model):
@@ -45,7 +42,6 @@ class FollowRelationship(models.Model):
     def __str__(self):
         return f"{self.follower.username} follows {self.followee.username}"
 
-
 # 4. 私信表（Private Message）
 class PrivateMessage(models.Model):
     message_id = models.BigAutoField(primary_key=True)
@@ -57,7 +53,6 @@ class PrivateMessage(models.Model):
 
     def __str__(self):
         return f"Msg {self.message_id} from {self.sender.username} to {self.receiver.username}"
-
 
 # 5. 管理员日志表（Admin Log）
 class AdminLog(models.Model):
@@ -71,7 +66,6 @@ class AdminLog(models.Model):
     def __str__(self):
         return f"Log {self.log_id} by {self.admin.account}"
 
-
 # 6. 敏感词表（Sensitive Words）
 class SensitiveWord(models.Model):
     word_id = models.AutoField(primary_key=True)
@@ -80,7 +74,6 @@ class SensitiveWord(models.Model):
 
     def __str__(self):
         return self.word_content
-
 
 # 7. 评论表（Comment）
 # 由于评论中需要关联到智能体，因此在 Agent 模型定义之后再建立外键引用
@@ -95,7 +88,6 @@ class Comment(models.Model):
     def __str__(self):
         return f"Comment {self.comment_id} by {self.user.username}"
 
-
 # 8. 公告表（Announcement）
 class Announcement(models.Model):
     id = models.AutoField(primary_key=True)
@@ -105,7 +97,6 @@ class Announcement(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.type})"
-
 
 # 9. 工作流表（Workflow）
 class Workflow(models.Model):
@@ -120,7 +111,6 @@ class Workflow(models.Model):
     icon_url = models.URLField(max_length=500, null=True, blank=True)
     def __str__(self):
         return f"Workflow {self.workflow_id}"
-
 
 # 知识库表（Knowledge Base）
 class KnowledgeBase(models.Model):
@@ -157,7 +147,6 @@ class KnowledgeFile(models.Model):
     def __str__(self):
         return self.name
 
-
 class KnowledgeChunk(models.Model):
     chunk_id = models.AutoField(primary_key=True)
     kb = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE)
@@ -171,7 +160,6 @@ class KnowledgeChunk(models.Model):
     def __str__(self):
         return f"Chunk {self.chunk_id} in KB {self.kb.kb_name}"
 
-
 # 知识条目表（Agent 与 KB 的关联）
 class AgentKnowledgeEntry(models.Model):
     agent = models.ForeignKey('Agent', on_delete=models.CASCADE)
@@ -183,7 +171,6 @@ class AgentKnowledgeEntry(models.Model):
 
     def __str__(self):
         return f"KnowledgeEntry: Agent {self.agent.agent_id} - KB {self.kb.kb_id}"
-
 
 # 12. 智能体表（Agent）
 class Agent(models.Model):
@@ -202,7 +189,6 @@ class Agent(models.Model):
     def __str__(self):
         return self.agent_name
 
-
 # 13. 智能体工作流关系表（Agent-Workflow Relation）
 class AgentWorkflowRelation(models.Model):
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE)
@@ -213,7 +199,6 @@ class AgentWorkflowRelation(models.Model):
 
     def __str__(self):
         return f"Agent {self.agent.agent_id} - Workflow {self.workflow.workflow_id}"
-
 
 # 14. 用户交互表（User Interaction）
 class UserInteraction(models.Model):
@@ -227,7 +212,6 @@ class UserInteraction(models.Model):
 
     def __str__(self):
         return f"UserInteraction: {self.user.username} - {self.agent.agent_name}"
-
 
 # 15. 对话历史表（Dialogue History）
 class DialogueHistory(models.Model):
