@@ -34,6 +34,9 @@ urlpatterns = [
     path('rl/getKnowledgeBases', views.get_knowledge_bases, name='get_knowledge_bases'),
     path('kb/uploadPicture', views.upload_picture_kb_file, name='upload_picture_kb_file'),
     path('kb/getPictures', views.get_pictures, name='get_pictures'),
+    path('kb/uploadTable', views.upload_table_kb_file, name='upload_table_kb_file'),
+    path('kb/getTables', views.get_tables, name='get_tables'),
+
     # 工作流
     path('workflow/run',views.workflow_run, name='workflow_run'),
     path('workflow/create',views.workflow_create, name='workflow_create'),

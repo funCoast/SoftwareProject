@@ -34,6 +34,7 @@ from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
 from .utils.vector_store import add_chunks_to_agent_index
 from .models import Announcement
+import pandas as pd
 
 # workflow
 
@@ -1088,6 +1089,139 @@ def get_pictures(request):
         "code": 0,
         "message": "获取成功",
         "pictures": pictures
+    })
+
+
+ALLOWED_TABLE_EXTENSIONS = ['.csv', '.xlsx']
+
+
+@csrf_exempt
+def upload_table_kb_file(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    uid = request.POST.get('uid')
+    kb_id = request.POST.get('kb_id')
+    file = request.FILES.get('file')
+
+    if not uid or not kb_id or not file:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file 参数"})
+
+    ext = os.path.splitext(file.name)[-1].lower()
+    if ext not in ALLOWED_TABLE_EXTENSIONS:
+        return JsonResponse({"code": -1, "message": "不支持的文件类型"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    # 保存表格文件
+    saved_file = KnowledgeFile.objects.create(
+        kb=kb,
+        file=file,
+        name=file.name,
+        segment_mode='auto'  # 表格默认标记为auto
+    )
+
+    try:
+        # 读取表格内容并生成嵌入
+        table_text = extract_table_text(saved_file.file.path)
+        embedding = get_tongyi_embedding(table_text)
+
+        if embedding:
+            KnowledgeChunk.objects.create(
+                kb=kb,
+                file=saved_file,
+                content=table_text,
+                embedding=json.dumps(embedding),
+                order=0
+            )
+        else:
+            return JsonResponse({
+                "code": -1,
+                "message": "表格嵌入生成失败"
+            })
+
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": f"上传成功但处理失败: {str(e)}"
+        })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "上传成功"
+    })
+
+
+def extract_table_text(file_path):
+    ext = os.path.splitext(file_path)[-1].lower()
+    try:
+        if ext == '.csv':
+            df = pd.read_csv(file_path)
+        elif ext == '.xlsx':
+            df = pd.read_excel(file_path)
+        else:
+            raise ValueError("不支持的表格文件格式")
+
+        # 把表格每行变成自然语言文本
+        rows = []
+        for idx, row in df.iterrows():
+            line = ', '.join([f"{col}: {row[col]}" for col in df.columns])
+            rows.append(line)
+
+        return '\n'.join(rows)
+
+    except Exception as e:
+        print(f"[表格解析失败] {str(e)}")
+        return ""
+
+
+@csrf_exempt
+def get_tables(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    uid = request.GET.get('uid')
+    kb_id = request.GET.get('kb_id')
+
+    if not uid or not kb_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    # 获取该知识库下所有上传的表格文件
+    table_files = kb.files.all()
+
+    tables = []
+    for file in table_files:
+        ext = os.path.splitext(file.name)[-1].lower()
+        if ext in ALLOWED_TABLE_EXTENSIONS:
+            tables.append({
+                "id": file.id,
+                "name": file.name,
+                "url": file.file.url,
+                "description": f"表格文件：{file.name}"
+            })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "tables": tables
     })
 
 
