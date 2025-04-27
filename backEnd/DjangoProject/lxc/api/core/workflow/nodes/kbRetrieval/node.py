@@ -1,8 +1,8 @@
 import numpy as np
 import json
-from lxc.backend.models import User, KnowledgeBase, KnowledgeChunk
-from lxc.backend.views import get_tongyi_embedding
-
+from backend.models import User, KnowledgeBase, KnowledgeChunk
+from backend.views import get_tongyi_embedding
+from ...registry import register_node
 def query_kb(uid, kb_id, query_text, top_k=5):
     try:
         user = User.objects.get(user_id=uid)
@@ -48,3 +48,15 @@ def query_kb(uid, kb_id, query_text, top_k=5):
         })
 
     return results
+
+@register_node("kbRetrieval")
+def run_kbRetrieval_node(node,inputs):
+    uid = node.get("data",{}).get("uid",None)
+    text = inputs[0].get("value", "")
+    result = query_kb(uid,text)
+    outputs = {}
+    for output in node.get("outputs", []):
+        id = output["id"]
+        outputs[id] = result  # 所有输出都给一样的结果（你也可以按 name 分别生成）
+    return outputs
+
