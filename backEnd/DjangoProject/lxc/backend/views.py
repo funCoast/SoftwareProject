@@ -708,13 +708,18 @@ def create_kb(request):
         kb.icon = f"/media/kb_icons/{filename}"
         kb.save()
     else:
-        # 没上传图标，根据 kb_type 使用默认图标
+        # 没上传图标，根据 kb_type 使用默认图标（kb_type 英文，大小写不敏感）
         type_to_icon = {
-            "文本": "Text.svg",
-            "表格": "Table.svg",
-            "图片": "Picture.svg",
+            "text": "Text.svg",
+            "table": "Table.svg",
+            "picture": "Picture.svg",
         }
-        default_icon_file = type_to_icon.get(kb_type, "Text.svg")
+
+        # 防止kb_type异常，同时统一小写处理
+        kb_type_cleaned = (kb_type or "").strip().lower()
+
+        default_icon_file = type_to_icon.get(kb_type_cleaned, "Text.svg")
+
         kb.icon = f"/media/kb_icons/{default_icon_file}"
         kb.save()
 
