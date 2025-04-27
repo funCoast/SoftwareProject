@@ -1,3 +1,5 @@
+import os
+
 import requests
 from bs4 import BeautifulSoup
 from api.core.plugin.plugins.base_plugin import BasePlugin
@@ -81,7 +83,9 @@ class WeatherScraperPlugin(BasePlugin):
 
             if not city_code.isdigit():
                 # city_code实际上是城市名，需要转换
-                xml_file = "./weatherCode.xml"
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                xml_file = os.path.join(current_dir, "weatherCode.xml")
+
                 city_map = build_city_weathercode_map(xml_file)
                 city_code = get_weather_code(city_code, city_map)
 
@@ -95,4 +99,4 @@ class WeatherScraperPlugin(BasePlugin):
 
 if __name__ == "__main__":
     plugin = WeatherScraperPlugin()
-    print(plugin.execute(city_code="Chongqing"))  # 测试一下北京
+    print(plugin.execute(city_code="Beijing"))  # 测试一下北京
