@@ -24,10 +24,8 @@ def plugin_choose_and_run(input_text: str):
     for intent in intents:
         if intent in tools.keys():
             kwargs = json.loads(extract_parameters_by_model(text, tools[intent]))
-            print(kwargs)
             llm_response = plugin_manager.intent_dict[intent]().execute(**kwargs)
             called_plugins.append(plugin_manager.intent_dict[intent]().name)
-            print(llm_response)
             if llm_response and llm_response["status"] == 'success':
                 call_results.append({intent: llm_response["result"]})
 
