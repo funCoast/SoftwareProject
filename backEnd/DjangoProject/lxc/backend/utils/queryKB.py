@@ -1,5 +1,7 @@
 import numpy as np
 import json
+from lxc.backend.models import User, KnowledgeBase, KnowledgeChunk
+from lxc.backend.views import get_tongyi_embedding
 
 def query_kb(uid, kb_id, query_text, top_k=5):
     try:
