@@ -10,37 +10,38 @@ interface resource {
   description: string
   icon: string
   updateTime: string
+  hover?: boolean
 }
 
 const resources = ref<resource[]> ([])
-const dialogVisible = ref(false); // 控制弹窗显示
+const dialogVisible = ref(false) // 控制弹窗显示
 const baseInfo = ref({
   type: "text", // 默认类型
   name: "",
   description: "",
   icon: null as File | null, // 存储图标文件
-});
-const iconUploader = ref<HTMLInputElement | null>(null); // 文件输入框引用
-const iconUpload = ref(''); // 图标预览 URL
+})
+const iconUploader = ref<HTMLInputElement | null>(null) // 文件输入框引用
+const iconUpload = ref('') // 图标预览 URL
 
 const defaultIcons = {
-  text: 'http://122.9.33.84:8000/media/kb_icons/Text.svg', // 文本类型默认图标
-  table: 'http://122.9.33.84:8000/media/kb_icons/Table.svg', // 表格类型默认图标
-  picture: 'http://122.9.33.84:8000/media/kb_icons/Picture.svg', // 图像类型默认图标
-};
+  text: 'http://122.9.33.84:8000/media/kb_icons/Text.svg', // 文本知识库默认图标
+  table: 'http://122.9.33.84:8000/media/kb_icons/Table.svg', // 表格知识库默认图标
+  picture: 'http://122.9.33.84:8000/media/kb_icons/Picture.svg', // 图像知识库默认图标
+}
 
 // 计算图标预览 URL
 const iconPreview = computed(() => {
-  return iconUpload.value || defaultIcons[baseInfo.value.type as keyof typeof defaultIcons];
-});
+  return iconUpload.value || defaultIcons[baseInfo.value.type as keyof typeof defaultIcons]
+})
 
 onMounted(() => {
   getKnowledgeBases()
 })
 
 // 打开弹窗
-function createKnowledge() {
-  dialogVisible.value = true;
+function createKB() {
+  dialogVisible.value = true
 }
 
 function getKnowledgeBases() {
@@ -53,12 +54,9 @@ function getKnowledgeBases() {
   }).then(function (response) {
     if (response.data.code === 0) {
       resources.value = resources.value.concat(response.data.knowledgeBases)
-      console.log(resources.value)
     } else {
       console.log(response.data.message)
     }
-  }).catch(function (error) {
-    console.error(error)
   })
 }
 
@@ -68,34 +66,34 @@ function triggerFileInput() {
 
 // 处理图标上传
 function handleIconChange(event: Event) {
-  const input = event.target as HTMLInputElement;
+  const input = event.target as HTMLInputElement
   if (input.files && input.files[0]) {
-    const file = input.files[0];
+    const file = input.files[0]
 
     // 验证文件大小和类型
     if (file.size > 5 * 1024 * 1024) {
-      alert("图片大小不能超过5MB");
-      return;
+      alert("图片大小不能超过5MB")
+      return
     }
 
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (e) => {
-      iconUpload.value = e.target?.result as string; // 设置预览 URL
-    };
-    baseInfo.value.icon = input.files[0]; // 将文件存储到 baseInfo.icon
-    reader.readAsDataURL(file); // 读取文件内容
+      iconUpload.value = e.target?.result as string // 设置预览 URL
+    }
+    baseInfo.value.icon = input.files[0] // 将文件存储到 baseInfo.icon
+    reader.readAsDataURL(file) // 读取文件内容
   }
 }
 
 // 提交表单
 function submitKB() {
-  const formData = new FormData();
-  formData.append("uid", sessionStorage.getItem("uid") as string);
-  formData.append("kb_type", baseInfo.value.type);
-  formData.append("kb_name", baseInfo.value.name);
-  formData.append("kb_description", baseInfo.value.description);
+  const formData = new FormData()
+  formData.append("uid", sessionStorage.getItem("uid") as string)
+  formData.append("kb_type", baseInfo.value.type)
+  formData.append("kb_name", baseInfo.value.name)
+  formData.append("kb_description", baseInfo.value.description)
   if (baseInfo.value.icon) {
-    formData.append("kb_icon", baseInfo.value.icon);
+    formData.append("kb_icon", baseInfo.value.icon)
   }
 
   axios({
@@ -105,22 +103,15 @@ function submitKB() {
     headers: {
       "Content-Type": "multipart/form-data",
     },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      alert("创建成功！")
+      router.push("/workspace/" + baseInfo.value.type + "/" + response.data.kb_id)
+    } else {
+      alert(response.data.message)
+    }
   })
-    .then(function (response) {
-      if (response.data.code === 0) {
-        alert("创建成功！");
-        router.push("/workspace/" + baseInfo.value.type + "Base/" + response.data.kb_id);
-      } else {
-        alert("创建失败：" + response.data.message);
-        console.log(response.data.message);
-      }
-    })
-    .catch(function (error) {
-      console.error(error);
-      alert("上传失败，请重试！");
-    });
-
-  dialogVisible.value = false; // 关闭弹窗
+  dialogVisible.value = false // 关闭弹窗
 }
 
 function createWorkflow() {
@@ -128,7 +119,26 @@ function createWorkflow() {
 }
 
 function goToResource(resource: resource) {
-  router.push(`/workspace/${resource.type}Base/${resource.id}`)
+  router.push(`/workspace/${resource.type}/${resource.id}`)
+}
+
+function deleteResource(id: number, resourceType: string) {
+  axios({
+    method: "post",
+    url: "/rl/delete",
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      resource_id: id,
+      resource_type: resourceType,
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      alert("删除成功！")
+      router.go(0)
+    } else {
+      alert(response.data.message)
+    }
+  })
 }
 </script>
 
@@ -154,7 +164,7 @@ function goToResource(resource: resource) {
               <span>工作流</span>
             </el-dropdown-item>
           </div>
-            <el-dropdown-item @click="createKnowledge">
+            <el-dropdown-item @click="createKB">
               <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                 <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
               </svg>
@@ -188,7 +198,14 @@ function goToResource(resource: resource) {
 
     <!-- 资源列表 -->
     <div class="resource-list">
-      <div v-for="resource in resources" :key="resource.id" class="resource-card" @click="goToResource(resource)">
+      <div
+        v-for="resource in resources"
+        :key="resource.id"
+        class="resource-card"
+        @click="goToResource(resource)"
+        @mouseover="resource.hover = true"
+        @mouseleave="resource.hover = false"
+      >
         <div class="resource-icon">
           <img :src="'http://122.9.33.84:8000' + resource.icon" :alt="resource.name">
           <div class="resource-type">{{ resource.type }}</div>
@@ -199,6 +216,16 @@ function goToResource(resource: resource) {
           <div class="resource-meta">
             <span class="update-time">最后更新：{{ resource.updateTime }}</span>
           </div>
+        </div>
+        <!-- 删除图标 -->
+        <div
+          v-if="resource.hover"
+          class="delete-icon"
+          @click.stop="deleteResource(resource.id, resource.type)"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1M18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
+          </svg>
         </div>
       </div>
     </div>
@@ -343,6 +370,7 @@ function goToResource(resource: resource) {
   display: flex;
   gap: 16px;
   cursor: pointer;
+  position: relative;
 }
 
 .resource-card:hover {
@@ -408,6 +436,22 @@ function goToResource(resource: resource) {
 .update-time {
   color: #95a5a6;
   font-size: 11px;
+}
+
+.delete-icon {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: white;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.delete-icon:hover {
+  background: #f5f5f5;
 }
 
 /* 自定义弹窗样式 */

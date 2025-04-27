@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue"
-import type { UploadInstance } from 'element-plus'
+import type { UploadInstance, UploadRequestOptions } from 'element-plus'
 import { UploadFilled } from "@element-plus/icons-vue"
 import axios from "axios"
 import router from "../../router"
@@ -12,9 +12,9 @@ const dialogVisible = ref(false)
 
 // 文件上传前的钩子，用于校验文件类型和大小
 function handleChange(file: File, fileList: File[]) {
-  const isLt5M = file.size / 1024 / 1024 < 5
+  const isLt5M = file.size / 1024 / 1024 < 20
   if (!isLt5M) {
-    alert("文件大小不能超过 5MB！")
+    alert("文件大小不能超过 20MB！")
     fileList.splice(fileList.indexOf(file), 1)
   }
   listLength.value = fileList.length
@@ -28,17 +28,16 @@ function openDialog() {
   dialogVisible.value = true
 }
 
-function uploadText(file: File) {
-  console.log(router.currentRoute.value.path)
+function uploadText(options: UploadRequestOptions) {
   const formData = new FormData()
-  formData.append("file", file)
+  formData.append("file", options.file)
   formData.append("uid", sessionStorage.getItem("uid") as string)
   formData.append("kb_id", router.currentRoute.value.params.id as string)
   formData.append("segment_mode", segmentMode.value)
 
   axios({
     method: 'post',
-    url: '/kb/upload',
+    url: '/kb/uploadText',
     data: formData,
     headers: {
           'Content-Type': 'multipart/form-data',
@@ -46,6 +45,7 @@ function uploadText(file: File) {
   }).then(function (response) {
     if (response.data.code === 0) {
       console.log(response.data.message)
+      router.push('/workspace/textBase/' + router.currentRoute.value.params.id)
     } else {
       console.log(response.data.message)
     }
@@ -87,13 +87,13 @@ function clear() {
         </div>
         <template #tip>
           <div class="el-upload__tip">
-            支持 txt、pdf、doc、docx、md 格式文件，单个文件大小不超过 5MB
+            支持 txt、pdf、doc、docx、md 格式文件，单个文件大小不超过 20MB
           </div>
         </template>
       </el-upload>
 
       <div class="actions">
-        <el-button type="primary" :disabled="!listLength" @click="openDialog">确认上传</el-button>
+        <el-button type="primary" :disabled="!listLength" @click="openDialog">选择分段模式</el-button>
         <el-button type="danger" :disabled="!listLength" @click="clear">清空列表</el-button>
       </div>
     </div>
@@ -103,9 +103,9 @@ function clear() {
       <el-form>
         <el-form-item label="分段模式">
           <el-radio-group v-model="segmentMode">
-            <el-radio label="auto">自动分段</el-radio>
-            <el-radio label="custom">自定义分段</el-radio>
-            <el-radio label="hierarchical">按层级分段</el-radio>
+            <el-radio value="auto">自动分段</el-radio>
+            <el-radio value="custom">自定义分段</el-radio>
+            <el-radio value="hierarchical">按层级分段</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>

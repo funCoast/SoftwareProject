@@ -16,9 +16,9 @@ interface paragraph {
 }
 
 const texts = ref<Text[]>([])
-const searchQuery = ref("") // 搜索框绑定的值
-const selectedText = ref<Text>() // 存储选中的文本
-const content = ref<paragraph[]>([]) // 存储文本内容
+const searchQuery = ref("")
+const selectedText = ref<Text>()  // 存储选中的文本
+const content = ref<paragraph[]>([])  // 存储文本内容
 
 // 计算属性：根据搜索框的输入过滤文本列表
 const filteredTexts = computed(() => {
@@ -28,10 +28,10 @@ const filteredTexts = computed(() => {
 })
 
 onMounted(async () => {
-  await getTexts(); // 等待获取文本列表完成
+  await getTexts()  // 等待获取文本列表完成
   if (texts.value.length > 0) {
-    selectedText.value = texts.value[0]; // 选中第一个文本
-    await getTextContent(selectedText.value.id); // 等待获取选中文本内容完成
+    selectedText.value = texts.value[0]  // 选中第一个文本
+    await getTextContent(selectedText.value.id) // 获取文本内容
   }
 })
 
@@ -73,7 +73,7 @@ async function getTextContent(id: number) {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      content.value = response.data.Content
+      content.value = response.data.content
     } else {
       console.log(response.data.message)
     }
@@ -193,7 +193,7 @@ function goToUploadPage() {
 }
 
 .left-area {
-  width: 180px;
+  width: 200px;
   height: 100%;
   border-right: 1px solid #ccc;
   display: flex;
@@ -224,6 +224,7 @@ function goToUploadPage() {
   padding: 5px 10px;
   border-bottom: 1px solid #ccc;
   cursor: pointer;
+  font-size: 14px;
 }
 
 .text-item:hover {
@@ -270,7 +271,7 @@ function goToUploadPage() {
 }
 
 .text-paragraph {
-  margin-bottom: 20px; /* 增加段落间距 */
+  margin-bottom: 10px; /* 增加段落间距 */
   line-height: 1.8; /* 增加行高 */
   font-size: 15px; /* 调整字体大小 */
   color: #333;
