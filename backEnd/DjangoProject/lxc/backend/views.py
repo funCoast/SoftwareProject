@@ -1250,18 +1250,15 @@ def delete_resource(request):
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
     try:
-        # 判断是否是JSON格式请求
         if request.content_type == "application/json":
             body = json.loads(request.body)
             uid = body.get('uid')
             resource_id = body.get('resource_id')
             resource_type = body.get('resource_type')
         else:
-            # 兼容form-data或者urlencoded表单提交
             uid = request.POST.get('uid')
             resource_id = request.POST.get('resource_id')
             resource_type = request.POST.get('resource_type')
-
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
 
@@ -1280,16 +1277,20 @@ def delete_resource(request):
 
     try:
         if resource_type in ['textBase', 'pictureBase', 'tableBase']:
-            # 通用删除逻辑
+            # 删除关联chunk
             KnowledgeChunk.objects.filter(file=resource_file).delete()
-
+            # 删除物理文件
             if resource_file.file and os.path.isfile(resource_file.file.path):
                 os.remove(resource_file.file.path)
-
+            # 保存知识库对象，用来后面判断
+            kb = resource_file.kb
+            # 删除KnowledgeFile
             resource_file.delete()
-
+            # 检查这个知识库下是否还有其他文件
+            if not kb.files.exists():
+                # 没有文件了，删除知识库
+                kb.delete()
         else:
-            # 预留未来其他资源类型
             return JsonResponse({"code": -1, "message": f"不支持的资源类型: {resource_type}"})
 
     except Exception as e:
