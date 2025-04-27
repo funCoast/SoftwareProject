@@ -35,6 +35,7 @@ from .utils.qa import ask_llm
 from .utils.vector_store import add_chunks_to_agent_index
 from .models import Announcement
 import pandas as pd
+import requests
 
 # workflow
 
@@ -1000,7 +1001,6 @@ def upload_picture_kb_file(request):
     try:
         # 生成图像嵌入
         embedding = get_image_embedding(saved_file.file.path)
-
         if embedding:
             # 保存为一个chunk
             KnowledgeChunk.objects.create(

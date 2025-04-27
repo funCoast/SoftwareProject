@@ -6,3 +6,4 @@ import api.core.workflow.nodes.classifier.node
 import api.core.workflow.nodes.fileExtractor.node
 import api.core.workflow.nodes.httpRequest.node
 import api.core.workflow.nodes.if_else.node
+import api.core.workflow.nodes.kbRetrieval.node
