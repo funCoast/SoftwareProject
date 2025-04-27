@@ -1,12 +1,7 @@
-import re
-
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+import requests
 from bs4 import BeautifulSoup
-import time
-
 from api.core.plugin.plugins.base_plugin import BasePlugin
+from api.core.plugin.plugins.weather.weather_code import get_weather_code, build_city_weathercode_map
 
 
 class WeatherScraperPlugin(BasePlugin):
@@ -17,92 +12,87 @@ class WeatherScraperPlugin(BasePlugin):
             description="得到天气",
             intent="Check_the_weather_according_to_the_city",
             param_description={
-                "city": "the city for which weather information is requested."
-                        "default: None"
+                "city": "the city for which weather information is requested. Default: None"
             }
         )
 
+    def fetch_weather_page(self, city_code):
+        url = f"https://www.weather.com.cn/weather/{city_code}.shtml"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/113.0.0.0 Safari/537.36"
+        }
+        try:
+            response = requests.get(url, headers=headers, timeout=5)
+            response.encoding = 'utf-8'  # 必须设编码
+            if response.status_code == 200:
+                return response.text
+            else:
+                raise Exception(f"HTTP {response.status_code}")
+        except Exception as e:
+            raise Exception(f"Failed to fetch weather page: {str(e)}")
+
+    def parse_weather_html(self, html):
+        soup = BeautifulSoup(html, "html.parser")
+        weather_list = soup.find("ul", class_="t clearfix")
+        if not weather_list:
+            raise Exception("Failed to find weather list on page.")
+
+        weather_data = []
+        weather_items = weather_list.find_all("li")
+        for item in weather_items:
+            try:
+                # 日期
+                date = item.find("h1").text.strip()
+
+                # 天气
+                weather_tag = item.find("p", class_="wea")
+                weather = weather_tag.text.strip() if weather_tag else ""
+
+                # 温度
+                temp_tag = item.find("p", class_="tem")
+                high = temp_tag.find("span").text if temp_tag.find("span") else ""
+                low = temp_tag.find("i").text if temp_tag.find("i") else ""
+                temp = f"{high}/{low}" if high else low
+
+                # 风向风力
+                win_tag = item.find("p", class_="win")
+                wind_dirs = [span["title"] for span in win_tag.find_all("span")] if win_tag else []
+                wind_force = win_tag.find("i").text if win_tag and win_tag.find("i") else ""
+                wind = f"{', '.join(wind_dirs)} {wind_force}".strip()
+
+                weather_data.append({
+                    "日期": date,
+                    "天气": weather,
+                    "温度": temp,
+                    "风向风力": wind
+                })
+            except Exception:
+                continue  # 有些<li>可能结构不完整，直接跳过
+
+        return weather_data
 
     def execute(self, *args, **kwargs):
         try:
-            city_code = kwargs['city_code']
-            # 设置Selenium WebDriver
-            options = webdriver.ChromeOptions()
-            options.add_argument("--headless")  # 无头模式
-            options.add_argument("--disable-gpu")
-            options.add_argument("--no-sandbox")
-            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-            # 构建请求URL
-            url = f"https://www.weather.com.cn/weather/{city_code}.shtml"
-            driver.get(url)
-            # 等待页面加载完成
-            time.sleep(3)
-            # 获取页面源码
-            page_source = driver.page_source
-            driver.quit()
+            city_code = kwargs.get('city_code')
+            if not city_code:
+                return {"status": "error", "message": "Missing 'city_code' parameter"}
 
-            # 解析HTML内容
-            soup = BeautifulSoup(page_source, "html.parser")
+            if not city_code.isdigit():
+                # city_code实际上是城市名，需要转换
+                xml_file = "./weatherCode.xml"
+                city_map = build_city_weathercode_map(xml_file)
+                city_code = get_weather_code(city_code, city_map)
 
-            try:
-                # 找到包含7天天气信息的 ul 标签
-                weather_list = soup.find("ul", class_="t clearfix")
+            html = self.fetch_weather_page(city_code)
+            weather_data = self.parse_weather_html(html)
 
-                # 提取每一天的天气信息
-                pattern = re.compile(r'(?=.*\bsky\b)(?=.*\bskyid\b)')
-                weather_items = weather_list.find_all("li", class_=pattern)
-                weather_data = []
-                for item in weather_items:
-                    # 提取日期
-                    date_tag = item.find("h1")
-                    date = date_tag.text.strip()
-
-                    # 提取天气
-                    weather_tag = item.find("p", class_="wea")
-                    weather = weather_tag["title"]
-
-                    # 提取温度
-                    temp_tag = item.find("p", class_="tem")
-                    if temp_tag.find("span"):
-                        temp_high = temp_tag.find("span").text
-                        temp_low = temp_tag.find("i").text
-                        temp = f"{temp_high}/{temp_low}"
-                    else:
-                        temp_low = temp_tag.find("i").text
-                        temp = f"{temp_low}"
-
-                    # 提取风向和风力
-                    wind_dir_tags = item.find("p", class_="win").find_all("span")
-                    wind_dirs = [tag["title"] for tag in wind_dir_tags]
-                    wind_force = item.find("p", class_="win").find("i").text
-
-                    # 组合风向和风力
-                    wind = f"{', '.join(wind_dirs)} {wind_force}"
-
-                    # 添加到结果列表
-                    weather_data.append({
-                        "日期": date,
-                        "天气": weather,
-                        "温度": temp,
-                        "风向风力": wind
-                    })
-
-                return {
-                    "status": "success",
-                    "result": weather_data
-                }
-
-            except Exception as e:
-                return {
-                    "status": "error",
-                    "message": f"Failed to parse weather data: {str(e)}"
-                }
+            return {"status": "success", "result": weather_data}
         except Exception as e:
-            return {
-                "status": "error",
-                "message": f"Failed to fetch weather data: {str(e)}"
-            }
+            return {"status": "error", "message": str(e)}
+
 
 if __name__ == "__main__":
     plugin = WeatherScraperPlugin()
-    print(plugin.execute(city_code="101270101"))
+    print(plugin.execute(city_code="Chongqing"))  # 测试一下北京
