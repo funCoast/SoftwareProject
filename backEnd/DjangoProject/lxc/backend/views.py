@@ -1271,25 +1271,26 @@ def delete_resource(request):
         return JsonResponse({"code": -1, "message": "用户不存在"})
 
     try:
-        # 根据 resource_id 找到指定的文件
-        resource_file = KnowledgeFile.objects.get(id=resource_id, kb__user=user)
-        # 再拿到对应的知识库
-        kb = resource_file.kb
-    except KnowledgeFile.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "资源不存在或无权限"})
+        # 根据resource_id直接找KnowledgeBase
+        kb = KnowledgeBase.objects.get(kb_id=resource_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
     try:
         if resource_type in ['textBase', 'pictureBase', 'tableBase']:
-            # 1. 删除该知识库下所有的 KnowledgeChunk
+            # 1. 删除知识库下所有的KnowledgeChunk
             KnowledgeChunk.objects.filter(kb=kb).delete()
-            # 2. 删除该知识库下所有的 KnowledgeFile
+
+            # 2. 删除知识库下所有的KnowledgeFile
             files = KnowledgeFile.objects.filter(kb=kb)
             for f in files:
                 if f.file and os.path.isfile(f.file.path):
                     os.remove(f.file.path)
                 f.delete()
-            # 3. 删除 KnowledgeBase 本身
+
+            # 3. 删除KnowledgeBase本身
             kb.delete()
+
         else:
             return JsonResponse({"code": -1, "message": f"不支持的资源类型: {resource_type}"})
 
