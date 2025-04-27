@@ -947,7 +947,7 @@ def get_knowledge_bases(request):
     for kb in kb_list:
         knowledge_bases.append({
             "id": kb.kb_id,
-            "type": kb.kb_type,
+            "type": kb.kb_type + "Base",
             "name": kb.kb_name,
             "description": kb.kb_description or "",
             "icon": kb.icon or "",  # 从数据库读取 icon 路径
@@ -1184,7 +1184,7 @@ def extract_table_text(file_path):
 
 
 @csrf_exempt
-def get_tables(request):
+def get_table_data(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
@@ -1204,24 +1204,92 @@ def get_tables(request):
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
-    # 获取该知识库下所有上传的表格文件
-    table_files = kb.files.all()
+    # 找到所有表格文件
+    table_files = kb.files.filter(name__iendswith=('.csv', '.xlsx'))
 
-    tables = []
-    for file in table_files:
-        ext = os.path.splitext(file.name)[-1].lower()
-        if ext in ALLOWED_TABLE_EXTENSIONS:
-            tables.append({
-                "id": file.id,
-                "name": file.name,
-                "url": file.file.url,
-                "description": f"表格文件：{file.name}"
+    if not table_files.exists():
+        return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
+
+    all_tables = []
+
+    for table_file in table_files:
+        file_path = table_file.file.path
+        ext = os.path.splitext(file_path)[-1].lower()
+
+        try:
+            if ext == '.csv':
+                df = pd.read_csv(file_path)
+            elif ext == '.xlsx':
+                df = pd.read_excel(file_path)
+            else:
+                continue  # 不支持的格式，跳过
+
+            columns = list(df.columns)
+            data = df.fillna("").to_dict(orient='records')
+
+            all_tables.append({
+                "file_id": table_file.id,
+                "file_name": table_file.name,
+                "columns": columns,
+                "data": data
             })
+
+        except Exception as e:
+            print(f"[解析表格文件失败: {table_file.name}] {str(e)}")
+            continue  # 如果某个表格解析失败，跳过，继续处理其他表格
 
     return JsonResponse({
         "code": 0,
         "message": "获取成功",
-        "tables": tables
+        "tables": all_tables
+    })
+
+@csrf_exempt
+def delete_resource(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    uid = request.POST.get('uid')
+    resource_id = request.POST.get('resource_id')
+    resource_type = request.POST.get('resource_type')
+
+    if not uid or not resource_id or not resource_type:
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、resource_id 或 resource_type)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        resource_file = KnowledgeFile.objects.get(id=resource_id, kb__user=user)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "资源不存在或无权限"})
+
+    # 根据 resource_type 分类处理
+    try:
+        if resource_type in ['textBase', 'pictureBase', 'tableBase']:
+            # 通用处理逻辑
+            # 1. 删除关联的KnowledgeChunk
+            KnowledgeChunk.objects.filter(file=resource_file).delete()
+
+            # 2. 删除实际文件（服务器磁盘上的文件）
+            if resource_file.file and os.path.isfile(resource_file.file.path):
+                os.remove(resource_file.file.path)
+
+            # 3. 删除KnowledgeFile记录
+            resource_file.delete()
+
+        else:
+            # 预留：未来支持其他类型
+            return JsonResponse({"code": -1, "message": f"不支持的资源类型: {resource_type}"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"删除失败: {str(e)}"})
+
+    return JsonResponse({
+        "code": 0,
+        "message": "删除成功"
     })
 
 
