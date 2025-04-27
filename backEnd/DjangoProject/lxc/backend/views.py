@@ -1249,9 +1249,21 @@ def delete_resource(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-    uid = request.POST.get('uid')
-    resource_id = request.POST.get('resource_id')
-    resource_type = request.POST.get('resource_type')
+    try:
+        # 判断是否是JSON格式请求
+        if request.content_type == "application/json":
+            body = json.loads(request.body)
+            uid = body.get('uid')
+            resource_id = body.get('resource_id')
+            resource_type = body.get('resource_type')
+        else:
+            # 兼容form-data或者urlencoded表单提交
+            uid = request.POST.get('uid')
+            resource_id = request.POST.get('resource_id')
+            resource_type = request.POST.get('resource_type')
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
 
     if not uid or not resource_id or not resource_type:
         return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、resource_id 或 resource_type)"})
@@ -1266,22 +1278,18 @@ def delete_resource(request):
     except KnowledgeFile.DoesNotExist:
         return JsonResponse({"code": -1, "message": "资源不存在或无权限"})
 
-    # 根据 resource_type 分类处理
     try:
         if resource_type in ['textBase', 'pictureBase', 'tableBase']:
-            # 通用处理逻辑
-            # 1. 删除关联的KnowledgeChunk
+            # 通用删除逻辑
             KnowledgeChunk.objects.filter(file=resource_file).delete()
 
-            # 2. 删除实际文件（服务器磁盘上的文件）
             if resource_file.file and os.path.isfile(resource_file.file.path):
                 os.remove(resource_file.file.path)
 
-            # 3. 删除KnowledgeFile记录
             resource_file.delete()
 
         else:
-            # 预留：未来支持其他类型
+            # 预留未来其他资源类型
             return JsonResponse({"code": -1, "message": f"不支持的资源类型: {resource_type}"})
 
     except Exception as e:
@@ -1291,7 +1299,6 @@ def delete_resource(request):
         "code": 0,
         "message": "删除成功"
     })
-
 
 def workflow_run(request):
     nodes = request.data.get("nodes", [])
