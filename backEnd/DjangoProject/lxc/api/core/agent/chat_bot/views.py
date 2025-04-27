@@ -1,54 +1,37 @@
-# views.py
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 
-from backend.models import Agent, Conversation, Message
-from .serializers import AgentSerializer, ConversationSerializer, MessageSerializer
-from .llm_integration import LLMClient
-from ..skill.plugin_call.plugin_call import plugin_choose_and_run
+from api.core.agent.chat_bot.llm_integration import LLMClient
+from api.core.agent.skill.plugin_call.plugin_call import plugin_call
 
 
-class ConversationViewSet(viewsets.ModelViewSet):
-    serializer_class = ConversationSerializer
+@csrf_exempt
+@require_http_methods(["POST"])
+def temp_send_message(request):
+    try:
+        llm_client = LLMClient()
+        message = "北京今天几点, 是什么节日"
 
-    def get_queryset(self):
-        return Conversation.objects.filter(user=self.request.user)
+        # 插件调用
+        plugin_response = plugin_call(message)
 
-    def create(self, request):
-        agent = Agent.objects.get(pk=request.data['agent_id'])
-        conversation = Conversation.objects.create(
-            user=request.user,
-            agent=agent
-        )
-        return Response(ConversationSerializer(conversation).data)
+        # 知识库调用
+        # 工作流调用
 
+        prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
+        input_str = f"\t- 输入: {message}\n"
+        plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
+        kb_str = f"\t- 调用已有知识库中的内容，得到：[]\n"
+        workflow_str = f"\t- 调用工作流得到结果：[]\n"
 
+        total_message = prompt + input_str + plugin_str + kb_str + workflow_str
 
-@action(detail=False, methods=['post'], url_path='send/(?P<conversation_id>\d+)')
-def send_message(self, request, conversation_id=None):
-    conversation = Conversation.objects.get(pk=conversation_id)
-    message = Message.objects.create(
-        conversation=conversation,
-        content=request.data['content'],
-        is_user=True
-    )
+        response = llm_client.generate_response(total_message)
 
-    # 异步调用大模型
-    self.process_ai_response(conversation, message)
-
-    return Response({'status': 'processing'})
-
-def process_ai_response(self, conversation, user_message):
-    # 调用大模型接口
-    llm_client = LLMClient()
-    response = llm_client.generate_response(user_message.content)
-
-    Message.objects.create(
-        conversation=conversation,
-        content=response,
-        is_user=False
-    )
+        return JsonResponse(response)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
 

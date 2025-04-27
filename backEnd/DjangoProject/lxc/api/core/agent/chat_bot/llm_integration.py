@@ -5,7 +5,6 @@ from openai import OpenAI
 
 from api.core.agent.skill.plugin_call.plugin_call import plugin_choose_and_run
 
-
 class LLMClient:
     def __init__(self):
         self.config = {
@@ -23,7 +22,6 @@ class LLMClient:
         return self._call(prompt)
 
     def _call(self, prompt):
-        openai.api_key = self.config['api_key']
         response = self.client.chat.completions.create(
             model=self.config['model'],
             messages=[{"role": "user", "content": prompt}]
@@ -31,9 +29,9 @@ class LLMClient:
         return response.choices[0].message.content
 
 if __name__ == '__main__':
-    message = "北京今天几点, 是什么节日"
+    message = "北京今天天气如何，适合男士穿什么出门"
     called_plugins, call_return = plugin_choose_and_run(message)
-    plugin_call_result = "对于上面输入中的部分未知条件如下: \n" + str(call_return) + "\n"
+    plugin_call_result = "\n对于上面输入中的部分未知条件如下: \n" + str(call_return) + "\n"
 
     response = {
         "message": message,
@@ -41,6 +39,7 @@ if __name__ == '__main__':
         "call_return": call_return
     }
     print(response)
+    print(LLMClient().generate_response(message + plugin_call_result))
 
 
 
