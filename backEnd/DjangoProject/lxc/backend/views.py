@@ -1,5 +1,6 @@
 import uuid
 import random
+from openai import OpenAI
 from smtplib import SMTPException
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
@@ -968,6 +969,8 @@ def get_knowledge_bases(request):
 
 
 ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
+
+
 @csrf_exempt
 def upload_picture_kb_file(request):
     if request.method != 'POST':
@@ -1022,37 +1025,39 @@ def upload_picture_kb_file(request):
         "message": "上传成功"
     })
 
-def get_image_caption(image_path):
-    url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-image-caption/generation"
-    headers = {
-        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
-        "Content-Type": "application/json"
-    }
+
+def get_image_caption(image_url):
+    """
+    输入公网图片URL，使用阿里云qwen-vl-plus生成图片描述。
+    """
 
     try:
-        with open(image_path, 'rb') as img_file:
-            img_bytes = img_file.read()
-            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+        # 正确初始化 client，api_key直接从 settings
+        client = OpenAI(
+            api_key=settings.DASHSCOPE_API_KEY,  # 👈 这里！用settings，不用os.getenv
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        )
 
-        payload = {
-            "model": "multimodal-caption-v1",  # 阿里云官方推荐的模型
-            "input": {
-                "image": img_base64
-            }
-        }
+        completion = client.chat.completions.create(
+            model="qwen-vl-plus",  # 阿里云视觉大模型
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "请简要描述这张图片。"},
+                        {"type": "image_url", "image_url": {"url": image_url}}
+                    ]
+                }
+            ]
+        )
 
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
-        data = response.json()
-
-        if "output" in data and "text" in data["output"]:
-            return data["output"]["text"]
-        else:
-            print(f"[阿里云智能标注异常返回] {data}")
-            return None
+        # 提取并返回描述文本
+        return completion.choices[0].message.content.strip()
 
     except Exception as e:
         print(f"[阿里云智能标注失败] {str(e)}")
         return None
+
 
 def get_image_embedding(image_path):
     url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/image-embedding/image-embedding"
@@ -1084,6 +1089,7 @@ def get_image_embedding(image_path):
     except Exception as e:
         print(f"[阿里云图像嵌入失败] {str(e)}")
         return None
+
 
 @csrf_exempt
 def get_pictures(request):
@@ -1131,6 +1137,8 @@ def get_pictures(request):
 
 
 ALLOWED_TABLE_EXTENSIONS = ['.csv', '.xlsx']
+
+
 @csrf_exempt
 def upload_table_kb_file(request):
     if request.method != 'POST':
@@ -1280,6 +1288,7 @@ def get_table_data(request):
         "tables": all_tables
     })
 
+
 @csrf_exempt
 def delete_resource(request):
     if request.method != 'POST':
@@ -1337,6 +1346,7 @@ def delete_resource(request):
         "code": 0,
         "message": "删除成功"
     })
+
 
 def workflow_run(request):
     nodes = request.data.get("nodes", [])
@@ -1476,6 +1486,7 @@ def workflow_save(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"服务器错误：{str(e)}"})
+
 
 def workflow_fetchAll(request):
     uid = request.GET.get('uid')
