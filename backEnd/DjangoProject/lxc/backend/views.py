@@ -1135,10 +1135,19 @@ def get_pictures(request):
         "pictures": pictures
     })
 
+def preprocess_text(text):
+    if not text:
+        return ""
+
+    # 去除过多的换行、控制字符
+    text = text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+    # 只保留可打印字符
+    text = ''.join(c for c in text if 32 <= ord(c) <= 126 or c in '。！？；：，、——（）【】')
+    # 截断最大长度
+    max_length = 4000
+    return text[:max_length]
 
 ALLOWED_TABLE_EXTENSIONS = ['.csv', '.xlsx']
-
-
 @csrf_exempt
 def upload_table_kb_file(request):
     if request.method != 'POST':
@@ -1176,6 +1185,7 @@ def upload_table_kb_file(request):
     try:
         # 读取表格内容并生成嵌入
         table_text = extract_table_text(saved_file.file.path)
+        table_text = preprocess_text(table_text)
         embedding = get_tongyi_embedding(table_text)
 
         if embedding:
@@ -1225,7 +1235,6 @@ def extract_table_text(file_path):
     except Exception as e:
         print(f"[表格解析失败] {str(e)}")
         return ""
-
 
 @csrf_exempt
 def get_table_data(request):
@@ -1287,7 +1296,6 @@ def get_table_data(request):
         "message": "获取成功",
         "tables": all_tables
     })
-
 
 @csrf_exempt
 def delete_resource(request):
@@ -1483,7 +1491,6 @@ def workflow_run(request):
     executor = Executor(user_id, workflow_id, nodes, edges)
     result = executor.execute()
     return JsonResponse({"result": result})
-
 
 def workflow_create(request):
     try:
