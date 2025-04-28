@@ -1512,3 +1512,25 @@ def workflow_fetchAll(request):
         "workflows": workflow_list
     })
 
+def workflow_delete(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "请求方式错误，应为POST"})
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        uid = data.get('uid')
+        workflow_id = data.get('workflow_id')
+
+        if not uid or not workflow_id:
+            return JsonResponse({"code": -1, "message": "缺少参数 uid 或 workflow_id"})
+
+        # 查找该用户下的 workflow
+        try:
+            workflow = Workflow.objects.get(workflow_id=workflow_id, user__user_id=uid)
+            workflow.delete()
+            return JsonResponse({"code": 0, "message": "删除成功"})
+        except Workflow.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "未找到对应的工作流"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": str(e)})
