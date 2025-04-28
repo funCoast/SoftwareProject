@@ -7,4 +7,4 @@ import api.core.workflow.nodes.fileExtractor.node
 import api.core.workflow.nodes.httpRequest.node
 import api.core.workflow.nodes.if_else.node
 import api.core.workflow.nodes.kbRetrieval.node
-import api.core.workflow.nodes.plugin.node
+import api.core.workflow.nodes.weather.node
