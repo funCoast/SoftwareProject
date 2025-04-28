@@ -1476,3 +1476,39 @@ def workflow_save(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"服务器错误：{str(e)}"})
+
+def workflow_fetchAll(request):
+    uid = request.GET.get('uid')
+    if not uid:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少用户ID",
+            "workflows": []
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在",
+            "workflows": []
+        })
+
+    workflows = Workflow.objects.filter(user=user)
+    workflow_list = []
+
+    for workflow in workflows:
+        workflow_list.append({
+            "workflow_id": workflow.workflow_id,
+            "name": workflow.name,
+            "description": workflow.description,
+            "icon": workflow.icon_url if workflow.icon_url else ""
+        })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "workflows": workflow_list
+    })
+
