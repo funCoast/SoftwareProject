@@ -14,6 +14,7 @@ from pycparser import parse_file
 from api.core.workflow.executor import Executor
 from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow
 from django.db.models import Q
+import base64
 import json
 # backend/views.py
 from django.conf import settings
@@ -708,13 +709,18 @@ def create_kb(request):
         kb.icon = f"/media/kb_icons/{filename}"
         kb.save()
     else:
-        # 没上传图标，根据 kb_type 使用默认图标
+        # 没上传图标，根据 kb_type 使用默认图标（kb_type 英文，大小写不敏感）
         type_to_icon = {
-            "文本": "Text.svg",
-            "表格": "Table.svg",
-            "图片": "Picture.svg",
+            "text": "Text.svg",
+            "table": "Table.svg",
+            "picture": "Picture.svg",
         }
-        default_icon_file = type_to_icon.get(kb_type, "Text.svg")
+
+        # 防止kb_type异常，同时统一小写处理
+        kb_type_cleaned = (kb_type or "").strip().lower()
+
+        default_icon_file = type_to_icon.get(kb_type_cleaned, "Text.svg")
+
         kb.icon = f"/media/kb_icons/{default_icon_file}"
         kb.save()
 
@@ -947,7 +953,7 @@ def get_knowledge_bases(request):
     for kb in kb_list:
         knowledge_bases.append({
             "id": kb.kb_id,
-            "type": kb.kb_type,
+            "type": kb.kb_type + "Base",
             "name": kb.kb_name,
             "description": kb.kb_description or "",
             "icon": kb.icon or "",  # 从数据库读取 icon 路径
@@ -962,8 +968,6 @@ def get_knowledge_bases(request):
 
 
 ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
-
-
 @csrf_exempt
 def upload_picture_kb_file(request):
     if request.method != 'POST':
@@ -998,29 +1002,14 @@ def upload_picture_kb_file(request):
         segment_mode='auto'  # 图像无需分段，统一标注
     )
 
-    try:
-        # 生成图像嵌入
-        embedding = get_image_embedding(saved_file.file.path)
-        if embedding:
-            # 保存为一个chunk
-            KnowledgeChunk.objects.create(
-                kb=kb,
-                file=saved_file,
-                content=f"图片文件: {saved_file.name}",
-                embedding=json.dumps(embedding),
-                order=0
-            )
-        else:
-            return JsonResponse({
-                "code": -1,
-                "message": "图像嵌入生成失败"
-            })
-
-    except Exception as e:
-        return JsonResponse({
-            "code": -1,
-            "message": f"上传成功但处理失败: {str(e)}"
-        })
+    # 注意！直接保存chunk，不做向量化
+    KnowledgeChunk.objects.create(
+        kb=kb,
+        file=saved_file,
+        content=f"图片文件: {saved_file.name}",
+        embedding="[]",  # 这里给个空向量，格式上统一
+        order=0
+    )
 
     return JsonResponse({
         "code": 0,
@@ -1028,27 +1017,37 @@ def upload_picture_kb_file(request):
     })
 
 
+
 def get_image_embedding(image_path):
     url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/image-embedding/image-embedding"
     headers = {
         "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
-        "Content-Type": "application/octet-stream"
+        "Content-Type": "application/json"
     }
 
     try:
         with open(image_path, 'rb') as img_file:
-            response = requests.post(url, headers=headers, data=img_file.read(), timeout=15)
+            img_bytes = img_file.read()
+            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+
+        payload = {
+            "model": "image-embedding-v1",  # 这里要指定正确模型
+            "input": {
+                "image": img_base64
+            }
+        }
+
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
         data = response.json()
-        # 增加安全性检查，避免空返回或异常结构
         if "output" in data and "embeddings" in data["output"]:
             return data["output"]["embeddings"][0]
         else:
             print(f"[阿里云图像嵌入异常返回] {data}")
             return None
+
     except Exception as e:
         print(f"[阿里云图像嵌入失败] {str(e)}")
         return None
-
 
 @csrf_exempt
 def get_pictures(request):
@@ -1184,7 +1183,7 @@ def extract_table_text(file_path):
 
 
 @csrf_exempt
-def get_tables(request):
+def get_table_data(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
@@ -1204,26 +1203,103 @@ def get_tables(request):
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
-    # 获取该知识库下所有上传的表格文件
-    table_files = kb.files.all()
+    # 找到所有表格文件
+    table_files = kb.files.filter(name__iendswith=('.csv', '.xlsx'))
 
-    tables = []
-    for file in table_files:
-        ext = os.path.splitext(file.name)[-1].lower()
-        if ext in ALLOWED_TABLE_EXTENSIONS:
-            tables.append({
-                "id": file.id,
-                "name": file.name,
-                "url": file.file.url,
-                "description": f"表格文件：{file.name}"
+    if not table_files.exists():
+        return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
+
+    all_tables = []
+
+    for table_file in table_files:
+        file_path = table_file.file.path
+        ext = os.path.splitext(file_path)[-1].lower()
+
+        try:
+            if ext == '.csv':
+                df = pd.read_csv(file_path)
+            elif ext == '.xlsx':
+                df = pd.read_excel(file_path)
+            else:
+                continue  # 不支持的格式，跳过
+
+            columns = list(df.columns)
+            data = df.fillna("").to_dict(orient='records')
+
+            all_tables.append({
+                "file_id": table_file.id,
+                "file_name": table_file.name,
+                "columns": columns,
+                "data": data
             })
+
+        except Exception as e:
+            print(f"[解析表格文件失败: {table_file.name}] {str(e)}")
+            continue  # 如果某个表格解析失败，跳过，继续处理其他表格
 
     return JsonResponse({
         "code": 0,
         "message": "获取成功",
-        "tables": tables
+        "tables": all_tables
     })
 
+@csrf_exempt
+def delete_resource(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        if request.content_type == "application/json":
+            body = json.loads(request.body)
+            uid = body.get('uid')
+            resource_id = body.get('resource_id')
+            resource_type = body.get('resource_type')
+        else:
+            uid = request.POST.get('uid')
+            resource_id = request.POST.get('resource_id')
+            resource_type = request.POST.get('resource_type')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not uid or not resource_id or not resource_type:
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、resource_id 或 resource_type)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        # 根据resource_id直接找KnowledgeBase
+        kb = KnowledgeBase.objects.get(kb_id=resource_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    try:
+        if resource_type in ['textBase', 'pictureBase', 'tableBase']:
+            # 1. 删除知识库下所有的KnowledgeChunk
+            KnowledgeChunk.objects.filter(kb=kb).delete()
+
+            # 2. 删除知识库下所有的KnowledgeFile
+            files = KnowledgeFile.objects.filter(kb=kb)
+            for f in files:
+                if f.file and os.path.isfile(f.file.path):
+                    os.remove(f.file.path)
+                f.delete()
+
+            # 3. 删除KnowledgeBase本身
+            kb.delete()
+
+        else:
+            return JsonResponse({"code": -1, "message": f"不支持的资源类型: {resource_type}"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"删除失败: {str(e)}"})
+
+    return JsonResponse({
+        "code": 0,
+        "message": "删除成功"
+    })
 
 def workflow_run(request):
     nodes = request.data.get("nodes", [])

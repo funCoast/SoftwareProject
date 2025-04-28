@@ -31,8 +31,19 @@ def plugin_choose_and_run(input_text: str):
 
     return called_plugins, call_results
 
+def plugin_call(message: str):
+    called_plugins, call_return = plugin_choose_and_run(message)
+
+    response = {
+        "message": message,
+        "called_plugins": f"自动调用插件：{str(called_plugins)}",
+        "call_return": call_return
+    }
+
+    return response
+
 if __name__ == '__main__':
-    print(plugin_choose_and_run("北京现在几点"))
+    print(plugin_choose_and_run("北京现在天气如何"))
 
 
 

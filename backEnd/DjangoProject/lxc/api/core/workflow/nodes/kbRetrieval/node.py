@@ -1,8 +1,29 @@
 import numpy as np
 import json
 from backend.models import User, KnowledgeBase, KnowledgeChunk
-from backend.views import get_tongyi_embedding
-from ...registry import register_node
+from django.conf import settings
+import requests
+
+def get_tongyi_embedding(text):
+    url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+    headers = {
+        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "text-embedding-v1",
+        "input": [text]
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        data = response.json()
+        return data["output"]["embeddings"][0]  # 向量列表
+    except Exception as e:
+        print(f"[通义嵌入失败] {str(e)}")
+        return None
+
+
 def query_kb(uid, kb_id, query_text, top_k=5):
     try:
         user = User.objects.get(user_id=uid)
@@ -48,15 +69,3 @@ def query_kb(uid, kb_id, query_text, top_k=5):
         })
 
     return results
-
-@register_node("kbRetrieval")
-def run_kbRetrieval_node(node,inputs):
-    uid = node.get("data",{}).get("uid",None)
-    text = inputs[0].get("value", "")
-    result = query_kb(uid,text)
-    outputs = {}
-    for output in node.get("outputs", []):
-        id = output["id"]
-        outputs[id] = result  # 所有输出都给一样的结果（你也可以按 name 分别生成）
-    return outputs
-

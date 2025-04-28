@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'backend',
-    'api.core.plugin.api'
+    'api.core.plugin.api',
+    'api.core.agent.chat_bot'
 ]
 
 MIDDLEWARE = [
