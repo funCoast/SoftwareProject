@@ -1347,6 +1347,132 @@ def delete_resource(request):
         "message": "删除成功"
     })
 
+@csrf_exempt
+def delete_picture(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        kb_id = data.get('kb_id')
+        picture_id = data.get('picture_id')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not uid or not kb_id or not picture_id:
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、kb_id、picture_id)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    try:
+        file = KnowledgeFile.objects.get(id=picture_id, kb=kb)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "图片文件不存在"})
+
+    # 删除文件物理文件
+    if file.file and os.path.isfile(file.file.path):
+        os.remove(file.file.path)
+
+    # 删除对应的chunk
+    KnowledgeChunk.objects.filter(file=file).delete()
+
+    # 删除文件记录
+    file.delete()
+
+    return JsonResponse({
+        "code": 0,
+        "message": "删除成功"
+    })
+
+@csrf_exempt
+def update_picture(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        kb_id = data.get('kb_id')
+        picture_id = data.get('picture_id')
+        description = data.get('description')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not uid or not kb_id or not picture_id or description is None:
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、kb_id、picture_id、description)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    try:
+        file = KnowledgeFile.objects.get(id=picture_id, kb=kb)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "图片文件不存在"})
+
+    # 更新chunk里的content
+    chunk = KnowledgeChunk.objects.filter(file=file).first()
+    if chunk:
+        chunk.content = description
+        chunk.save()
+        return JsonResponse({
+            "code": 0,
+            "message": "编辑成功"
+        })
+    else:
+        return JsonResponse({
+            "code": -1,
+            "message": "未找到对应标注"
+        })
+
+@csrf_exempt
+def delete_text(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        kb_id = data.get('kb_id')
+        text_id = data.get('text_id')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not uid or not kb_id or not text_id:
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、kb_id、text_id)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    try:
+        file = KnowledgeFile.objects.get(id=text_id, kb=kb)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "文本文件不存在"})
+
+    # 删除文件物理文件
+    if file.file and os.path.isfile(file.file.path):
+        os.remove(file.file.path)
+
+    # 删除对应的chunk
+    KnowledgeChunk.objects.filter(file=file).delete()
+
+    # 删除文件记录
+    file.delete()
+
+    return JsonResponse({
+        "code": 0,
+        "message": "删除成功"
+    })
 
 def workflow_run(request):
     nodes = request.data.get("nodes", [])
