@@ -14,6 +14,7 @@ from pycparser import parse_file
 from api.core.workflow.executor import Executor
 from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow
 from django.db.models import Q
+import base64
 import json
 # backend/views.py
 from django.conf import settings
@@ -967,8 +968,6 @@ def get_knowledge_bases(request):
 
 
 ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
-
-
 @csrf_exempt
 def upload_picture_kb_file(request):
     if request.method != 'POST':
@@ -1003,29 +1002,14 @@ def upload_picture_kb_file(request):
         segment_mode='auto'  # 图像无需分段，统一标注
     )
 
-    try:
-        # 生成图像嵌入
-        embedding = get_image_embedding(saved_file.file.path)
-        if embedding:
-            # 保存为一个chunk
-            KnowledgeChunk.objects.create(
-                kb=kb,
-                file=saved_file,
-                content=f"图片文件: {saved_file.name}",
-                embedding=json.dumps(embedding),
-                order=0
-            )
-        else:
-            return JsonResponse({
-                "code": -1,
-                "message": "图像嵌入生成失败"
-            })
-
-    except Exception as e:
-        return JsonResponse({
-            "code": -1,
-            "message": f"上传成功但处理失败: {str(e)}"
-        })
+    # 注意！直接保存chunk，不做向量化
+    KnowledgeChunk.objects.create(
+        kb=kb,
+        file=saved_file,
+        content=f"图片文件: {saved_file.name}",
+        embedding="[]",  # 这里给个空向量，格式上统一
+        order=0
+    )
 
     return JsonResponse({
         "code": 0,
@@ -1033,27 +1017,37 @@ def upload_picture_kb_file(request):
     })
 
 
+
 def get_image_embedding(image_path):
     url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/image-embedding/image-embedding"
     headers = {
         "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
-        "Content-Type": "application/octet-stream"
+        "Content-Type": "application/json"
     }
 
     try:
         with open(image_path, 'rb') as img_file:
-            response = requests.post(url, headers=headers, data=img_file.read(), timeout=15)
+            img_bytes = img_file.read()
+            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+
+        payload = {
+            "model": "image-embedding-v1",  # 这里要指定正确模型
+            "input": {
+                "image": img_base64
+            }
+        }
+
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
         data = response.json()
-        # 增加安全性检查，避免空返回或异常结构
         if "output" in data and "embeddings" in data["output"]:
             return data["output"]["embeddings"][0]
         else:
             print(f"[阿里云图像嵌入异常返回] {data}")
             return None
+
     except Exception as e:
         print(f"[阿里云图像嵌入失败] {str(e)}")
         return None
-
 
 @csrf_exempt
 def get_pictures(request):
