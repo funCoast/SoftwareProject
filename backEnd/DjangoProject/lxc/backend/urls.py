@@ -41,4 +41,5 @@ urlpatterns = [
     path('workflow/fetch',views.workflow_fetch, name='workflow_fetch'),
     path('workflow/save',views.workflow_save, name='workflow_save'),
     path('workflow/fetchAll',views.workflow_fetchAll, name='workflow_fetchAll')
+    
 ]
