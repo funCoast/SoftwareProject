@@ -999,15 +999,21 @@ def upload_picture_kb_file(request):
         kb=kb,
         file=file,
         name=file.name,
-        segment_mode='auto'  # 图像无需分段，统一标注
+        segment_mode='auto'
     )
 
-    # 注意！直接保存chunk，不做向量化
+    # 生成智能标注
+    label = get_image_caption(saved_file.file.path)
+
+    if not label:
+        label = f"图片文件: {saved_file.name}"  # 如果标注失败，兜底用文件名
+
+    # 保存chunk
     KnowledgeChunk.objects.create(
         kb=kb,
         file=saved_file,
-        content=f"图片文件: {saved_file.name}",
-        embedding="[]",  # 这里给个空向量，格式上统一
+        content=label,
+        embedding="[]",
         order=0
     )
 
@@ -1016,7 +1022,37 @@ def upload_picture_kb_file(request):
         "message": "上传成功"
     })
 
+def get_image_caption(image_path):
+    url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-image-caption/generation"
+    headers = {
+        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
+    try:
+        with open(image_path, 'rb') as img_file:
+            img_bytes = img_file.read()
+            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+
+        payload = {
+            "model": "multimodal-caption-v1",  # 阿里云官方推荐的模型
+            "input": {
+                "image": img_base64
+            }
+        }
+
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
+        data = response.json()
+
+        if "output" in data and "text" in data["output"]:
+            return data["output"]["text"]
+        else:
+            print(f"[阿里云智能标注异常返回] {data}")
+            return None
+
+    except Exception as e:
+        print(f"[阿里云智能标注失败] {str(e)}")
+        return None
 
 def get_image_embedding(image_path):
     url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/image-embedding/image-embedding"
@@ -1077,11 +1113,14 @@ def get_pictures(request):
     for file in picture_files:
         ext = os.path.splitext(file.name)[-1].lower()
         if ext in ALLOWED_IMAGE_EXTENSIONS:
+            # 查找这个文件对应的chunk，提取描述内容
+            chunk = KnowledgeChunk.objects.filter(file=file).first()
+
             pictures.append({
                 "id": file.id,
                 "name": file.name,
-                "url": file.file.url,  # Django FileField 自动处理 /media/xxx 路径
-                "description": f"图片文件：{file.name}"
+                "url": file.file.url,
+                "description": chunk.content if chunk else f"图片文件：{file.name}"
             })
 
     return JsonResponse({
@@ -1092,8 +1131,6 @@ def get_pictures(request):
 
 
 ALLOWED_TABLE_EXTENSIONS = ['.csv', '.xlsx']
-
-
 @csrf_exempt
 def upload_table_kb_file(request):
     if request.method != 'POST':
