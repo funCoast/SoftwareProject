@@ -1500,7 +1500,7 @@ def workflow_fetchAll(request):
 
     for workflow in workflows:
         workflow_list.append({
-            "workflow_id": workflow.workflow_id,
+            "id": workflow.workflow_id,
             "name": workflow.name,
             "description": workflow.description,
             "icon": workflow.icon_url if workflow.icon_url else ""

@@ -109,6 +109,7 @@ class Workflow(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     icon_url = models.URLField(max_length=500, null=True, blank=True)
+    update_time = models.DateTimeField(auto_now=True)
     def __str__(self):
         return f"Workflow {self.workflow_id}"
 
