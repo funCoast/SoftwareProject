@@ -35,6 +35,9 @@ urlpatterns = [
     path('kb/uploadTable', views.upload_table_kb_file, name='upload_table_kb_file'),
     path('kb/getTables', views.get_table_data, name='get_tables'),
     path('rl/delete', views.delete_resource, name='delete_resource'),
+    path('kb/deletePicture', views.delete_picture, name='delete_picture'),
+    path('kb/updatePicture', views.update_picture, name='update_picture'),
+    path('kb/deleteText', views.delete_text, name='delete_text'),
 
     # 工作流
     path('workflow/run',views.workflow_run, name='workflow_run'),

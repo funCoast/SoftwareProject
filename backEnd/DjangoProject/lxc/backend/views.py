@@ -1,5 +1,6 @@
 import uuid
 import random
+from openai import OpenAI
 from smtplib import SMTPException
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
@@ -968,6 +969,8 @@ def get_knowledge_bases(request):
 
 
 ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
+
+
 @csrf_exempt
 def upload_picture_kb_file(request):
     if request.method != 'POST':
@@ -1022,37 +1025,39 @@ def upload_picture_kb_file(request):
         "message": "上传成功"
     })
 
-def get_image_caption(image_path):
-    url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-image-caption/generation"
-    headers = {
-        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
-        "Content-Type": "application/json"
-    }
+
+def get_image_caption(image_url):
+    """
+    输入公网图片URL，使用阿里云qwen-vl-plus生成图片描述。
+    """
 
     try:
-        with open(image_path, 'rb') as img_file:
-            img_bytes = img_file.read()
-            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+        # 正确初始化 client，api_key直接从 settings
+        client = OpenAI(
+            api_key=settings.DASHSCOPE_API_KEY,  # 👈 这里！用settings，不用os.getenv
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        )
 
-        payload = {
-            "model": "multimodal-caption-v1",  # 阿里云官方推荐的模型
-            "input": {
-                "image": img_base64
-            }
-        }
+        completion = client.chat.completions.create(
+            model="qwen-vl-plus",  # 阿里云视觉大模型
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "请简要描述这张图片。"},
+                        {"type": "image_url", "image_url": {"url": image_url}}
+                    ]
+                }
+            ]
+        )
 
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
-        data = response.json()
-
-        if "output" in data and "text" in data["output"]:
-            return data["output"]["text"]
-        else:
-            print(f"[阿里云智能标注异常返回] {data}")
-            return None
+        # 提取并返回描述文本
+        return completion.choices[0].message.content.strip()
 
     except Exception as e:
         print(f"[阿里云智能标注失败] {str(e)}")
         return None
+
 
 def get_image_embedding(image_path):
     url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/image-embedding/image-embedding"
@@ -1084,6 +1089,7 @@ def get_image_embedding(image_path):
     except Exception as e:
         print(f"[阿里云图像嵌入失败] {str(e)}")
         return None
+
 
 @csrf_exempt
 def get_pictures(request):
@@ -1129,6 +1135,17 @@ def get_pictures(request):
         "pictures": pictures
     })
 
+def preprocess_text(text):
+    if not text:
+        return ""
+
+    # 去除过多的换行、控制字符
+    text = text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+    # 只保留可打印字符
+    text = ''.join(c for c in text if 32 <= ord(c) <= 126 or c in '。！？；：，、——（）【】')
+    # 截断最大长度
+    max_length = 4000
+    return text[:max_length]
 
 ALLOWED_TABLE_EXTENSIONS = ['.csv', '.xlsx']
 @csrf_exempt
@@ -1168,6 +1185,7 @@ def upload_table_kb_file(request):
     try:
         # 读取表格内容并生成嵌入
         table_text = extract_table_text(saved_file.file.path)
+        table_text = preprocess_text(table_text)
         embedding = get_tongyi_embedding(table_text)
 
         if embedding:
@@ -1217,7 +1235,6 @@ def extract_table_text(file_path):
     except Exception as e:
         print(f"[表格解析失败] {str(e)}")
         return ""
-
 
 @csrf_exempt
 def get_table_data(request):
@@ -1338,6 +1355,133 @@ def delete_resource(request):
         "message": "删除成功"
     })
 
+@csrf_exempt
+def delete_picture(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        kb_id = data.get('kb_id')
+        picture_id = data.get('picture_id')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not uid or not kb_id or not picture_id:
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、kb_id、picture_id)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    try:
+        file = KnowledgeFile.objects.get(id=picture_id, kb=kb)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "图片文件不存在"})
+
+    # 删除文件物理文件
+    if file.file and os.path.isfile(file.file.path):
+        os.remove(file.file.path)
+
+    # 删除对应的chunk
+    KnowledgeChunk.objects.filter(file=file).delete()
+
+    # 删除文件记录
+    file.delete()
+
+    return JsonResponse({
+        "code": 0,
+        "message": "删除成功"
+    })
+
+@csrf_exempt
+def update_picture(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        kb_id = data.get('kb_id')
+        picture_id = data.get('picture_id')
+        description = data.get('description')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not uid or not kb_id or not picture_id or description is None:
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、kb_id、picture_id、description)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    try:
+        file = KnowledgeFile.objects.get(id=picture_id, kb=kb)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "图片文件不存在"})
+
+    # 更新chunk里的content
+    chunk = KnowledgeChunk.objects.filter(file=file).first()
+    if chunk:
+        chunk.content = description
+        chunk.save()
+        return JsonResponse({
+            "code": 0,
+            "message": "编辑成功"
+        })
+    else:
+        return JsonResponse({
+            "code": -1,
+            "message": "未找到对应标注"
+        })
+
+@csrf_exempt
+def delete_text(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        kb_id = data.get('kb_id')
+        text_id = data.get('text_id')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not uid or not kb_id or not text_id:
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、kb_id、text_id)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    try:
+        file = KnowledgeFile.objects.get(id=text_id, kb=kb)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "文本文件不存在"})
+
+    # 删除文件物理文件
+    if file.file and os.path.isfile(file.file.path):
+        os.remove(file.file.path)
+
+    # 删除对应的chunk
+    KnowledgeChunk.objects.filter(file=file).delete()
+
+    # 删除文件记录
+    file.delete()
+
+    return JsonResponse({
+        "code": 0,
+        "message": "删除成功"
+    })
+
 def workflow_run(request):
     nodes = request.data.get("nodes", [])
     edges = request.data.get("edges", [])
@@ -1347,7 +1491,6 @@ def workflow_run(request):
     executor = Executor(user_id, workflow_id, nodes, edges)
     result = executor.execute()
     return JsonResponse({"result": result})
-
 
 def workflow_create(request):
     try:
@@ -1476,6 +1619,7 @@ def workflow_save(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"服务器错误：{str(e)}"})
+
 
 def workflow_fetchAll(request):
     uid = request.GET.get('uid')
