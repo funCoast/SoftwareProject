@@ -1647,7 +1647,8 @@ def workflow_fetchAll(request):
             "id": workflow.workflow_id,
             "name": workflow.name,
             "description": workflow.description,
-            "icon": workflow.icon_url if workflow.icon_url else ""
+            "icon": workflow.icon_url if workflow.icon_url else "",
+            "updateTime":workflow.update_time
         })
 
     return JsonResponse({
