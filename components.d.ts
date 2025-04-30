@@ -59,6 +59,7 @@ declare module 'vue' {
     TextBase: typeof import('./src/components/knowledgeBase/TextBase.vue')['default']
     UpdatePicture: typeof import('./src/components/knowledgeBase/UploadPicture.vue')['default']
     UploadPicture: typeof import('./src/components/knowledgeBase/UploadPicture.vue')['default']
+    UploadTable: typeof import('./src/components/knowledgeBase/UploadTable.vue')['default']
     UploadText: typeof import('./src/components/knowledgeBase/UploadText.vue')['default']
     WorkflowCanvas: typeof import('./src/components/workflow/WorkflowCanvas.vue')['default']
     WorkflowNodeDetail: typeof import('./src/components/workflow/node-details/WorkflowNodeDetail.vue')['default']

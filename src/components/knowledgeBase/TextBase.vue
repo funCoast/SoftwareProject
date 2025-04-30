@@ -19,6 +19,7 @@ const texts = ref<Text[]>([])
 const searchQuery = ref("")
 const selectedText = ref<Text>()  // 存储选中的文本
 const content = ref<paragraph[]>([])  // 存储文本内容
+const deleteDialog = ref(false); // 控制删除确认弹窗显示
 
 // 计算属性：根据搜索框的输入过滤文本列表
 const filteredTexts = computed(() => {
@@ -28,16 +29,12 @@ const filteredTexts = computed(() => {
 })
 
 onMounted(async () => {
-  await getTexts()  // 等待获取文本列表完成
-  if (texts.value.length > 0) {
-    selectedText.value = texts.value[0]  // 选中第一个文本
-    await getTextContent(selectedText.value.id) // 获取文本内容
-  }
+  getTexts()  // 等待获取文本列表完成
 })
 
 
-async function getTexts() {
-  return axios({
+function getTexts() {
+  axios({
     method: 'get',
     url: '/kb/getTexts',
     params: {
@@ -50,9 +47,6 @@ async function getTexts() {
     } else {
       console.log(response.data.message)
     }
-  }).catch(function (error) {
-    console.error(error)
-    alert(error.message)
   })
 }
 
@@ -62,8 +56,8 @@ function selectText(text: Text) {
   getTextContent(text.id)
 }
 
-async function getTextContent(id: number) {
-  return axios({
+function getTextContent(id: number) {
+  axios({
     method: 'get',
     url: '/kb/getTextContent',
     params: {
@@ -84,6 +78,34 @@ async function getTextContent(id: number) {
 
 function goToUploadPage() {
   router.push(router.currentRoute.value.path + "/upload")
+}
+
+function tryDelete() {
+  deleteDialog.value = true
+}
+
+function confirmDelete() {
+  if (!selectedText.value) return;
+
+  axios({
+    method: "post",
+    url: "/kb/deleteText",
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+      text_id: selectedText.value.id,
+    },
+  }).then(async (response) => {
+    if (response.data.code === 0) {
+      alert("删除成功！");
+      deleteDialog.value = false; // 关闭弹窗
+      selectedText.value = undefined; // 清空选中的文本
+      getTexts()  // 等待获取文本列表完成
+    } else {
+      alert(response.data.message);
+      deleteDialog.value = false; // 关闭弹窗
+    }
+  })
 }
 </script>
 
@@ -119,11 +141,16 @@ function goToUploadPage() {
           <div v-if="selectedText" class="text-title">
             <span class="text-icon">📄</span>
             <span class="text-name">{{ selectedText.name }}</span>
+            <!-- 删除图标 -->
+            <span class="delete-icon" @click="tryDelete">
+              🗑️
+            </span>
           </div>
           <div v-else class="text-placeholder">
             请选择一个文本
           </div>
         </el-header>
+        
         <!-- 文本内容分段显示 -->
         <el-main class="text-content">
           <div v-if="selectedText">
@@ -142,6 +169,15 @@ function goToUploadPage() {
       </el-container>
     </el-container>
   </div>
+
+  <!-- 删除确认弹窗 -->
+  <el-dialog v-model="deleteDialog" title="确认删除" width="400px" class="delete-dialog">
+    <p>确定要删除选中的文本吗？此操作不可撤销。</p>
+    <template #footer>
+      <el-button @click="deleteDialog = false">取消</el-button>
+      <el-button type="danger" @click="confirmDelete">确认删除</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
@@ -244,6 +280,8 @@ function goToUploadPage() {
 .text-title {
   display: flex;
   align-items: center;
+  justify-content: space-between; /* 使内容两端对齐 */
+  width: 100%; /* 确保占满父容器宽度 */
   font-size: 16px;
   font-weight: bold;
   color: #333;
@@ -255,6 +293,7 @@ function goToUploadPage() {
 }
 
 .text-name {
+  flex: 1; /* 让文本名称占据剩余空间 */
   font-size: 16px;
 }
 
@@ -317,5 +356,34 @@ function goToUploadPage() {
   font-weight: 400;
   color: #8d6e63;
   border-left-color: #bcaaa4;
+}
+
+.delete-icon {
+  font-size: 18px;
+  color: #f56c6c;
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.3s ease; /* 添加颜色和缩放的过渡效果 */
+}
+
+.delete-icon:hover {
+  color: #ff4d4f; /* 悬停时颜色变深 */
+  transform: scale(1.2); /* 悬停时放大 */
+}
+
+.delete-dialog .el-dialog__header {
+  background-color: #fef2f2;
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+.delete-dialog .el-dialog__body {
+  color: #333;
+  font-size: 14px;
+}
+
+.delete-dialog .el-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 </style>

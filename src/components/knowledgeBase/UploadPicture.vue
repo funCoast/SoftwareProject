@@ -85,7 +85,7 @@ function clear() {
         </div>
         <template #tip>
           <div class="el-upload__tip">
-            支持 jpg、png、jpeg 等格式的图像，单张图像大小不超过 5MB
+            支持 jpg, png, jpeg 等格式的图像，单张图像大小不超过 5MB
           </div>
         </template>
       </el-upload>

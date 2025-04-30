@@ -9,12 +9,13 @@ interface resource {
   name: string
   description: string
   icon: string
+  createTime: string
   updateTime: string
   hover?: boolean
 }
 
 const resources = ref<resource[]> ([])
-const dialogVisible = ref(false) // 控制弹窗显示
+const KBDialog = ref(false) // 控制弹窗显示
 const baseInfo = ref({
   type: "text", // 默认类型
   name: "",
@@ -41,7 +42,7 @@ onMounted(() => {
 
 // 打开弹窗
 function createKB() {
-  dialogVisible.value = true
+  KBDialog.value = true
 }
 
 function getKnowledgeBases() {
@@ -106,12 +107,12 @@ function submitKB() {
   }).then(function (response) {
     if (response.data.code === 0) {
       alert("创建成功！")
-      router.push("/workspace/" + baseInfo.value.type + "/" + response.data.kb_id)
+      router.push("/workspace/" + baseInfo.value.type + "Base/" + response.data.kb_id)
     } else {
       alert(response.data.message)
     }
   })
-  dialogVisible.value = false // 关闭弹窗
+  KBDialog.value = false // 关闭弹窗
 }
 
 function createWorkflow() {
@@ -122,24 +123,86 @@ function goToResource(resource: resource) {
   router.push(`/workspace/${resource.type}/${resource.id}`)
 }
 
-function deleteResource(id: number, resourceType: string) {
+const deleteDialog = ref(false); // 控制删除确认弹窗显示
+const deleteTarget = ref<{ id: number; type: string , name: string} | null>(null); // 待删除的资源信息
+
+// 打开删除确认弹窗
+function tryDelete(id: number, resourceType: string) {
+  deleteTarget.value = { id, type: resourceType, name: resources.value.find(resource => resource.id === id)?.name || '' };
+  deleteDialog.value = true;
+}
+
+// 确认删除资源
+function handleDelete() {
+  if (!deleteTarget.value) return;
+
   axios({
     method: "post",
     url: "/rl/delete",
     data: {
       uid: sessionStorage.getItem("uid"),
-      resource_id: id,
-      resource_type: resourceType,
+      resource_id: deleteTarget.value.id,
+      resource_type: deleteTarget.value.type,
     },
   }).then(function (response) {
     if (response.data.code === 0) {
       alert("删除成功！")
-      router.go(0)
+      resources.value = []
+      getKnowledgeBases()
+      deleteDialog.value = false
+      deleteTarget.value = null
     } else {
       alert(response.data.message)
+      deleteDialog.value = false
+      deleteTarget.value = null
     }
   })
 }
+
+const filterCriteria = ref({
+  sortBy: "name", // 排序方式
+  type: "all", // 资源类型
+  search: "", // 搜索关键字
+});
+
+// 筛选资源
+const filteredResources = computed(() => {
+  let filtered = [...resources.value];
+
+  // 按类型筛选
+  if (filterCriteria.value.type !== "all") {
+    if (filterCriteria.value.type === "knowledgeBase") {
+      filtered = filtered.filter(
+        (resource) =>
+          resource.type === "textBase" ||
+          resource.type === "tableBase" ||
+          resource.type === "pictureBase"
+      );
+    } else {
+      filtered = filtered.filter(
+        (resource) => resource.type === filterCriteria.value.type
+      );
+    }
+  }
+
+  // 按搜索关键字筛选
+  if (filterCriteria.value.search.trim() !== "") {
+    filtered = filtered.filter((resource) =>
+      resource.name.toLowerCase().includes(filterCriteria.value.search.trim().toLowerCase())
+    );
+  }
+
+  // 按排序方式排序
+  if (filterCriteria.value.sortBy === "updateTime") {
+    filtered.sort((a, b) => new Date(b.updateTime).getTime() - new Date(a.updateTime).getTime());
+  } else if (filterCriteria.value.sortBy === "createTime") {
+    filtered.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+  } else if (filterCriteria.value.sortBy === "name") {
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return filtered;
+});
 </script>
 
 <template>
@@ -177,29 +240,28 @@ function deleteResource(id: number, resourceType: string) {
 
     <!-- 筛选栏 -->
     <div class="filter-bar">
-      <select class="filter-select">
-        <option value="create-time">按创建时间排序</option>
+      <select class="filter-select" v-model="filterCriteria.sortBy">
+        <option value="updateTime">按编辑时间排序</option>
+        <option value="createTime">按创建时间排序</option>
         <option value="name">按名称排序</option>
-        <option value="modify-time">按修改时间排序</option>
       </select>
-      <select class="filter-select">
+      <select class="filter-select" v-model="filterCriteria.type">
         <option value="all">全部</option>
         <option value="workflow">工作流</option>
-        <option value="plugin">插件</option>
-        <option value="knowledge">知识库</option>
+        <option value="knowledgeBase">知识库</option>
       </select>
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="搜索资源...">
+        <input type="text" placeholder="搜索资源..." v-model="filterCriteria.search">
       </div>
     </div>
 
     <!-- 资源列表 -->
     <div class="resource-list">
       <div
-        v-for="resource in resources"
+        v-for="resource in filteredResources"
         :key="resource.id"
         class="resource-card"
         @click="goToResource(resource)"
@@ -221,7 +283,7 @@ function deleteResource(id: number, resourceType: string) {
         <div
           v-if="resource.hover"
           class="delete-icon"
-          @click.stop="deleteResource(resource.id, resource.type)"
+          @click.stop="tryDelete(resource.id, resource.type)"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
             <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1M18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
@@ -231,7 +293,7 @@ function deleteResource(id: number, resourceType: string) {
     </div>
 
     <!-- 知识库创建弹窗 -->
-    <el-dialog v-model="dialogVisible" title="创建知识库" width="500px" class="custom-dialog">
+    <el-dialog v-model="KBDialog" title="创建知识库" width="500px" class="custom-dialog">
       <div class="dialog-body">
         <!-- 类型 -->
         <div class="form-row">
@@ -272,8 +334,19 @@ function deleteResource(id: number, resourceType: string) {
       </div>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="KBDialog = false">取消</el-button>
         <el-button type="primary" @click="submitKB">创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 删除确认弹窗 -->
+    <el-dialog v-model="deleteDialog" title="确认删除" width="400px" class="custom-dialog">
+      <div class="dialog-body">
+        <p>确定要删除“{{ deleteTarget?.name }}”吗？此操作不可撤销。</p>
+      </div>
+      <template #footer>
+        <el-button @click="deleteDialog = false">取消</el-button>
+        <el-button type="danger" @click="handleDelete">删除</el-button>
       </template>
     </el-dialog>
   </div>
