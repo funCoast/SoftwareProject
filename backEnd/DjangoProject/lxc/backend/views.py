@@ -1,6 +1,8 @@
 import uuid
 import random
 from openai import OpenAI
+import dashscope
+from http import HTTPStatus
 from smtplib import SMTPException
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
@@ -736,7 +738,6 @@ def create_kb(request):
 
 ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
 
-
 @csrf_exempt
 def upload_kb_file(request):
     if request.method != 'POST':
@@ -775,21 +776,11 @@ def upload_kb_file(request):
     kb.save()
 
     try:
-        # 1. 分段
         segment_file_and_save_chunks(saved_file, segment_mode)
-
-        # 2. 查出分段并生成嵌入
-        chunks = KnowledgeChunk.objects.filter(file=saved_file)
-        for chunk in chunks:
-            embedding = get_tongyi_embedding(chunk.content)
-            if embedding:
-                chunk.embedding = json.dumps(embedding)  # 序列化存入 TextField
-                chunk.save()
-
     except Exception as e:
         return JsonResponse({
             "code": -1,
-            "message": f"上传成功但分段/嵌入失败: {str(e)}"
+            "message": f"上传成功但处理失败: {str(e)}"
         })
 
     return JsonResponse({
@@ -797,26 +788,29 @@ def upload_kb_file(request):
         "message": "上传成功"
     })
 
-
 def get_tongyi_embedding(text):
-    url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
-    headers = {
-        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "text-embedding-v1",
-        "input": [text]
-    }
+    # 从 settings 中获取 API KEY
+    dashscope.api_key = getattr(settings, "DASHSCOPE_API_KEY", None)
+
+    if not dashscope.api_key:
+        print("[通义嵌入失败] 未配置 DASHSCOPE_API_KEY")
+        return None
 
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=10)
-        data = response.json()
-        return data["output"]["embeddings"][0]  # 向量列表
+        resp = dashscope.TextEmbedding.call(
+            model=dashscope.TextEmbedding.Models.text_embedding_v3,
+            input=text,
+            dimension=1024,
+            output_type="dense&sparse"
+        )
+        if resp.status_code == HTTPStatus.OK:
+            return resp.output["embeddings"][0]["embedding"]  # 取出嵌入向量
+        else:
+            print(f"[通义嵌入异常返回] {resp}")
+            return None
     except Exception as e:
         print(f"[通义嵌入失败] {str(e)}")
         return None
-
 
 @csrf_exempt
 def get_kb_files(request):
@@ -848,7 +842,6 @@ def get_kb_files(request):
         "texts": file_list
     })
 
-
 def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
     text = extract_text_from_file(file_obj.file.path)
     kb = file_obj.kb
@@ -858,7 +851,14 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
     if segment_mode == 'auto':
         paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
         for i, para in enumerate(paragraphs):
-            KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=para, order=i)
+            embedding = get_tongyi_embedding(para)
+            KnowledgeChunk.objects.create(
+                kb=kb,
+                file=file_obj,
+                content=para,
+                embedding=json.dumps(embedding) if embedding else None,
+                order=i
+            )
 
     elif segment_mode == 'custom':
         words = text.split()
@@ -866,7 +866,14 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
         order = 0
         while i < len(words):
             chunk_text = ' '.join(words[i:i + max_length])
-            KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=chunk_text, order=order)
+            embedding = get_tongyi_embedding(chunk_text)
+            KnowledgeChunk.objects.create(
+                kb=kb,
+                file=file_obj,
+                content=chunk_text,
+                embedding=json.dumps(embedding) if embedding else None,
+                order=order
+            )
             i += max_length
             order += 1
 
@@ -876,14 +883,27 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
         order = 0
         for line in lines:
             if line.startswith("#"):
-                current_parent = KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order)
+                embedding = get_tongyi_embedding(line.strip())
+                current_parent = KnowledgeChunk.objects.create(
+                    kb=kb,
+                    file=file_obj,
+                    content=line.strip(),
+                    embedding=json.dumps(embedding) if embedding else None,
+                    order=order
+                )
             elif line.strip():
-                KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order,
-                                              parent=current_parent)
+                embedding = get_tongyi_embedding(line.strip())
+                KnowledgeChunk.objects.create(
+                    kb=kb,
+                    file=file_obj,
+                    content=line.strip(),
+                    embedding=json.dumps(embedding) if embedding else None,
+                    order=order,
+                    parent=current_parent
+                )
             order += 1
     else:
         raise ValueError("不支持的分段方式")
-
 
 @csrf_exempt
 def get_text_content(request):
@@ -1181,36 +1201,36 @@ def upload_table_kb_file(request):
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
-    # 保存表格文件
     saved_file = KnowledgeFile.objects.create(
         kb=kb,
         file=file,
         name=file.name,
-        segment_mode='auto'  # 表格默认标记为auto
+        segment_mode='auto'
     )
 
     kb.updated_at = timezone.now()
     kb.save()
 
     try:
-        # 读取表格内容并生成嵌入
-        table_text = extract_table_text(saved_file.file.path)
-        table_text = preprocess_text(table_text)
-        embedding = get_tongyi_embedding(table_text)
-
-        if embedding:
-            KnowledgeChunk.objects.create(
-                kb=kb,
-                file=saved_file,
-                content=table_text,
-                embedding=json.dumps(embedding),
-                order=0
-            )
+        if ext == '.csv':
+            df = pd.read_csv(saved_file.file.path)
+        elif ext == '.xlsx':
+            df = pd.read_excel(saved_file.file.path)
         else:
-            return JsonResponse({
-                "code": -1,
-                "message": "表格嵌入生成失败"
-            })
+            raise ValueError("不支持的表格文件格式")
+
+        columns = list(df.columns)
+        for i, row in df.iterrows():
+            row_text = ', '.join([f"{col}: {row[col]}" for col in columns])
+            embedding = get_tongyi_embedding(row_text)
+            if embedding:
+                KnowledgeChunk.objects.create(
+                    kb=kb,
+                    file=saved_file,
+                    content=row_text,
+                    embedding=json.dumps(embedding),
+                    order=i
+                )
 
     except Exception as e:
         return JsonResponse({
@@ -1222,29 +1242,6 @@ def upload_table_kb_file(request):
         "code": 0,
         "message": "上传成功"
     })
-
-
-def extract_table_text(file_path):
-    ext = os.path.splitext(file_path)[-1].lower()
-    try:
-        if ext == '.csv':
-            df = pd.read_csv(file_path)
-        elif ext == '.xlsx':
-            df = pd.read_excel(file_path)
-        else:
-            raise ValueError("不支持的表格文件格式")
-
-        # 把表格每行变成自然语言文本
-        rows = []
-        for idx, row in df.iterrows():
-            line = ', '.join([f"{col}: {row[col]}" for col in df.columns])
-            rows.append(line)
-
-        return '\n'.join(rows)
-
-    except Exception as e:
-        print(f"[表格解析失败] {str(e)}")
-        return ""
 
 @csrf_exempt
 def get_table_data(request):

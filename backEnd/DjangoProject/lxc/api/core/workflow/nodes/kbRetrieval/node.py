@@ -2,23 +2,28 @@ import numpy as np
 import json
 from backend.models import User, KnowledgeBase, KnowledgeChunk
 from django.conf import settings
-import requests
+import dashscope
+from http import HTTPStatus
 
 def get_tongyi_embedding(text):
-    url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
-    headers = {
-        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "text-embedding-v1",
-        "input": [text]
-    }
+    # 从 settings 获取 API key
+    dashscope.api_key = getattr(settings, "DASHSCOPE_API_KEY", None)
+    if not dashscope.api_key:
+        print("[通义嵌入失败] 未配置 DASHSCOPE_API_KEY")
+        return None
 
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=10)
-        data = response.json()
-        return data["output"]["embeddings"][0]  # 向量列表
+        resp = dashscope.TextEmbedding.call(
+            model=dashscope.TextEmbedding.Models.text_embedding_v3,
+            input=text,
+            dimension=1024,
+            output_type="dense&sparse"
+        )
+        if resp.status_code == HTTPStatus.OK:
+            return resp.output["embeddings"][0]["embedding"]
+        else:
+            print(f"[通义嵌入异常返回] {resp}")
+            return None
     except Exception as e:
         print(f"[通义嵌入失败] {str(e)}")
         return None
