@@ -771,6 +771,9 @@ def upload_kb_file(request):
         segment_mode=segment_mode
     )
 
+    kb.updated_at = timezone.now()
+    kb.save()
+
     try:
         # 1. 分段
         segment_file_and_save_chunks(saved_file, segment_mode)
@@ -958,7 +961,8 @@ def get_knowledge_bases(request):
             "name": kb.kb_name,
             "description": kb.kb_description or "",
             "icon": kb.icon or "",  # 从数据库读取 icon 路径
-            "updateTime": kb.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+            "updateTime": kb.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "createTime": kb.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         })
 
     return JsonResponse({
@@ -1019,6 +1023,9 @@ def upload_picture_kb_file(request):
         embedding="[]",
         order=0
     )
+
+    kb.updated_at = timezone.now()
+    kb.save()
 
     return JsonResponse({
         "code": 0,
@@ -1181,6 +1188,9 @@ def upload_table_kb_file(request):
         name=file.name,
         segment_mode='auto'  # 表格默认标记为auto
     )
+
+    kb.updated_at = timezone.now()
+    kb.save()
 
     try:
         # 读取表格内容并生成嵌入
@@ -1392,6 +1402,9 @@ def delete_picture(request):
     # 删除文件记录
     file.delete()
 
+    kb.updated_at = timezone.now()
+    kb.save()
+
     return JsonResponse({
         "code": 0,
         "message": "删除成功"
@@ -1424,6 +1437,9 @@ def update_picture(request):
         file = KnowledgeFile.objects.get(id=picture_id, kb=kb)
     except KnowledgeFile.DoesNotExist:
         return JsonResponse({"code": -1, "message": "图片文件不存在"})
+
+    kb.updated_at = timezone.now()
+    kb.save()
 
     # 更新chunk里的content
     chunk = KnowledgeChunk.objects.filter(file=file).first()
@@ -1476,6 +1492,9 @@ def delete_text(request):
 
     # 删除文件记录
     file.delete()
+
+    kb.updated_at = timezone.now()
+    kb.save()
 
     return JsonResponse({
         "code": 0,
