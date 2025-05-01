@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow ,SensitiveWord
 from django.db.models import Q
 import base64
 import json
@@ -1698,3 +1698,94 @@ def workflow_delete(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
+
+@csrf_exempt
+def check_sensitive_words(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "仅支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        text = data.get('text', '')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    sensitive_words = SensitiveWord.objects.all()
+    detected = [word.word_content for word in sensitive_words if word.word_content in text]
+
+    if detected:
+        return JsonResponse({
+            "code": 1,
+            "message": f"内容包含敏感词：{', '.join(detected)}",
+            "detected_words": detected
+        })
+    else:
+        return JsonResponse({
+            "code": 0,
+            "message": "未检测到敏感词"
+        })
+
+@csrf_exempt
+def add_sensitive_word(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "仅支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        word_content = data.get('word')
+        replacement = data.get('replacement', '')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not word_content:
+        return JsonResponse({"code": -1, "message": "缺少 word 参数"})
+
+    if SensitiveWord.objects.filter(word_content=word_content).exists():
+        return JsonResponse({"code": -1, "message": "敏感词已存在"})
+
+    SensitiveWord.objects.create(word_content=word_content, replacement=replacement)
+    return JsonResponse({"code": 0, "message": "敏感词添加成功"})
+
+@csrf_exempt
+def delete_sensitive_word(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "仅支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        word_id = data.get('id')
+        word_content = data.get('word')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if word_id:
+        try:
+            word = SensitiveWord.objects.get(word_id=word_id)
+            word.delete()
+            return JsonResponse({"code": 0, "message": "敏感词删除成功（通过ID）"})
+        except SensitiveWord.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "敏感词ID不存在"})
+    elif word_content:
+        try:
+            word = SensitiveWord.objects.get(word_content=word_content)
+            word.delete()
+            return JsonResponse({"code": 0, "message": "敏感词删除成功（通过word）"})
+        except SensitiveWord.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "敏感词不存在"})
+    else:
+        return JsonResponse({"code": -1, "message": "缺少 id 或 word 参数"})
+
+@csrf_exempt
+def list_sensitive_words(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "仅支持 GET 请求"})
+
+    words = SensitiveWord.objects.all().values('word_id', 'word_content', 'replacement')
+    word_list = list(words)
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "sensitive_words": word_list
+    })
+

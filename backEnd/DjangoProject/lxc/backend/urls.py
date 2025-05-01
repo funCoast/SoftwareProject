@@ -46,4 +46,10 @@ urlpatterns = [
     path('workflow/save',views.workflow_save, name='workflow_save'),
     path('workflow/fetchAll',views.workflow_fetchAll, name='workflow_fetchAll'),
     path('workflow/delete',views.workflow_delete, name='workflow_delete')
+
+    # 敏感词
+    path('sensitive/check', views.check_sensitive_words, name='check_sensitive_words'),
+    path('sensitive/add', views.add_sensitive_word, name='add_sensitive_word'),
+    path('sensitive/delete', views.delete_sensitive_word, name='delete_sensitive_word'),
+    path('sensitive/list', views.list_sensitive_words, name='list_sensitive_words'),
 ]
