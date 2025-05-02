@@ -401,7 +401,7 @@ const jumpAgent = () => {
 }
 
 .confirm-btn {
-  background: #95a5a6;
+  background: #36A2EB;
   border: none;
   color: white;
 }

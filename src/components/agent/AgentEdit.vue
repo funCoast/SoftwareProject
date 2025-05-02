@@ -186,84 +186,181 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeMount } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
+
+interface Workflow {
+  workflow_id: number
+  name: string
+  description: string
+  icon: string
+  hover?: boolean
+}
+
+onMounted(() => {
+  getKnowledgeBases()
+  getWorkflows()
+  getPlugins()
+})
 
 // 智能体信息
 const agentInfo = ref({
   name: 'AI讲师',
   description: 'AI讲师',
   system_prompt: '',
-  avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
+  avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png',
+  selectedKbs: ref<number[]>([]),
+  selectedPlugins: ref<number[]>([]),
+  selectedWorkflows: ref<number[]>([])
 })
 
-// 知识库相关
-const knowledgeBases = ref([
-  {
-    id: 1,
-    name: '北京政策文件',
-    description: '包含北京经济、交通、旅游业等政策的文件',
-    type: '文本知识库',
-    icon: 'http://122.9.33.84:8000/media/kb_icons/Text.svg'
-  },
-  {
-    id: 2,
-    name: '穿衣指南',
-    description: '根据天气情况提供穿衣建议',
-    type: '表格知识库',
-    icon: 'https://example.com/clothing-icon.png'
+onBeforeMount(() => {
+  getAvatar()
+  fetchUserInfo()
+})
+
+const useravatar = ref('')
+function getAvatar() {
+  axios({
+    method: 'get',
+    url: 'user/getAvatar',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      useravatar.value = 'http://127.0.0.1:8000' + response.data.avatar
+      console.log(useravatar.value)
+    } else {
+      alert(response.data.message)
+    }
+  })
+}
+
+const userInfo = ref({
+  name: '',
+  account: '',
+  description: '',
+  following: 0,
+  followers: 0,
+})
+function fetchUserInfo() {
+  axios({
+    method: 'get',
+      url: '/user/fetchProfile',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      userInfo.value = response.data.data
+      console.log('获取用户信息成功')
+    } else {
+      console.log(response.data.message)
+    }
+  })
+}
+
+
+
+
+// 知识库列表
+const knowledgeBases = ref([])
+
+// 获取知识库列表
+async function getKnowledgeBases() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/rl/getKnowledgeBases',
+      params: {
+        uid: sessionStorage.getItem('uid')
+      },
+    })
+    
+    if (response.data.code === 0) {
+      knowledgeBases.value = response.data.knowledgeBases
+      console.log('获取知识库列表成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取知识库列表失败:', error)
   }
-])
+}
 
 // 插件相关
-const plugins = ref([
-  {
-    id: 1,
-    name: '天气查询插件',
-    description: '实时获取天气数据',
-    icon: 'https://example.com/weather-plugin.png'
-  },
-  {
-    id: 2,
-    name: '位置服务插件',
-    description: '获取用户当前位置',
-    icon: 'https://example.com/location-plugin.png'
+const plugins = ref([])
+
+async function getPlugins() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/plugins/getPlugins',
+      params: {
+        uid: sessionStorage.getItem('uid')
+      },
+    })
+    
+    if (response.data.code === 0) {
+      plugins.value = response.data.plugins
+      console.log('获取插件列表成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取插件列表失败:', error)
   }
-])
+}
 
 // 工作流相关
-const workflows = ref([
-  {
-    id: 1,
-    name: 'workflow_3',
-    description: '这是一个测试_3',
-    icon: 'http://127.0.0.1:8000/media/workflow_icons/d7056b3d82d3490697cef6a83c3baf58.jpeg'
-  },
-  {
-    id: 2,
-    name: '天气穿搭',
-    description: '预测用户给出的城市的天气，根据天气给出穿搭建议',
-    icon: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
-  }
-])
+const workflows = ref([])
 
-// 选中的项
-const selectedKbs = ref<number[]>([])
-const selectedPlugins = ref<number[]>([])
-const selectedWorkflows = ref<number[]>([])
+// 获取所有工作流
+async function getWorkflows() {
+  try {
+    const uid = sessionStorage.getItem('uid')
+    if (!uid) {
+      console.error('用户ID不存在')
+      return
+    }
+
+    const response = await axios({
+      method: 'get',
+      url: '/workflow/fetchAll',
+      params: {
+        uid
+      }
+    })
+    
+    if (response.data.code === 0) {
+      workflows.value = response.data.workflows.map((workflow: Workflow) => ({
+        ...workflow,
+        icon: 'http://127.0.0.1:8000' + workflow.icon,
+        hover: false
+      }))
+      console.log('获取工作流列表成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取工作流列表失败:', error)
+  }
+}
 
 // 计算选中的列表
 const selectedKbsList = computed(() => 
-  knowledgeBases.value.filter(kb => selectedKbs.value.includes(kb.id))
+  knowledgeBases.value.filter(kb => agentInfo.value.selectedKbs.includes(kb.id))
 )
 
 const selectedPluginsList = computed(() => 
-  plugins.value.filter(plugin => selectedPlugins.value.includes(plugin.id))
+  plugins.value.filter(plugin => agentInfo.value.selectedPlugins.includes(plugin.id))
 )
 
 const selectedWorkflowsList = computed(() => 
-  workflows.value.filter(workflow => selectedWorkflows.value.includes(workflow.id))
+  workflows.value.filter(workflow => agentInfo.value.selectedWorkflows.includes(workflow.id))
 )
 
 // 聊天相关
@@ -305,10 +402,10 @@ const sendMessage = () => {
   
   chatHistory.value.push({
     type: 'user',
-    sender: '用户',
+    sender: userInfo.value.name,
     content: messageInput.value,
     time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-    avatar: 'https://example.com/user-avatar.png'
+    avatar: useravatar.value
   })
   
   messageInput.value = ''
