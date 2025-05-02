@@ -1248,12 +1248,8 @@ def get_table_data(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
-    try:
-        body = json.loads(request.body.decode('utf-8'))
-        uid = body.get('uid')
-        kb_id = body.get('kb_id')
-    except Exception:
-        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+    uid = request.GET.get('uid')
+    kb_id = request.GET.get('kb_id')
 
     if not uid or not kb_id:
         return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
