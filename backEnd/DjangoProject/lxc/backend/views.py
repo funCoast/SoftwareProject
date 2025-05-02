@@ -1248,8 +1248,12 @@ def get_table_data(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
-    uid = request.GET.get('uid')
-    kb_id = request.GET.get('kb_id')
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        uid = body.get('uid')
+        kb_id = body.get('kb_id')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
 
     if not uid or not kb_id:
         return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
@@ -1264,8 +1268,8 @@ def get_table_data(request):
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
-    # 找到所有表格文件
-    table_files = kb.files.filter(name__iendswith=('.csv', '.xlsx'))
+    # 获取表格文件
+    table_files = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx'))
 
     if not table_files.exists():
         return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
@@ -1284,7 +1288,10 @@ def get_table_data(request):
             else:
                 continue  # 不支持的格式，跳过
 
+            # 提取列名
             columns = list(df.columns)
+
+            # 提取数据，转为 [{列1:值1, 列2:值2}, {...}]
             data = df.fillna("").to_dict(orient='records')
 
             all_tables.append({
@@ -1296,7 +1303,7 @@ def get_table_data(request):
 
         except Exception as e:
             print(f"[解析表格文件失败: {table_file.name}] {str(e)}")
-            continue  # 如果某个表格解析失败，跳过，继续处理其他表格
+            continue  # 跳过解析失败的表格文件
 
     return JsonResponse({
         "code": 0,
