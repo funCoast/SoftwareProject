@@ -190,6 +190,9 @@ import { ref, computed, onMounted, onBeforeMount } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
+import router from "../../router";
+
+const agentIdentifier = router.currentRoute.value.params.id
 
 interface Workflow {
   workflow_id: number
@@ -203,6 +206,7 @@ onMounted(() => {
   getKnowledgeBases()
   getWorkflows()
   getPlugins()
+  getAgentInfo()
 })
 
 // 智能体信息
@@ -350,6 +354,26 @@ async function getWorkflows() {
   }
 }
 
+async function getAgentInfo() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'agent/getAgentInfo',
+      params: {
+        ag_id: agentIdentifier
+      },
+    })
+    if (response.data.code === 0) {
+      agentInfo.value = response.data.agentInfo
+      console.log('获取配置成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取配置失败:', error)
+  }
+}
+
 // 计算选中的列表
 const selectedKbsList = computed(() => 
   knowledgeBases.value.filter(kb => agentInfo.value.selectedKbs.includes(kb.id))
@@ -396,10 +420,40 @@ const chatHistory = ref([
   }
 ])
 
+async function sendsendMessage() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/sendMessage',
+      params: {
+        type: 'user',
+        sender: userInfo.value.name,
+        content: messageInput.value,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        avatar: useravatar.value
+      },
+    })
+    if (response.data.code === 0) {
+      chatHistory.value.push({
+        type: response.data.type,
+        sender: response.data.sender,
+        content: response.data.content,
+        time: response.data.time,
+        avatar: response.data.avatar
+      })
+      console.log('信息发送成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('信息发送失败:', error)
+  }
+}
+
 // 发送消息
 const sendMessage = () => {
   if (!messageInput.value.trim()) return
-  
+  sendsendMessage()
   chatHistory.value.push({
     type: 'user',
     sender: userInfo.value.name,
@@ -411,9 +465,37 @@ const sendMessage = () => {
   messageInput.value = ''
 }
 
+async function updateAgentInfo() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/updateAgentInfo',
+      params: {
+        ag_id: agentIdentifier,
+        name: agentInfo.value.name,
+        description: agentInfo.value.description,
+        system_prompt: agentInfo.value.system_prompt,
+        avatar: agentInfo.value.avatar,
+        selectedKbs: agentInfo.value.selectedKbs,
+        selectedPlugins: agentInfo.value.selectedPlugins,
+        selectedWorkflows: agentInfo.value.selectedWorkflows
+      },
+    })
+    if (response.data.code === 0) {
+      console.log('配置更新成功')
+      alert("配置已保存")
+      ElMessage.success('配置已保存')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('配置更新失败:', error)
+  }
+}
+
 // 确认按钮处理函数
 const handleConfirm = () => {
-  ElMessage.success('配置已保存')
+  updateAgentInfo()
 }
 </script>
 
