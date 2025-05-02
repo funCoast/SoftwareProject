@@ -22,9 +22,40 @@ const offCreateAgent = () => {
 }
 
 import { useRouter } from 'vue-router';
+import { computed, onMounted, onBeforeMount } from 'vue'
+import { Plus } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import axios from 'axios'
+
+async function updateAgentInfo() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/createAgent',
+      params: {
+        name: (document.querySelector('#agName') as HTMLInputElement).value,
+        description: (document.querySelector('#agDesc') as HTMLInputElement).value,
+        system_prompt: '',
+        avatar: '',
+        selectedKbs: ref<number[]>([]),
+        selectedPlugins: ref<number[]>([]),
+        selectedWorkflows: ref<number[]>([])
+      },
+    })
+    if (response.data.code === 0) {
+      router.push('/agentEdit/' + response.data.ag_id);
+      console.log('创建智能体成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('创建智能体失败:', error)
+  }
+}
+
 const router = useRouter();
 const jumpAgent = () => {
-  router.push('/agentEdit');
+  updateAgentInfo()
 }
 </script>
 
@@ -89,12 +120,12 @@ const jumpAgent = () => {
         <div class="create-agent-body">
           <div class="form-group">
             <label>智能体名称 <span class="required">*</span></label>
-            <input type="text" placeholder="给智能体起一个独一无二的名字" maxlength="20">
+            <input type="text" placeholder="给智能体起一个独一无二的名字" maxlength="20" id="agName">
             <span class="char-count">0/20</span>
           </div>
           <div class="form-group">
             <label>智能体功能介绍</label>
-            <textarea placeholder="介绍智能体的功能，将会展示给智能体的用户" maxlength="500"></textarea>
+            <textarea placeholder="介绍智能体的功能，将会展示给智能体的用户" maxlength="500" id="agDesc"></textarea>
             <span class="char-count">0/500</span>
           </div>
         </div>

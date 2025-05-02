@@ -211,7 +211,7 @@ onMounted(() => {
 
 // 智能体信息
 const agentInfo = ref({
-  name: 'AI讲师',
+  name: 'AI讲师' + agentIdentifier,
   description: 'AI讲师',
   system_prompt: '',
   avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png',

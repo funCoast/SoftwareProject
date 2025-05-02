@@ -98,7 +98,7 @@ const routes = [
         component: () => import("./components/profile/EditProfile.vue"),
       },
       {
-        path: "agentEdit",
+        path: "agentEdit/:id",
         name: "AgentEdit",
         component: () => import("./components/agent/AgentEdit.vue"),
       },
