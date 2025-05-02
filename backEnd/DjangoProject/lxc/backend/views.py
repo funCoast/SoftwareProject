@@ -1193,44 +1193,74 @@ def upload_table_kb_file(request):
 
     try:
         user = User.objects.get(user_id=uid)
-    except User.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "用户不存在"})
-
-    try:
         kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
-    except KnowledgeBase.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
-
-    saved_file = KnowledgeFile.objects.create(
-        kb=kb,
-        file=file,
-        name=file.name,
-        segment_mode='auto'
-    )
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
 
     kb.updated_at = timezone.now()
     kb.save()
 
-    try:
-        if ext == '.csv':
-            df = pd.read_csv(saved_file.file.path)
-        elif ext == '.xlsx':
-            df = pd.read_excel(saved_file.file.path)
-        else:
-            raise ValueError("不支持的表格文件格式")
+    # 获取当前表格文件
+    table_files = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx'))
 
-        columns = list(df.columns)
-        for i, row in df.iterrows():
-            row_text = ', '.join([f"{col}: {row[col]}" for col in columns])
-            embedding = get_tongyi_embedding(row_text)
-            if embedding:
-                KnowledgeChunk.objects.create(
-                    kb=kb,
-                    file=saved_file,
-                    content=row_text,
-                    embedding=json.dumps(embedding),
-                    order=i
-                )
+    try:
+        new_df = pd.read_csv(file) if ext == '.csv' else pd.read_excel(file)
+
+        if table_files.exists():
+            # 有已有表格，取第一个（按你的要求只允许一个表格）
+            existing_file = table_files.first()
+            existing_path = existing_file.file.path
+            existing_ext = os.path.splitext(existing_path)[-1].lower()
+            existing_df = pd.read_csv(existing_path) if existing_ext == '.csv' else pd.read_excel(existing_path)
+
+            # 确保表头一致
+            if list(existing_df.columns) != list(new_df.columns):
+                return JsonResponse({"code": -1, "message": "表头不一致"})
+
+            # 拼接表格
+            combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+
+            # 覆盖保存文件
+            save_path = existing_file.file.path
+            if existing_ext == '.csv':
+                combined_df.to_csv(save_path, index=False)
+            else:
+                combined_df.to_excel(save_path, index=False)
+
+            # 只增加新增部分的 chunks
+            start_order = existing_df.shape[0]
+            for i, row in new_df.iterrows():
+                row_text = ', '.join([f"{col}: {row[col]}" for col in new_df.columns])
+                embedding = get_tongyi_embedding(row_text)
+                if embedding:
+                    KnowledgeChunk.objects.create(
+                        kb=kb,
+                        file=existing_file,
+                        content=row_text,
+                        embedding=json.dumps(embedding),
+                        order=start_order + i
+                    )
+
+        else:
+            # 没有表格文件，新建
+            saved_file = KnowledgeFile.objects.create(
+                kb=kb,
+                file=file,
+                name=file.name,
+                segment_mode='auto'
+            )
+
+            for i, row in new_df.iterrows():
+                row_text = ', '.join([f"{col}: {row[col]}" for col in new_df.columns])
+                embedding = get_tongyi_embedding(row_text)
+                if embedding:
+                    KnowledgeChunk.objects.create(
+                        kb=kb,
+                        file=saved_file,
+                        content=row_text,
+                        embedding=json.dumps(embedding),
+                        order=i
+                    )
 
     except Exception as e:
         return JsonResponse({
@@ -1256,56 +1286,102 @@ def get_table_data(request):
 
     try:
         user = User.objects.get(user_id=uid)
-    except User.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "用户不存在"})
-
-    try:
         kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
-    except KnowledgeBase.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
 
-    # 获取表格文件
-    table_files = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx'))
-
-    if not table_files.exists():
+    table_file = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx')).first()
+    if not table_file:
         return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
 
-    all_tables = []
-
-    for table_file in table_files:
+    try:
         file_path = table_file.file.path
         ext = os.path.splitext(file_path)[-1].lower()
+        df = pd.read_csv(file_path) if ext == '.csv' else pd.read_excel(file_path)
 
-        try:
-            if ext == '.csv':
-                df = pd.read_csv(file_path)
-            elif ext == '.xlsx':
-                df = pd.read_excel(file_path)
-            else:
-                continue  # 不支持的格式，跳过
+        columns = list(df.columns)
+        data = df.fillna("").to_dict(orient='records')
 
-            # 提取列名
-            columns = list(df.columns)
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "columns": columns,
+            "data": data
+        })
 
-            # 提取数据，转为 [{列1:值1, 列2:值2}, {...}]
-            data = df.fillna("").to_dict(orient='records')
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": f"读取表格失败: {str(e)}"
+        })
 
-            all_tables.append({
-                "file_id": table_file.id,
-                "file_name": table_file.name,
-                "columns": columns,
-                "data": data
-            })
+@csrf_exempt
+def update_table(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-        except Exception as e:
-            print(f"[解析表格文件失败: {table_file.name}] {str(e)}")
-            continue  # 跳过解析失败的表格文件
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        uid = body.get('uid')
+        kb_id = body.get('kb_id')
+        row_index = body.get('rowIndex')
+        prop = body.get('prop')
+        value = body.get('value')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
 
-    return JsonResponse({
-        "code": 0,
-        "message": "获取成功",
-        "tables": all_tables
-    })
+    if not uid or not kb_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    table_file = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx')).first()
+    if not table_file:
+        return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
+
+    try:
+        file_path = table_file.file.path
+        ext = os.path.splitext(file_path)[-1].lower()
+        df = pd.read_csv(file_path) if ext == '.csv' else pd.read_excel(file_path)
+
+        # 更新指定行列
+        if int(row_index) >= len(df):
+            return JsonResponse({"code": -1, "message": "行索引超出范围"})
+        if prop not in df.columns:
+            return JsonResponse({"code": -1, "message": "字段不存在"})
+
+        df.at[int(row_index), prop] = value
+
+        # 保存回文件
+        if ext == '.csv':
+            df.to_csv(file_path, index=False)
+        else:
+            df.to_excel(file_path, index=False)
+
+        # 更新 KnowledgeChunk
+        row_text = ', '.join([f"{col}: {df.at[int(row_index), col]}" for col in df.columns])
+        embedding = get_tongyi_embedding(row_text)
+        if embedding:
+            # 找到对应 chunk 并更新
+            chunk = KnowledgeChunk.objects.filter(
+                kb=kb, file=table_file, order=int(row_index)
+            ).first()
+            if chunk:
+                chunk.content = row_text
+                chunk.embedding = json.dumps(embedding)
+                chunk.save()
+
+        kb.updated_at = timezone.now()
+        kb.save()
+
+        return JsonResponse({"code": 0, "message": "更新成功"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"更新失败: {str(e)}"})
 
 @csrf_exempt
 def delete_resource(request):
