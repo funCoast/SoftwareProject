@@ -10,68 +10,7 @@ interface agent {
   statusText: string
   updateTime: string
 }
-const agents = ref<agent[]> ([
-  {
-    id: 1,
-    name: 'AI助手',
-    description: '智能对话助手，支持多轮对话和上下文理解',
-    category: '对话助手',
-    image: 'https://picsum.photos/300/300?random=1',
-    status: 'published',
-    statusText: '已发布',
-    updateTime: '2024-03-15'
-  },
-  {
-    id: 2,
-    name: '数据分析师',
-    description: '专业的数据分析工具，支持多种数据可视化',
-    category: '数据分析',
-    image: 'https://picsum.photos/300/300?random=2',
-    status: 'draft',
-    statusText: '草稿',
-    updateTime: '2024-03-14'
-  },
-  {
-    id: 3,
-    name: '创意写作',
-    description: 'AI写作助手，支持多种文体和风格',
-    category: '写作助手',
-    image: 'https://picsum.photos/300/300?random=3',
-    status: 'review',
-    statusText: '审核中',
-    updateTime: '2024-03-13'
-  },
-  {
-    id: 4,
-    name: '代码助手',
-    description: '编程辅助工具，支持多种编程语言',
-    category: '开发工具',
-    image: 'https://picsum.photos/300/300?random=4',
-    status: 'published',
-    statusText: '已发布',
-    updateTime: '2024-03-12'
-  },
-  {
-    id: 5,
-    name: '图像处理',
-    description: '专业的图像处理工具，支持多种编辑功能',
-    category: '图像工具',
-    image: 'https://picsum.photos/300/300?random=5',
-    status: 'draft',
-    statusText: '草稿',
-    updateTime: '2024-03-11'
-  },
-  {
-    id: 6,
-    name: '语音助手',
-    description: '智能语音助手，支持语音识别和合成',
-    category: '语音工具',
-    image: 'https://picsum.photos/300/300?random=6',
-    status: 'review',
-    statusText: '审核中',
-    updateTime: '2024-03-10'
-  }
-])
+const agents = ref<agent[]> ([])
 
 const isCreateAgentVisible = ref(false)
 

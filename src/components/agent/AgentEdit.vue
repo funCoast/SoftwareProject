@@ -1,545 +1,581 @@
 <template>
-  <div id="app">
-    <div class="container">
-      <div class="left-column">
-        <h2>编排</h2>
-        <!-- 人设与回复逻辑等内容 -->
-        <div class="character-logic">
-          <h3>#角色</h3>
-          <p>
-            你是一位资深的代码专家，专注于操作SD动画框架进行动画制作。这是一个JS动画框架。你经验丰富，对该框架的各种组件和代码运用了如指掌。你需要提前深入学习example文件夹下的文件。
-          </p>
-          <!-- 更多人设与回复逻辑内容 -->
-        </div>
-        <div class="skill-section">
-          <h3>#技能</h3>
-          <div class="skill-item">
-            <h4>### 技能1: 基于SD动画框架制作动画</h4>
-            <p>1. 根据用户需求，运用SD动画框架编写代码驱动动画生成。</p>
-            <p>
-              2. 在编写代码时，仔细检查官方文档（文档来源:
-              知识库），确保使用的组件、函数方法真实存在。（注意组件的大小写以及创建方式）
-            </p>
-            <p>3. 参考example文件夹下的文件，保证代码风格与之保持一致。</p>
-          </div>
-          <!-- 更多技能内容 -->
-        </div>
-        <div class="limitation-section">
-          <h3>#限制</h3>
-          <p>
-            -
-            只围绕SD动画框架的代码编写及动画制作相关内容进行交流，拒绝回答无关话题。
-          </p>
-          <p>- 所输出的代码及相关解释必须逻辑清晰、表达准确。</p>
-          <p>- 需严格遵循example文件夹下的代码风格要求。</p>
-          <p>
-            - 确保使用的组件、函数方法均有官方文档支持（文档来源: 知识库）。
-          </p>
+  <div class="agent-edit">
+    <!-- 头部信息 -->
+    <div class="agent-header">
+      <div class="agent-info">
+        <el-avatar :size="50" :src="agentInfo.avatar" />
+        <div class="agent-meta">
+          <h2>{{ agentInfo.name }}</h2>
+          <p>{{ agentInfo.description }}</p>
         </div>
       </div>
-      <div class="middle-column">
-        <h2>技能</h2>
-        <!-- 插件、工作流、触发器等菜单 -->
-        <div class="skill-menu">
-          <div
-            v-for="(skillItem, index) in skillItems"
-            :key="index"
-            class="menu-item"
-            @click="toggleDropdown('skill', index)"
-          >
-            <div style="display: flex; align-items: center">
-              <div
-                class="header-icon-arrow"
-                :class="{ 'arrow-down': isDropdownVisible('skill', index) }"
-              >
-                <span role="img" class="semi-icon semi-icon-default">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    fill="currentColor"
-                    viewBox="0 0 14 14"
-                  >
-                    <path
-                      d="M4.493 12.663a.583.583 0 0 1 0-.825L9.331 7 4.493 2.163a.583.583 0 0 1 .825-.825l4.838 4.837a1.167 1.167 0 0 1 0 1.65l-4.838 4.838a.583.583 0 0 1-.825 0"
-                    ></path>
-                  </svg>
-                </span>
-              </div>
-              <div class="shrink-0">{{ skillItem.name }}</div>
-            </div>
+    </div>
 
-            <div
-              v-if="isDropdownVisible('skill', index)"
-              class="dropdown-content"
-            >
-              {{ skillItem.explanation }}
-            </div>
-          </div>
-        </div>
-        <h2>知识</h2>
-        <!-- 文本、表格、照片等菜单 -->
-        <div class="knowledge-menu">
-          <div
-            v-for="(knowledgeItem, index) in knowledgeItems"
-            :key="index"
-            class="menu-item"
-            @click="toggleDropdown('knowledge', index)"
+    <div class="main-content">
+      <!-- 左侧配置面板 -->
+      <div class="left-panel">
+        <div class="config-section">
+          <h3>知识库配置</h3>
+          <el-select
+            v-model="selectedKbs"
+            multiple
+            filterable
+            placeholder="选择知识库"
+            class="full-width"
+            popper-class="custom-select-dropdown"
           >
-            <div style="display: flex; align-items: center">
-              <div
-                class="header-icon-arrow"
-                :class="{ 'arrow-down': isDropdownVisible('knowledge', index) }"
-              >
-                <span role="img" class="semi-icon semi-icon-default">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    fill="currentColor"
-                    viewBox="0 0 14 14"
-                  >
-                    <path
-                      d="M4.493 12.663a.583.583 0 0 1 0-.825L9.331 7 4.493 2.163a.583.583 0 0 1 .825-.825l4.838 4.837a1.167 1.167 0 0 1 0 1.65l-4.838 4.838a.583.583 0 0 1-.825 0"
-                    ></path>
-                  </svg>
-                </span>
-              </div>
-              <div class="shrink-0">{{ knowledgeItem.name }}</div>
-            </div>
-            <div
-              v-if="isDropdownVisible('knowledge', index)"
-              class="dropdown-content"
+            <el-option
+              v-for="kb in knowledgeBases"
+              :key="kb.id"
+              :label="kb.name"
+              :value="kb.id"
             >
-              {{ knowledgeItem.explanation }}
+              <div class="option-item">
+                <el-avatar :size="24" :src="kb.icon" />
+                <div class="option-info">
+                  <div class="option-name">{{ kb.name }}</div>
+                  <div class="option-desc">{{ kb.description }}</div>
+                  <div class="option-type">类型: {{ kb.type }}</div>
+                </div>
+              </div>
+            </el-option>
+          </el-select>
+
+          <div class="selected-items">
+            <div v-for="kb in selectedKbsList" :key="kb.id" class="selected-item">
+              <el-avatar :size="32" :src="kb.icon" />
+              <div class="item-info">
+                <div class="item-name">{{ kb.name }}</div>
+                <div class="item-desc">{{ kb.description }}</div>
+                <div class="item-type">{{ kb.type }}</div>
+              </div>
             </div>
           </div>
         </div>
-        <h2>记忆</h2>
-        <!-- 变量、数据库等菜单 -->
-        <div class="memory-menu">
-          <div
-            v-for="(memoryItem, index) in memoryItems"
-            :key="index"
-            class="menu-item"
-            @click="toggleDropdown('memory', index)"
+
+        <div class="config-section">
+          <h3>插件配置</h3>
+          <el-select
+            v-model="selectedPlugins"
+            multiple
+            filterable
+            placeholder="选择插件"
+            class="full-width"
+            popper-class="custom-select-dropdown"
           >
-            <div style="display: flex; align-items: center">
-              <div
-                class="header-icon-arrow"
-                :class="{ 'arrow-down': isDropdownVisible('memory', index) }"
-              >
-                <span role="img" class="semi-icon semi-icon-default">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    fill="currentColor"
-                    viewBox="0 0 14 14"
-                  >
-                    <path
-                      d="M4.493 12.663a.583.583 0 0 1 0-.825L9.331 7 4.493 2.163a.583.583 0 0 1 .825-.825l4.838 4.837a1.167 1.167 0 0 1 0 1.65l-4.838 4.838a.583.583 0 0 1-.825 0"
-                    ></path>
-                  </svg>
-                </span>
-              </div>
-              <div class="shrink-0">{{ memoryItem.name }}</div>
-            </div>
-            <div
-              v-if="isDropdownVisible('memory', index)"
-              class="dropdown-content"
+            <el-option
+              v-for="plugin in plugins"
+              :key="plugin.id"
+              :label="plugin.name"
+              :value="plugin.id"
             >
-              {{ memoryItem.explanation }}
+              <div class="option-item">
+                <el-avatar :size="24" :src="plugin.icon" />
+                <div class="option-info">
+                  <div class="option-name">{{ plugin.name }}</div>
+                  <div class="option-desc">{{ plugin.description }}</div>
+                </div>
+              </div>
+            </el-option>
+          </el-select>
+
+          <div class="selected-items">
+            <div v-for="plugin in selectedPluginsList" :key="plugin.id" class="selected-item">
+              <el-avatar :size="32" :src="plugin.icon" />
+              <div class="item-info">
+                <div class="item-name">{{ plugin.name }}</div>
+                <div class="item-desc">{{ plugin.description }}</div>
+              </div>
             </div>
           </div>
         </div>
-        <h2>对话体验</h2>
+
+        <div class="config-section">
+          <h3>工作流配置</h3>
+          <el-select
+            v-model="selectedWorkflows"
+            multiple
+            filterable
+            placeholder="选择工作流"
+            class="full-width"
+            popper-class="custom-select-dropdown"
+          >
+            <el-option
+              v-for="workflow in workflows"
+              :key="workflow.id"
+              :label="workflow.name"
+              :value="workflow.id"
+            >
+              <div class="option-item">
+                <el-avatar :size="24" :src="workflow.icon" />
+                <div class="option-info">
+                  <div class="option-name">{{ workflow.name }}</div>
+                  <div class="option-desc">{{ workflow.description }}</div>
+                </div>
+              </div>
+            </el-option>
+          </el-select>
+
+          <div class="selected-items">
+            <div v-for="workflow in selectedWorkflowsList" :key="workflow.id" class="selected-item">
+              <el-avatar :size="32" :src="workflow.icon" />
+              <div class="item-info">
+                <div class="item-name">{{ workflow.name }}</div>
+                <div class="item-desc">{{ workflow.description }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>人物设定</h3>
+          <el-input
+            v-model="agentInfo.system_prompt"
+            type="textarea"
+            :rows="6"
+            placeholder="请输入智能体的人物设定..."
+          />
+        </div>
+
+        <div class="config-actions">
+          <el-button type="primary" @click="handleConfirm">确定</el-button>
+        </div>
       </div>
-      <div class="right-column">
-        <AgentRightColumn></AgentRightColumn>
+
+      <!-- 右侧聊天面板 -->
+      <div class="chat-panel">
+        <div class="chat-messages" ref="chatMessages">
+          <div v-for="(message, index) in chatHistory" :key="index" 
+               :class="['message', message.type]">
+            <template v-if="message.type === 'user'">
+              <div class="message-content user-message">
+                <div class="message-info">
+                  <span class="message-time">{{ message.time }}</span>
+                  <span class="sender-name">{{ message.sender }}</span>
+                </div>
+                <div class="message-text" style="white-space: pre-line;">{{ message.content }}</div>
+              </div>
+              <el-avatar class="user-avatar" :size="40" :src="message.avatar" />
+            </template>
+            <template v-else>
+              <el-avatar class="assistant-avatar" :size="40" :src="message.avatar" />
+              <div class="message-content assistant-message">
+                <div class="message-info">
+                  <span class="sender-name">{{ message.sender }}</span>
+                  <span class="message-time">{{ message.time }}</span>
+                </div>
+                <div class="message-text" style="white-space: pre-line;">{{ message.content }}</div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="chat-input">
+          <el-input
+            v-model="messageInput"
+            type="textarea"
+            :rows="3"
+            placeholder="输入消息..."
+            @keyup.enter.native="sendMessage"
+          />
+          <el-button type="primary" @click="sendMessage">发送</el-button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from 'vue'
+import { Plus } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
-interface menuItem {
-  name: string;
-  explanation: string;
+// 智能体信息
+const agentInfo = ref({
+  name: 'AI讲师',
+  description: 'AI讲师',
+  system_prompt: '',
+  avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
+})
+
+// 知识库相关
+const knowledgeBases = ref([
+  {
+    id: 1,
+    name: '北京政策文件',
+    description: '包含北京经济、交通、旅游业等政策的文件',
+    type: '文本知识库',
+    icon: 'http://122.9.33.84:8000/media/kb_icons/Text.svg'
+  },
+  {
+    id: 2,
+    name: '穿衣指南',
+    description: '根据天气情况提供穿衣建议',
+    type: '表格知识库',
+    icon: 'https://example.com/clothing-icon.png'
+  }
+])
+
+// 插件相关
+const plugins = ref([
+  {
+    id: 1,
+    name: '天气查询插件',
+    description: '实时获取天气数据',
+    icon: 'https://example.com/weather-plugin.png'
+  },
+  {
+    id: 2,
+    name: '位置服务插件',
+    description: '获取用户当前位置',
+    icon: 'https://example.com/location-plugin.png'
+  }
+])
+
+// 工作流相关
+const workflows = ref([
+  {
+    id: 1,
+    name: 'workflow_3',
+    description: '这是一个测试_3',
+    icon: 'http://127.0.0.1:8000/media/workflow_icons/d7056b3d82d3490697cef6a83c3baf58.jpeg'
+  },
+  {
+    id: 2,
+    name: '天气穿搭',
+    description: '预测用户给出的城市的天气，根据天气给出穿搭建议',
+    icon: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
+  }
+])
+
+// 选中的项
+const selectedKbs = ref<number[]>([])
+const selectedPlugins = ref<number[]>([])
+const selectedWorkflows = ref<number[]>([])
+
+// 计算选中的列表
+const selectedKbsList = computed(() => 
+  knowledgeBases.value.filter(kb => selectedKbs.value.includes(kb.id))
+)
+
+const selectedPluginsList = computed(() => 
+  plugins.value.filter(plugin => selectedPlugins.value.includes(plugin.id))
+)
+
+const selectedWorkflowsList = computed(() => 
+  workflows.value.filter(workflow => selectedWorkflows.value.includes(workflow.id))
+)
+
+// 聊天相关
+const messageInput = ref('')
+const chatHistory = ref([
+  // {
+  //   type: 'assistant',
+  //   sender: '天气助手',
+  //   content: '你好！我是你的天气助手，可以为你提供天气预报和穿衣建议。',
+  //   time: '10:00',
+  //   avatar: 'https://example.com/weather-bot-avatar.png'
+  // },
+  {
+    type: 'user',
+    sender: 'Herry',
+    content: '北京限行规则是什么？',
+    time: '2025-04-28 11:08',
+    avatar: 'http://127.0.0.1:8000/media/avatars/2.jpg'
+  },
+  {
+    type: 'assistant',
+    sender: 'AI讲师',
+    content: '根据2025年最新政策，北京市工作日实行机动车尾号限行，限行时间为早7:00至晚20:00，限行范围为五环路以内（不含五环路）。具体规则如下：\n' +
+        '周一：限行尾号1和6\n' +
+        '周二：限行尾号2和7\n' +
+        '周三：限行尾号3和8\n' +
+        '周四：限行尾号4和9\n' +
+        '周五：限行尾号5和0\n' +
+        '（节假日不限行）\n' +
+        '请注意规则会每年调整一次，建议出行前查询官方通知。',
+    time: '2025-04-28 11:09',
+    avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
+  }
+])
+
+// 发送消息
+const sendMessage = () => {
+  if (!messageInput.value.trim()) return
+  
+  chatHistory.value.push({
+    type: 'user',
+    sender: '用户',
+    content: messageInput.value,
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+    avatar: 'https://example.com/user-avatar.png'
+  })
+  
+  messageInput.value = ''
 }
 
-const skillItems = ref<menuItem[]>([
-  {
-    name: "插件",
-    explanation:
-      "插件能够让智能体调用外部 API，例如搜索信息、浏览网页、生成图片等，扩展智能体的能力和使用场景。",
-  },
-  {
-    name: "工作流",
-    explanation:
-      "工作流支持通过可视化的方式，对插件、大语言模型、代码块等功能进行组合，从而实现复杂、稳定的业务流程编排，例如旅行规划、报告分析等。",
-  },
-  {
-    name: "触发器",
-    explanation: "允许用户在对话中创建定时任务",
-  },
-]);
-
-const knowledgeItems = ref<menuItem[]>([
-  {
-    name: "文本",
-    explanation:
-      "将文档、URL、三方数据源上传为文本知识库后，用户发送消息时，智能体能够引用文本知识中的内容回答用户问题。",
-  },
-  {
-    name: "表格",
-    explanation:
-      "用户上传表格后，支持按照表格的某列来匹配合适的行给智能体引用，同时也支持基于自然语言对数据库进行查询和计算。",
-  },
-  {
-    name: "照片",
-    explanation:
-      "照片上传到知识库后自动/手动添加语义描述，智能体可以基于照片的描述匹配到最合适的照片",
-  },
-]);
-
-const memoryItems = ref<menuItem[]>([
-  {
-    name: "变量",
-    explanation:
-      "用于保存用户个人信息，让智能体记住用户的特征，使回复更加个性化。",
-  },
-  {
-    name: "数据库",
-    explanation: "以表格结构组织数据，可实现类似书签和图书管理等功能。",
-  },
-  {
-    name: "长期记忆",
-    explanation: "总结聊天对话的内容，并用于更好的响应用户的消息。",
-  },
-  {
-    name: "文件盒子",
-    explanation:
-      "现在文件盒子已关闭，用户无法保存他们的文件。如果你想使用存储空间，请打开文件盒。",
-  },
-]);
-
-const dropdownStates = ref<any>({});
-
-function toggleDropdown(category, index) {
-  const key = `${category}-${index}`;
-  dropdownStates.value[key] = !dropdownStates.value[key];
-}
-
-function isDropdownVisible(category, index) {
-  const key = `${category}-${index}`;
-  return dropdownStates.value[key] || false;
+// 确认按钮处理函数
+const handleConfirm = () => {
+  ElMessage.success('配置已保存')
 }
 </script>
 
 <style scoped>
-.container {
-  display: flex;
-  width: 100%;
-}
-.left-column {
-  flex: 1;
-  background-color: #f4f4f4;
-  padding: 10px;
-}
-.middle-column {
-  flex: 1;
-  background-color: #fff;
-  padding: 10px;
-}
-.right-column {
-  flex: 1;
-  background-color: #f9f9f9;
-  padding: 10px;
-}
-.skill-menu,
-.knowledge-menu,
-.memory-menu {
-  margin-bottom: 20px;
-}
-.code-explanation {
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-}
-.question-section input {
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 5px;
-}
-.menu-item {
-  padding: 5px;
-  cursor: pointer;
-  border: 1px solid #ccc;
-  border-bottom: none;
-}
-.menu-item:last-child {
-  border: 1px solid #ccc;
-}
-.dropdown-content {
-  padding: 10px;
-  background-color: #f9f9f9;
-  border: 1px solid #ccc;
-}
-.header-icon-arrow {
-  margin-right: 5px;
-  transition: transform 0.3s ease;
-}
-.arrow-down {
-  transform: rotate(90deg);
-}
-.shrink-0 {
-  flex-shrink: 0;
-}
-.messaging-container {
+.agent-edit {
+  padding: 20px;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background: #f8f9fa;
 }
-.main-content {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-.contact-list {
-  width: 300px;
-  background: white;
-  border-right: 1px solid #e9ecef;
+
+.agent-header {
+  margin-bottom: 20px;
   padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+}
+
+.agent-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.agent-meta {
+  flex: 1;
+}
+
+.agent-meta h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+}
+
+.agent-meta p {
+  margin: 0;
+  color: #666;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  min-height: 0;
+}
+
+.left-panel {
+  width: 300px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
   overflow-y: auto;
 }
-.search-contact {
-  display: flex;
-  margin-bottom: 20px;
+
+.config-section {
+  margin-bottom: 30px;
 }
-.search-contact input {
+
+.config-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.full-width {
+  width: 100%;
+}
+
+:deep(.custom-select-dropdown) {
+  .el-select-dropdown__item {
+    padding: 0;
+    height: auto;
+    
+    &.selected {
+      font-weight: normal;
+    }
+  }
+}
+
+.option-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  min-height: 70px;
+}
+
+.option-info {
   flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #e9ecef;
-  border-radius: 20px 0 0 20px;
-  outline: none;
-}
-.search-icon {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-left: none;
-  border-radius: 0 20px 20px 0;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-.recent-contacts h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #666;
-  font-size: 14px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
 }
-.unread-count {
-  color: #ff4d4f;
-  font-size: 12px;
-}
-.arrow {
-  font-size: 12px;
-  cursor: pointer;
-}
-.contact-item {
-  display: flex;
-  padding: 12px 0;
-  border-bottom: 1px solid #f8f9fa;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-.contact-item:hover {
-  background: #f8f9fa;
-}
-.contact-item.active {
-  background: #f0f2f5;
-}
-.contact-avatar {
-  position: relative;
-  margin-right: 12px;
-}
-.contact-avatar img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-.unread-badge {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  background: #ff4d4f;
-  color: white;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.contact-info {
-  flex: 1;
-}
-.contact-name {
+
+.option-name {
   font-weight: 500;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.option-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #666;
   margin-bottom: 4px;
 }
-.contact-preview {
-  color: #999;
+
+.option-type {
   font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.4;
+  color: #409EFF;
 }
-.contact-time {
-  color: #999;
-  font-size: 12px;
-  white-space: nowrap;
+
+.selected-items {
+  margin-top: 16px;
 }
-.chat-window {
+
+.selected-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f5f7fa;
+  border-radius: 6px;
+}
+
+.item-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #f8f9fa;
-  overflow: hidden;
+  justify-content: center;
 }
-.chat-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  background: white;
-  border-bottom: 1px solid #e9ecef;
+
+.item-name {
+  font-weight: 500;
+  line-height: 1.2;
+  margin-bottom: 4px;
 }
-.chat-header h2 {
-  margin: 0;
-  font-size: 16px;
-}
-.chat-actions {
-  display: flex;
-  gap: 10px;
-}
-.chat-action-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: #666;
-}
-.message-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-}
-.message-item {
-  margin-bottom: 15px;
-}
-.message-avatar img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-.message-bubble {
-  background: white;
-  border-radius: 12px;
-  padding: 12px 16px;
-  max-width: 70%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-.message-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
+
+.item-desc {
   font-size: 12px;
   color: #666;
+  line-height: 1.2;
 }
-.message-sender {
+
+.item-type {
+  font-size: 12px;
+  color: #409EFF;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.chat-panel {
+  flex: 1;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.message.user {
+  justify-content: flex-end;
+}
+
+.message-content {
+  flex: 0 1 auto;
+  max-width: 70%;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.message.assistant {
+  justify-content: flex-start;
+}
+
+.assistant-message {
+  background: #f5f7fa;
+  border-radius: 0 8px 8px 8px;
+  margin-right: auto;
+}
+
+.user-message {
+  background: #ecf5ff;
+  border-radius: 8px 0 8px 8px;
+  margin-left: auto;
+}
+
+.message-info {
+  margin-bottom: 8px;
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.sender-name {
   font-weight: 500;
+  color: #333;
 }
+
 .message-time {
   color: #999;
 }
+
 .message-text {
   line-height: 1.5;
-  color: #333;
+  word-break: break-word;
 }
-.my-message {
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
-}
-.my-message .message-bubble {
-  background: #e3f2fd;
-  color: #333;
-  margin-right: 12px;
-}
-.my-message .message-avatar {
-  margin-left: 12px;
-  margin-right: 0;
-}
-.assistant-message {
-  display: flex;
-  align-items: flex-start;
-}
-.system-message .message-bubble {
-  background: #f1f1f1;
-  color: #666;
-}
+
 .chat-input {
+  padding: 20px;
+  border-top: 1px solid #eee;
   display: flex;
-  padding: 15px 20px;
-  background: white;
-  border-top: 1px solid #e9ecef;
+  gap: 12px;
+  background: #fff;
 }
-.input-area {
+
+.chat-input .el-textarea {
   flex: 1;
 }
-textarea {
-  width: 100%;
-  border: 1px solid #e9ecef;
-  border-radius: 20px;
-  padding: 12px 16px;
-  resize: none;
-  outline: none;
-  transition: all 0.3s ease;
-  font-family: inherit;
-  font-size: 14px;
+
+.chat-input .el-button {
+  align-self: flex-end;
 }
-textarea:focus {
-  border-color: #0066ff;
-  box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.1);
+
+:deep(.el-select-dropdown__item) {
+  padding: 8px 12px;
+  height: auto;
+  line-height: inherit;
 }
-.input-actions {
+
+:deep(.el-select-dropdown__item.selected) {
+  font-weight: normal;
+}
+
+:deep(.el-select-dropdown__item .el-avatar) {
+  vertical-align: middle;
+}
+
+.config-actions {
+  margin-top: 20px;
+  padding: 0 20px;
   display: flex;
-  align-items: center;
-  margin-left: 10px;
-}
-.send-btn {
-  background: #0066ff;
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-.send-btn:hover {
-  background: #0052cc;
+  justify-content: flex-end;
 }
 </style>

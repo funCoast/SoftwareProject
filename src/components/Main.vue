@@ -19,7 +19,7 @@ function getAvatar() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar
+      avatar.value = 'http://127.0.0.1:8000' + response.data.avatar
       console.log(avatar.value)
     } else {
       alert(response.data.message)

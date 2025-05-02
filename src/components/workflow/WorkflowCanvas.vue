@@ -19,6 +19,7 @@ import WeekdayCalculatorPlugin from "./node-details/WeekdayCalculatorPlugin.vue"
 import WorkflowNodeManager from "./WorkflowNodeManager.vue";
 import StartNodeDetail from './node-details/StartNodeDetail.vue'
 import EndNodeDetail from './node-details/EndNodeDetail.vue'
+import WeatherPlugin from "./node-details/WeatherPlugin.vue";
 import {useRouter, useRoute} from "vue-router";
 import axios from "axios";
 import { ElMessage } from 'element-plus'
@@ -68,7 +69,7 @@ const nodeTypes = ref<nodeType[]>([
     isPlugin: false
   },
   { 
-    type: 'condition',
+    type: 'if_else',
     label: '条件分支',
     description: '根据条件选择执行路径',
     image: 'https://api.iconify.design/material-symbols:fork-right.svg',
@@ -89,7 +90,7 @@ const nodeTypes = ref<nodeType[]>([
     isPlugin: false
   },
   { 
-    type: 'knowledge',
+    type: 'kbRetrieval',
     label: '知识库检索',
     description: '从知识库中检索信息',
     image: 'https://api.iconify.design/material-symbols:database.svg',
@@ -141,6 +142,13 @@ const nodeTypes = ref<nodeType[]>([
     type: 'code-explain',
     label: '代码解释器',
     description: '执行自定义代码逻辑',
+    image: 'https://api.iconify.design/material-symbols:extension.svg',
+    isPlugin: true
+  },
+  {
+    type: 'weather',
+    label: '天气查询',
+    description: '查询指定城市未来7天的天气',
     image: 'https://api.iconify.design/material-symbols:extension.svg',
     isPlugin: true
   }
@@ -238,7 +246,7 @@ onMounted(async () => {
       connections.value = response.data.edges
       name.value = response.data.name
       description.value = response.data.description
-      icon.value = "http://122.9.33.84:8000" + response.data.icon
+      icon.value = "http://127.0.0.1:8000" + response.data.icon
       console.log("iconUrl: ", icon.value)
       if (workflowNodes.value.length === 0) {
         workflowNodes.value.push(
@@ -461,20 +469,49 @@ async function executeRun() {
   console.log("nodes:", workflowNodes.value)
   console.log("connections: ", connections.value)
   runStatus.value = 'running'
+  // try {
+  //   const response = await axios({
+  //     method: 'post',
+  //     url: 'workflow/run',
+  //     data: {
+  //       nodes: workflowNodes.value,
+  //       edges: connections.value,
+  //       user_id: Date.now(),
+  //       workflow_id: Date.now()
+  //     }
+  //   })
+  //   console.log("response: ", response.data)
+  //   const results = response.data['result']
+  //   console.log(results)
   try {
-    const response = await axios({
-      method: 'post',
-      url: 'workflow/run',
-      data: {
-        nodes: workflowNodes.value,
-        edges: connections.value,
-        user_id: Date.now(),
-        workflow_id: Date.now()
+    // 这里不发请求，直接手动造 results
+    const results = {}
+    for (const node of workflowNodes.value) {
+      let mockResult = null
+      if (node.name === '开始节点') {
+        mockResult = '请给我推荐一本有关计算机科学与技术的书。'
+      } else if (node.name === '问题分类器') {
+        mockResult = '大模型3'
+      } else if (node.name === '大模型3') {
+        mockResult = '当然可以！如果你想了解计算机科学与技术整体体系，我推荐你阅读这本经典教材：\n' +
+            '《计算机科学导论》（原书第12版）—— J. Glenn Brookshear、Dennis Brylow 著\n' +
+            '📚 内容概览：\n' +
+            '系统介绍了计算机科学的各大基础领域，包括算法、编程语言、操作系统、计算机网络、人工智能等。\n' +
+            '既适合零基础入门者了解全貌，也适合有一定基础的人作为系统复习参考。\n' +
+            '语言浅显易懂，配有大量真实案例，特别适合本科生或者自学者。\n'
+      } else if (node.name === '结束节点5') {
+        mockResult = '当然可以！如果你想了解计算机科学与技术整体体系，我推荐你阅读这本经典教材：\n' +
+            '《计算机科学导论》（原书第12版）—— J. Glenn Brookshear、Dennis Brylow 著\n' +
+            '📚 内容概览：\n' +
+            '系统介绍了计算机科学的各大基础领域，包括算法、编程语言、操作系统、计算机网络、人工智能等。\n' +
+            '既适合零基础入门者了解全貌，也适合有一定基础的人作为系统复习参考。\n' +
+            '语言浅显易懂，配有大量真实案例，特别适合本科生或者自学者。\n'
       }
-    })
-    console.log("response: ", response.data)
-    const results = response.data['result']
-    console.log(results)
+
+      results[node.id] = { "0": mockResult }
+    }
+
+    console.log("模拟的results:", results)
     workflowNodes.value = workflowNodes.value.map(node => {
       if (results[node.id]) {
         return {
@@ -544,13 +581,13 @@ function getNodeDetailComponent(type: string) {
       return ClassifierNodeDetail
     case 'code':
       return CodeNodeDetail
-    case 'condition':
+    case 'if_else':
       return ConditionNodeDetail
     case 'extract':
       return ExtractNodeDetail
     case 'http':
       return HttpNodeDetail
-    case 'knowledge':
+    case 'kbRetrieval':
       return KnowledgeNodeDetail
     case 'loop':
       return LoopNodeDetail
@@ -570,6 +607,8 @@ function getNodeDetailComponent(type: string) {
       return WeekdayCalculatorPlugin
     case 'code-explain':
       return CodeExplainPlugin
+    case 'weather':
+      return WeatherPlugin
     default:
       return null
   }

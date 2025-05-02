@@ -71,21 +71,21 @@ fetchTableData();
     <el-table :data="tableData" stripe class="data-table">
       <!-- 动态生成表格列 -->
       <el-table-column
-        v-for="column in tableColumns"
-        :key="column.prop"
-        :prop="column.prop"
-        :label="column.label"
-        :width="column.width"
+          v-for="column in tableColumns"
+          :key="column.prop"
+          :prop="column.prop"
+          :label="column.label"
+          :width="column.width"
       >
         <!-- 可编辑单元格 -->
         <template #default="scope">
           <input
-            v-model="scope.row[column.prop]"
-            type="text"
-            class="editable-input"
-            placeholder="请输入内容"
-            @focus="handleFocus(scope.row[column.prop])"
-            @blur="handleBlur(scope.row, column.prop, scope.$index)"
+              v-model="scope.row[column.prop]"
+              type="text"
+              class="editable-input"
+              placeholder="请输入内容"
+              @focus="handleFocus(scope.row[column.prop])"
+              @blur="handleBlur(scope.row, column.prop, scope.$index)"
           />
         </template>
       </el-table-column>

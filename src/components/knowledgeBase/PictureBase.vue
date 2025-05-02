@@ -1,31 +1,44 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
+import axios from "axios";
 import router from "../../router";
 
-const id = router.currentRoute.value.params.id; // 获取路由参数id
 interface Picture {
-  id: number;
-  name: string;
-  url: string;
-  description: string;
+  id: number
+  name: string
+  url: string
+  description: string
 }
 
-const pictures = ref<Picture[]>([
-  {
-    id: 1,
-    name: "图片1",
-    url: "https://img.picui.cn/free/2024/07/18/66987f69a1089.jpg",
-    description:
-      "在这张照片中，一只小黑猪正在吃一块饼干。在这张照片中，一只小黑猪正在吃一块饼干。在这张照片中，一只小黑猪正在吃一块饼干。" +
-      "在这张照片中，一只小黑猪正在吃一块饼干。在这张照片中，一只小黑猪正在吃一块饼干。在这张照片中，一只小黑猪正在吃一块饼干。",
-  },
-  { id: 2, name: "图片2", url: "https://img.picui.cn/free/2024/07/18/66987f69a1089.jpg", description: "示例图像2" },
-  { id: 3, name: "图片3", url: "https://img.picui.cn/free/2024/07/18/66987f69a1089.jpg", description: "示例图像3" },
-]);
+const pictures = ref<Picture[]>([])
+
+onMounted(() => {
+  getPictures(); // 获取图像列表
+})
+
+function getPictures() {
+  axios({
+    method: 'get',
+    url: '/kb/getPictures',
+    params: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      pictures.value = response.data.pictures
+    } else {
+      console.log(response.data.message)
+    }
+  }).catch(function (error) {
+    console.error(error)
+    alert(error.message)
+  })
+}
 
 // 跳转到图像上传界面
 function goToUploadPage() {
-  router.push("/workspace/uploadPicture/" + id);
+  router.push(router.currentRoute.value.path + "/upload");
 };
 </script>
 
@@ -43,7 +56,7 @@ function goToUploadPage() {
     <div class="picture-list">
       <div v-for="picture in pictures" :key="picture.id" class="picture-card">
         <div class="picture-image">
-          <img :src="picture.url" :alt="picture.name" />
+          <img :src="'http://122.9.33.84:8000' + picture.url" :alt="picture.name" />
         </div>
         <div class="picture-info">
           <h3>{{ picture.name }}</h3>

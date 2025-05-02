@@ -63,7 +63,7 @@ function uploadAvatar() {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      refreshAvatar('http://122.9.33.84:8000' + response.data.avatar)
+      refreshAvatar('http://127.0.0.1:8000' + response.data.avatar)
       alert(response.data.message)
     } else {
       alert(response.data.message)
@@ -95,7 +95,7 @@ function handleAvatarChange(event: Event) {
 function updateBasicInfo() {
   axios({
     method: 'post',
-    url: 'user/updateBasicInfo',
+    url: 'user/updateProfile',
     data: {
       uid: sessionStorage.getItem('uid'),
       name: name.value,

@@ -25,25 +25,6 @@
           placeholder="请输入代码"
           class="code-editor"
         />
-        <div class="return-code">
-          <div v-if="outputs.length === 0" class="return-empty">
-            <pre>return {</pre>
-            <pre>}</pre>
-          </div>
-          <div v-else class="return-content">
-            <pre>return {</pre>
-            <div v-for="output in outputs" :key="output.id" class="return-line">
-              <span class="return-name">  {{ output.name }}:</span>
-              <el-input
-                v-model="output.returnValue"
-                size="small"
-                :placeholder="getDefaultValue(output.type)"
-                class="return-value-input"
-              />
-            </div>
-            <pre>}</pre>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -229,7 +210,6 @@ interface Output {
   name: string
   type: string
   value?: any
-  returnValue: string // 用户配置的返回值
 }
 
 const props = defineProps<{
@@ -244,7 +224,6 @@ const props = defineProps<{
     data: {
       code: string
       language: string
-      returnConfig: Record<string, string> // 保存每个输出的返回值配置
     }
   }
   allNodes: any[]
@@ -263,7 +242,6 @@ const allUpstreamNodes = computed(() => {
 const inputs = ref<Input[]>(props.node.inputs || [])
 const outputs = ref<Output[]>(props.node.outputs?.map(output => ({
   ...output,
-  returnValue: props.node.data?.returnConfig?.[output.name] || getDefaultValue(output.type)
 })) || [])
 const code = ref(props.node.data?.code || '')
 const language = ref(props.node.data?.language || 'javascript')
@@ -303,7 +281,6 @@ watch([inputs, outputs, code, language], () => {
     data: {
       code: code.value,
       language: language.value,
-      returnConfig
     }
   })
 }, { deep: true })
@@ -343,8 +320,7 @@ function addOutput() {
   outputs.value.push({
     id: newId,
     name: '',
-    type: 'string',
-    returnValue: '""'
+    type: 'string'
   })
 }
 
@@ -442,22 +418,6 @@ function getDefaultValue(type: string): string {
     default: return 'null'
   }
 }
-
-// 生成返回代码
-function generateReturnCode(): string {
-  if (!outputs.value.length) return 'return {\n}'
-  
-  const returnLines = outputs.value.map(output => {
-    return `  ${output.name}: ${output.returnValue || getDefaultValue(output.type)}`
-  })
-  
-  return `return {\n${returnLines.join(',\n')}\n}`
-}
-
-// 计算代码编辑器的内容
-const editorContent = computed(() => {
-  return `${code.value}\n\n${generateReturnCode()}`
-})
 
 defineExpose({
   openRunPanel

@@ -63,6 +63,18 @@ const routes = [
             component: () => import("./components/knowledgeBase/TableBase.vue"),
             meta: { authReq: authRequired },
           },
+          {
+            path: 'pictureBase/:id/upload',
+            name: 'UploadPicture',
+            component: () => import('./components/knowledgeBase/UploadPicture.vue'),
+            meta: { authReq: authRequired },
+          },
+          {
+            path: 'textBase/:id/upload',
+            name: 'UploadText',
+            component: () => import('./components/knowledgeBase/UploadText.vue'),
+            meta: { authReq: authRequired },
+          }
         ],
       },
       {

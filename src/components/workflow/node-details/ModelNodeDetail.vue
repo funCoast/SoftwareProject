@@ -42,14 +42,30 @@ const allUpstreamNodes = computed(() => {
 })
 
 // 初始化输入
-const input = ref<Input>(props.node.inputs?.[0] || {
-  id: 0,
-  name: '',
-  type: 'string',
-  value: {
-    text: ''
+const inputs = ref<Input[]>(props.node.inputs?.length ? props.node.inputs : [
+  {
+    id: 0,
+    name: 'system_prompt',
+    type: 'string',
+    value: {
+      text: '',
+      type: 0,
+      nodeId: -1,
+      outputId: -1
+    }
+  },
+  {
+    id: 1,
+    name: 'user_prompt',
+    type: 'string',
+    value: {
+      text: '',
+      type: 0,
+      nodeId: -1,
+      outputId: -1
+    }
   }
-})
+])
 
 // 运行相关
 const showRunPanel = ref(false)
@@ -57,12 +73,13 @@ const isRunning = ref(false)
 const runStatus = ref<'running' | 'success' | 'error' | null>(null)
 const runResult = ref<string | null>(null)
 const runError = ref<string | null>(null)
-const runInput = ref('')
+const runSystemPrompt = ref('')
+const runUserPrompt = ref('')
 
 // 是否为手动输入
-const isManualInput = computed(() => {
-  return !input.value.value?.type || input.value.value.type !== 1
-})
+function isManualInput(input: Input) {
+  return !input.value?.type || input.value.type !== 1
+}
 
 // 生成选择器的值
 function generateSelectValue(val?: Input['value']): string {
@@ -71,17 +88,21 @@ function generateSelectValue(val?: Input['value']): string {
 }
 
 // 处理选择变化
-function onSelectChange(val: string) {
+function onSelectChange(inputId: number, val: string) {
+  const input = inputs.value.find(i => i.id === inputId)
+  if (!input) return
+
   if (val === 'manual') {
-    input.value.value = {
+    input.value = {
       text: ''
     }
   } else {
     const [nodeId, outputId] = val.split('|').map(Number)
-    input.value.value = {
+    input.value = {
       type: 1,
       nodeId,
-      outputId
+      outputId,
+      text: ''
     }
   }
   updateNode()
@@ -91,10 +112,7 @@ function onSelectChange(val: string) {
 function updateNode() {
   emit('update:node', {
     ...props.node,
-    inputs: [{
-      ...input.value,
-      id: input.value.id || 0
-    }],
+    inputs: inputs.value,
     outputs: [{
       id: 0,
       name: 'text',
@@ -117,7 +135,8 @@ async function run() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        input: runInput.value
+        system_prompt: runSystemPrompt.value,
+        user_prompt: runUserPrompt.value
       })
     })
 
@@ -140,7 +159,10 @@ async function run() {
 // 暴露方法给父组件
 defineExpose({
   openRunPanel: () => {
-    runInput.value = input.value.value?.text || ''
+    const systemPromptInput = inputs.value.find(i => i.name === 'system_prompt')
+    const userPromptInput = inputs.value.find(i => i.name === 'user_prompt')
+    runSystemPrompt.value = systemPromptInput?.value?.text || ''
+    runUserPrompt.value = userPromptInput?.value?.text || ''
     showRunPanel.value = true
   }
 })
@@ -155,50 +177,48 @@ defineExpose({
       </div>
       
       <div class="input-config">
-        <div class="form-group">
-          <label>变量名称</label>
-          <el-input
-            v-model="input.name"
-            placeholder="请输入变量名称"
-            size="small"
-            @input="updateNode"
-          />
-        </div>
-        
-        <div class="form-group">
-          <label>输入来源</label>
-          <el-select
-            :model-value="generateSelectValue(input.value)"
-            placeholder="选择输入来源"
-            size="small"
-            class="source-select"
-            @change="onSelectChange"
-          >
-            <el-option
-              label="手动输入"
-              value="manual"
-            />
-            <template v-for="node in allUpstreamNodes" :key="node.id">
-              <el-option
-                v-for="(nodeOutput, idx) in node.outputs"
-                :key="`${node.id}-${idx}`"
-                :label="`${node.name}: ${nodeOutput.name}`"
-                :value="`${node.id}|${nodeOutput.id}`"
+        <template v-for="input in inputs" :key="input.id">
+          <div class="input-group">
+            <div class="input-header">
+              <h5>{{ input.name === 'system_prompt' ? '系统提示词' : '用户提示词' }}</h5>
+            </div>
+            
+            <div class="form-group">
+              <label>输入来源</label>
+              <el-select
+                :model-value="generateSelectValue(input.value)"
+                placeholder="选择输入来源"
+                size="small"
+                class="source-select"
+                @change="val => onSelectChange(input.id, val)"
+              >
+                <el-option
+                  label="手动输入"
+                  value="manual"
+                />
+                <template v-for="node in allUpstreamNodes" :key="node.id">
+                  <el-option
+                    v-for="(nodeOutput, idx) in node.outputs"
+                    :key="`${node.id}-${idx}`"
+                    :label="`${node.name}: ${nodeOutput.name}`"
+                    :value="`${node.id}|${nodeOutput.id}`"
+                  />
+                </template>
+              </el-select>
+            </div>
+            
+            <div v-if="isManualInput(input)" class="form-group">
+              <label>输入内容</label>
+              <el-input
+                v-model="input.value.text"
+                type="textarea"
+                :rows="3"
+                :placeholder="input.name === 'system_prompt' ? '请输入系统提示词' : '请输入用户提示词'"
+                @input="updateNode"
               />
-            </template>
-          </el-select>
-        </div>
-        
-        <div v-if="isManualInput" class="form-group">
-          <label>输入内容</label>
-          <el-input
-            v-model="input.value.text"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入内容"
-            @input="updateNode"
-          />
-        </div>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -241,12 +261,21 @@ defineExpose({
     >
       <div class="run-panel">
         <div class="run-input">
-          <label>{{ input.name || '输入' }}</label>
+          <label>系统提示词</label>
           <el-input
-            v-model="runInput"
+            v-model="runSystemPrompt"
             type="textarea"
-            :rows="4"
-            :placeholder="`请输入${input.name || '内容'}`"
+            :rows="3"
+            placeholder="请输入系统提示词"
+          />
+        </div>
+        <div class="run-input">
+          <label>用户提示词</label>
+          <el-input
+            v-model="runUserPrompt"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入用户提示词"
           />
         </div>
       </div>
@@ -309,6 +338,27 @@ defineExpose({
 .section-header h4 {
   margin: 0;
   font-size: 16px;
+  color: #2c3e50;
+}
+
+.input-group {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.input-group:last-child {
+  margin-bottom: 0;
+}
+
+.input-header {
+  margin-bottom: 16px;
+}
+
+.input-header h5 {
+  margin: 0;
+  font-size: 14px;
   color: #2c3e50;
 }
 

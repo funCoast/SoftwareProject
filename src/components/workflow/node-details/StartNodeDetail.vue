@@ -5,6 +5,7 @@ interface Output {
   id: number
   name: string
   type: string
+  description: string
 }
 
 const props = defineProps<{
@@ -48,7 +49,8 @@ function addOutput() {
   outputs.value.push({
     id: newId,
     name: '',
-    type: 'string'
+    type: 'string',
+    description: ''
   })
 }
 
@@ -103,6 +105,16 @@ function removeOutput(id: number) {
             >
               删除
             </el-button>
+          </div>
+          <div class="description-row">
+            <el-input
+              v-model="output.description"
+              type="textarea"
+              :rows="2"
+              placeholder="请输入变量描述"
+              size="small"
+              class="description-input"
+            />
           </div>
         </div>
       </div>
@@ -171,6 +183,7 @@ function removeOutput(id: number) {
   display: flex;
   gap: 12px;
   align-items: center;
+  margin-bottom: 12px;
 }
 
 .name-input {
@@ -183,5 +196,13 @@ function removeOutput(id: number) {
 
 .remove-btn {
   flex-shrink: 0;
+}
+
+.description-row {
+  margin-top: 8px;
+}
+
+.description-input {
+  width: 100%;
 }
 </style> 

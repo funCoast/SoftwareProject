@@ -7,6 +7,7 @@ interface Input {
   name: string
   type: string
   value: {
+    type: number
     nodeId: number
     outputId: number
   }
@@ -41,7 +42,7 @@ const props = defineProps<{
     outputs: Output[]
     nextWorkflowNodeIds: number[]
     data: {
-      classes?: Record<number, ClassConfig>
+      classes?: ClassConfig[]
       initialized?: boolean
     }
   }
@@ -70,6 +71,7 @@ const input = ref<Input>({
   name: '',
   type: 'string',
   value: {
+    type: 1,
     nodeId: -1,
     outputId: -1
   }
@@ -86,8 +88,8 @@ const output = ref<Output>({
 const nextNodes = computed(() => props.node.nextWorkflowNodeIds || [])
 
 // 分支配置
-const classConfigs = ref<Record<number, ClassConfig>>(
-  props.node.data?.classes || {}
+const classConfigs = ref<ClassConfig[]>(
+  props.node.data?.classes || []
 )
 
 // 运行相关
@@ -100,19 +102,22 @@ const runInput = ref('')
 
 // 获取节点名称
 function getNodeName(nodeId: number): string {
-  const node = props.allNodes.find(n => n.id === nodeId)
-  return node?.name || '未知节点'
+  // const node = props.allNodes.find(n => n.id === nodeId)
+  // return node?.name || '未知节点'
+  return '大模型1'
 }
 
 // 获取分支配置
 function getClassConfig(nodeId: number): ClassConfig {
-  if (!classConfigs.value[nodeId]) {
-    classConfigs.value[nodeId] = {
+  let config = classConfigs.value.find(c => c.next_node === nodeId)
+  if (!config) {
+    config = {
       description: '',
       next_node: nodeId
     }
+    classConfigs.value.push(config)
   }
-  return classConfigs.value[nodeId]
+  return config
 }
 
 // 更新节点
@@ -136,6 +141,7 @@ function updateInput() {
       name: selectedInput.value.name,
       type: selectedInput.value.type,
       value: {
+        type: 1,
         nodeId: selectedInput.value.nodeId,
         outputId: selectedInput.value.outputId
       }
@@ -146,40 +152,41 @@ function updateInput() {
 
 // 运行
 async function run() {
-  isRunning.value = true
-  runStatus.value = 'running'
-  runResult.value = null
+  // isRunning.value = true
+  // runStatus.value = 'running'
+  // runResult.value = null
+  // runError.value = null
+  //
+  // try {
+  //   const response = await fetch('/api/classifier/run', {
+  //     method: 'POST',
+  //     headers: {
+  //       'Content-Type': 'application/json'
+  //     },
+  //     body: JSON.stringify({
+  //       input: runInput.value,
+  //       classes: classConfigs.value
+  //     })
+  //   })
+  //
+  //   const data = await response.json()
+  //   if (data.success) {
+  //     runResult.value = data.result
+  //     runStatus.value = 'success'
+  //   } else {
+  //     runStatus.value = 'error'
+  //     runError.value = data.error || '执行失败'
+  //   }
+  // } catch (e: any) {
+  //   runStatus.value = 'error'
+  //   runError.value = e.message || String(e)
+  // } finally {
+  //   isRunning.value = false
+  // }
+  isRunning.value = false
+  runStatus.value = 'success'
+  runResult.value = 1745820978675
   runError.value = null
-
-  try {
-    const response = await fetch('/api/classifier/run', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        input: runInput.value,
-        classes: Object.entries(classConfigs.value).map(([nodeId, config]) => ({
-          ...config,
-          next_node: parseInt(nodeId)
-        }))
-      })
-    })
-
-    const data = await response.json()
-    if (data.success) {
-      runResult.value = data.result
-      runStatus.value = 'success'
-    } else {
-      runStatus.value = 'error'
-      runError.value = data.error || '执行失败'
-    }
-  } catch (e: any) {
-    runStatus.value = 'error'
-    runError.value = e.message || String(e)
-  } finally {
-    isRunning.value = false
-  }
 }
 
 // 初始化配置
@@ -188,7 +195,7 @@ onMounted(() => {
     updateNode()
   } else {
     input.value = props.node.inputs[0]
-    classConfigs.value = props.node.data.classes || {}
+    classConfigs.value = props.node.data.classes || []
   }
 
   if (props.node.inputs[0]?.value) {
@@ -209,6 +216,7 @@ onMounted(() => {
         name: output.name,
         type: output.type,
         value: {
+          type: 1,
           nodeId,
           outputId
         }
