@@ -184,7 +184,6 @@ class Agent(models.Model):
     agent_id = models.AutoField(primary_key=True)
     agent_name = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
-    is_published = models.BooleanField(default=False)
     opening_line = models.CharField(max_length=255, null=True, blank=True)
     prompt = models.TextField(null=True, blank=True)
     persona = models.TextField(null=True, blank=True)
