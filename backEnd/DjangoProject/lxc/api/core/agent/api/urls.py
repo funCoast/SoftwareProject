@@ -6,5 +6,5 @@ urlpatterns = [
     path('send_agent_message', send_agent_message, name='send_agent_message'),
     path('getInfo', AgentInfoView.as_view(), name='get_info'),
     path('updateInfo', AgentInfoView.as_view(), name='update_info'),
-
+    path('create', AgentInfoView.as_view(), name='create'),
 ]

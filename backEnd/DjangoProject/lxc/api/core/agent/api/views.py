@@ -1,4 +1,6 @@
 import json
+import os
+import uuid
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -12,6 +14,7 @@ from api.core.agent.chat_bot.session import get_or_create_session, save_message,
     generate_prompt_with_context
 from api.core.agent.skill.plugin_call.plugin_call import plugin_call
 from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation, KnowledgeBase, Workflow
+from lxc import settings
 
 
 @csrf_exempt
@@ -125,7 +128,9 @@ class AgentInfoView(View):
             .values_list('workflow_id', flat=True)
         )
         # 如果有插件关联表，放在这里类似查询
-        plugin_ids = []
+        plugin_ids = ["CurrentTimePlugin", "TimestampPlugin", "TimestampTransformPlugin",
+                      "TimezoneSwitchPlugin", "WeekdayCalculatorPlugin", "CodeRunPlugin",
+                      "SpeechToTextPlugin", "WeatherScraperPlugin"]
 
         # 组装 config
         config = {
@@ -135,17 +140,32 @@ class AgentInfoView(View):
             "selectedWorkflows": workflow_ids,
         }
 
+        if agent.status=='published':
+            status = 2
+        elif agent.status=='check':
+            status = 1
+        else:
+            status = 0
+
+        # 找 icon
+        icon_url = ""
+        icon_dir = os.path.join(settings.MEDIA_ROOT, 'agent_icons')
+        if os.path.isdir(icon_dir):
+            for fn in os.listdir(icon_dir):
+                # 只要第一个匹配就行
+                if fn.startswith(f"{agent.agent_id}_"):
+                    icon_url = settings.MEDIA_URL + "agent_icons/" + fn
+                    break
+
         # 组装最终返回结构
         data = {
             "code": 0,
             "message": "获取成功",
             "config": config,
             "name": agent.agent_name,
-            # TODO icon
-            "icon": "",
+            "icon": icon_url,
             "description": agent.description or "",
-            # TODO 审核
-            "status": 2 if agent.is_published else 0,
+            "status": status,
         }
         return JsonResponse(data, json_dumps_params={'ensure_ascii': False})
 
@@ -159,10 +179,8 @@ class AgentUpdateView(View):
         agent_id = data.get('agent_id')
         system_prompt = data.get('system_prompt')
         selected_kbs = data.get('selectedKbs', [])
-        selected_plugins = data.get('selectedPlugins', [])
         selected_workflows = data.get('selectedWorkflows', [])
 
-        # 参数校验
         if not agent_id:
             return JsonResponse({"code": -1, "message": "缺少 agent_id 参数"}, status=400)
 
@@ -171,20 +189,17 @@ class AgentUpdateView(View):
         except Agent.DoesNotExist:
             return JsonResponse({"code": -1, "message": "未找到对应的智能体"}, status=404)
 
-        # 更新 system_prompt
         agent.persona = system_prompt
         agent.save()
 
-        # 更新知识库关联：清除旧记录再添加新记录
         AgentKnowledgeEntry.objects.filter(agent=agent).delete()
         for kb_id in selected_kbs:
             try:
                 kb = KnowledgeBase.objects.get(pk=kb_id)
                 AgentKnowledgeEntry.objects.create(agent=agent, kb=kb, is_used=True)
             except KnowledgeBase.DoesNotExist:
-                continue  # 跳过非法 kb_id
+                continue
 
-        # 更新工作流关联
         AgentWorkflowRelation.objects.filter(agent=agent).delete()
         for wf_id in selected_workflows:
             try:
@@ -193,13 +208,60 @@ class AgentUpdateView(View):
             except Workflow.DoesNotExist:
                 continue
 
-        # 插件更新逻辑（如有插件模型）
-        # AgentPluginRelation.objects.filter(agent=agent).delete()
-        # for plugin_id in selected_plugins:
-        #     try:
-        #         plugin = Plugin.objects.get(pk=plugin_id)
-        #         AgentPluginRelation.objects.create(agent=agent, plugin=plugin)
-        #     except Plugin.DoesNotExist:
-        #         continue
-
         return JsonResponse({"code": 0, "message": "修改成功"})
+
+class AgentCreateView(View):
+    """
+    POST /agent/create
+    接收 multipart/form-data:
+      - name: 智能体名称 (必填)
+      - description: 描述 (可选)
+      - icon: 图标文件 (可选)
+    返回 JSON:
+      {
+        "code": 0 或 -1,
+        "message": "创建成功" 或 错误信息,
+        "agent_id": 新建智能体的 ID (创建成功时)
+      }
+    """
+    def post(self, request):
+        name = request.POST.get('name')
+        description = request.POST.get('description', '')
+        icon = request.FILES.get('icon')
+
+        if not name:
+            return JsonResponse(
+                {"code": -1, "message": "缺少 name 参数"},
+                status=400,
+                json_dumps_params={'ensure_ascii': False}
+            )
+
+        # 创建 Agent
+        agent = Agent.objects.create(
+            agent_name=name,
+            description=description,
+            opening_line='',
+            prompt='',
+            persona='',
+            category='',
+            status='private',
+            is_modifiable=True,
+        )
+
+        # icon 上传
+        if icon:
+            icon_dir = os.path.join(settings.MEDIA_ROOT, 'agent_icons')
+            os.makedirs(icon_dir, exist_ok=True)
+
+            _, ext = os.path.splitext(icon.name)
+            filename = f"{agent.agent_id}_{uuid.uuid4().hex}{ext}"
+            filepath = os.path.join(icon_dir, filename)
+
+            with open(filepath, 'wb+') as dst:
+                for chunk in icon.chunks():
+                    dst.write(chunk)
+
+        return JsonResponse(
+            {"code": 0, "message": "创建成功", "agent_id": agent.agent_id},
+            json_dumps_params={'ensure_ascii': False}
+        )
