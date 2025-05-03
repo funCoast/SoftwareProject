@@ -2352,3 +2352,74 @@ def community_agent_send_comment(request):
             "code": -1,
             "message": "智能体不存在"
         })
+
+@csrf_exempt
+def fetch_pending_agents(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    try:
+        pending_agents = Agent.objects.filter(status='check')
+        agents_list = []
+        for agent in pending_agents:
+            agents_list.append({
+                "id": agent.agent_id,
+                "name": agent.agent_name,
+                "description": agent.description,
+                "icon": agent.icon_url,
+                "author": {
+                    "id": agent.user.user_id,
+                    "name": agent.user.username,
+                    "avatar": agent.user.avatar_url
+                }
+            })
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "agents": agents_list
+        })
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"获取失败: {str(e)}"})
+
+@csrf_exempt
+def review_agent(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        uid = body.get('uid')
+        agent_id = body.get('agent_id')
+        action = body.get('action')
+        category = body.get('category')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+
+    if not uid or not agent_id or not action or not category:
+        return JsonResponse({"code": -1, "message": "缺少必要参数"})
+
+    if action not in ['approve', 'reject']:
+        return JsonResponse({"code": -1, "message": "无效的操作类型"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "管理员用户不存在"})
+
+    try:
+        agent = Agent.objects.get(agent_id=agent_id)
+    except Agent.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "智能体不存在"})
+
+    try:
+        if action == 'approve':
+            agent.status = 'published'
+        elif action == 'reject':
+            agent.status = 'private'
+
+        agent.category = category
+        agent.save()
+
+        return JsonResponse({"code": 0, "message": "操作成功"})
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"操作失败: {str(e)}"})
