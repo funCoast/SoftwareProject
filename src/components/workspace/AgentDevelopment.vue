@@ -1,62 +1,115 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import {onMounted, ref} from 'vue'
+import { useRouter } from 'vue-router';
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
+
 interface agent {
   id: number
   name: string
   description: string
-  category: string
-  image: string
-  status: string
-  statusText: string
-  updateTime: string
+  icon: string
+  status: number
+  publishedTime: string
 }
 const agents = ref<agent[]> ([])
-
 const isCreateAgentVisible = ref(false)
+const router = useRouter();
 
-const onCreateAgent = () => {
+// 表单数据
+const agentForm = ref({
+  name: '',
+  description: '',
+  icon: ''
+})
+
+const formData = new FormData()
+
+function onCreateAgent() {
   isCreateAgentVisible.value = true
 }
-const offCreateAgent = () => {
+
+function offCreateAgent() {
   isCreateAgentVisible.value = false
+  agentForm.value = {
+    name: '',
+    description: '',
+    icon: ''
+  }
+  formData.delete('icon')
 }
 
-import { useRouter } from 'vue-router';
-import { computed, onMounted, onBeforeMount } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import axios from 'axios'
-
-async function updateAgentInfo() {
-  try {
-    const response = await axios({
-      method: 'post',
-      url: 'agent/createAgent',
-      params: {
-        name: (document.querySelector('#agName') as HTMLInputElement).value,
-        description: (document.querySelector('#agDesc') as HTMLInputElement).value,
-        system_prompt: '',
-        avatar: '',
-        selectedKbs: ref<number[]>([]),
-        selectedPlugins: ref<number[]>([]),
-        selectedWorkflows: ref<number[]>([])
-      },
-    })
-    if (response.data.code === 0) {
-      router.push('/agentEdit/' + response.data.ag_id);
-      console.log('创建智能体成功')
-    } else {
-      console.log(response.data.message)
+function handleImageUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+    // 验证文件大小和类型
+    if (file.size > 2 * 1024 * 1024) {
+      ElMessage.error('图片大小不能超过2MB')
+      return
     }
-  } catch (error) {
-    console.error('创建智能体失败:', error)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      agentForm.value.icon = e.target?.result as string
+    }
+    formData.append('icon', input.files[0])
+    reader.readAsDataURL(file)
   }
 }
 
-const router = useRouter();
-const jumpAgent = () => {
-  updateAgentInfo()
+async function fetchAgents() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'agent/fetchAll',
+      params: {
+        uid: sessionStorage.getItem('uid')
+      }
+    })
+    if (response.data.code === 0) {
+      agents.value = response.data.agents
+    } else {
+      console.log('获取智能体失败：', response.data.message)
+    }
+  } catch (error) {
+    console.error('获取智能体异常：', error)
+  }
 }
+
+// 创建智能体
+async function createAgent() {
+  if (!agentForm.value.name) {
+    ElMessage.error('请输入智能体名称')
+    return
+  }
+  formData.append('name', agentForm.value.name)
+  formData.append('description', agentForm.value.description)
+  formData.append('uid', sessionStorage.getItem('uid') as string)
+  try {
+    const response = await axios({
+      method: 'post',
+      url: '/agent/create',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    })
+    if (response.data.code === 0) {
+      ElMessage.success('创建成功！')
+      offCreateAgent()
+      await fetchAgents()
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('创建智能体失败:', error)
+    ElMessage.error('创建失败')
+  }
+}
+
+onMounted(() => {
+  fetchAgents()
+})
 </script>
 
 <template>
@@ -96,45 +149,66 @@ const jumpAgent = () => {
     <div class="agent-list">
       <div v-for="agent in agents" :key="agent.id" class="agent-card">
         <div class="agent-image">
-          <img :src="agent.image" :alt="agent.name">
-          <div class="agent-status" :class="agent.status">{{ agent.statusText }}</div>
+          <img :src="agent.icon" :alt="agent.name" />
+          <div class="agent-status">{{ agent.status }}</div>
         </div>
         <div class="agent-info">
           <h3>{{ agent.name }}</h3>
           <p>{{ agent.description }}</p>
           <div class="agent-meta">
-            <span class="category">{{ agent.category }}</span>
-            <span class="update-time">最后更新：{{ agent.updateTime }}</span>
+            <span>发布时间：{{ agent.publishedTime }}</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 创建智能体的弹窗 -->
-    <div v-if="isCreateAgentVisible" class="create-agent-box">
-      <div class="create-agent-content">
-        <div class="create-agent-header">
-          <h2>创建智能体</h2>
-          <button class="close-btn" @click="offCreateAgent">×</button>
+    <el-dialog v-model="isCreateAgentVisible" title="创建智能体" width="500px" class="custom-dialog">
+      <div class="dialog-body">
+        <!-- 名称 -->
+        <div class="form-row">
+          <label class="form-label">名称 <span class="required">*</span></label>
+          <el-input v-model="agentForm.name" placeholder="给智能体起一个独一无二的名字" maxlength="20" class="form-input" />
+          <span class="char-count">{{ agentForm.name.length }}/20</span>
         </div>
-        <div class="create-agent-body">
-          <div class="form-group">
-            <label>智能体名称 <span class="required">*</span></label>
-            <input type="text" placeholder="给智能体起一个独一无二的名字" maxlength="20" id="agName">
-            <span class="char-count">0/20</span>
-          </div>
-          <div class="form-group">
-            <label>智能体功能介绍</label>
-            <textarea placeholder="介绍智能体的功能，将会展示给智能体的用户" maxlength="500" id="agDesc"></textarea>
-            <span class="char-count">0/500</span>
-          </div>
+
+        <!-- 描述 -->
+        <div class="form-row">
+          <label class="form-label">功能介绍</label>
+          <el-input
+            v-model="agentForm.description"
+            type="textarea"
+            placeholder="介绍智能体的功能，将会展示给智能体的用户"
+            maxlength="500"
+            :rows="4"
+            class="form-input"
+          />
+          <span class="char-count">{{ agentForm.description.length }}/500</span>
         </div>
-        <div class="create-agent-footer">
-          <button class="cancel-btn" @click="offCreateAgent">取消</button>
-          <button class="confirm-btn" @click="jumpAgent">确认</button>
+
+        <!-- 图片上传 -->
+        <div class="form-row">
+          <label class="form-label">图标</label>
+          <div class="image-upload">
+            <div class="upload-preview" v-if="agentForm.icon">
+              <img :src="agentForm.icon" alt="预览图" />
+            </div>
+            <div class="upload-button" :class="{ 'has-image': agentForm.icon }">
+              <input type="file" accept="image/*" @change="handleImageUpload" class="file-input" />
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
+              </svg>
+              <span>{{ agentForm.icon ? '更换图片' : '上传图片' }}</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+
+      <template #footer>
+        <el-button @click="offCreateAgent">取消</el-button>
+        <el-button type="primary" @click="createAgent">创建</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -296,144 +370,122 @@ const jumpAgent = () => {
   border-radius: 12px;
 }
 
-.create-agent-box {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10;
-}
-
-.create-agent-content {
-  background-color: white;
-  border-radius: 8px;
-  width: 500px;
+/* 自定义弹窗样式 */
+.custom-dialog {
+  border-radius: 12px;
   overflow: hidden;
 }
 
-.create-agent-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.create-agent-header h2 {
-  margin: 0;
-  font-size: 20px;
-  color: #2c3e50;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #2c3e50;
-}
-
-.create-agent-body {
-  padding: 20px;
-}
-
-.mode-btn {
-  flex: 1;
-  padding: 10px;
-  background: #f8f9fa;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #666;
-}
-
-.mode-btn.active {
-  background: white;
-  color: #2c3e50;
+.custom-dialog .el-dialog__header {
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+  font-size: 18px;
   font-weight: bold;
-  border: 1px solid #e9ecef;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
   color: #2c3e50;
-  font-size: 16px;
+}
+
+.dialog-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #606266;
 }
 
 .required {
   color: red;
 }
 
-.form-group input,
-.form-group textarea {
-  width: 95%;
-  padding: 10px;
-  border: 1px solid #e9ecef;
+.form-input {
+  width: 100%;
   border-radius: 6px;
-  color: #2c3e50;
-}
-
-.form-group textarea {
-  min-height: 100px;
-  resize: vertical;
 }
 
 .char-count {
-  display: block;
   text-align: right;
   margin-top: 4px;
   font-size: 12px;
   color: #95a5a6;
 }
 
-.icon-preview {
+.image-upload {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 16px;
 }
 
-.icon-placeholder {
-  width: 60px;
-  height: 60px;
-  background-color: #f8f9fa;
+.upload-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+}
+
+.upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-button {
+  position: relative;
+  width: 120px;
+  height: 100px;
+  border: 2px dashed #e9ecef;
   border-radius: 8px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.create-agent-footer {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 20px 20px;
-  gap: 10px;
+.upload-button:hover {
+  border-color: #3498db;
+  color: #3498db;
 }
 
-.cancel-btn,
-.confirm-btn {
-  padding: 10px 20px;
-  border-radius: 6px;
+.upload-button.has-image {
+  width: 100px;
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
   cursor: pointer;
 }
 
-.cancel-btn {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  color: #2c3e50;
+.upload-button svg {
+  color: #95a5a6;
 }
 
-.confirm-btn {
-  background: #36A2EB;
-  border: none;
-  color: white;
+.upload-button:hover svg {
+  color: #3498db;
+}
+
+.upload-button span {
+  font-size: 12px;
+  color: #95a5a6;
+}
+
+.upload-button:hover span {
+  color: #3498db;
 }
 </style>

@@ -2,6 +2,7 @@
 import { ref, onBeforeMount, inject } from 'vue'
 import axios from 'axios'
 import router from '../../router'
+import {useRoute} from "vue-router";
 
 const avatar = inject('avatar') as string
 
@@ -20,7 +21,9 @@ const userInfo = ref({
   followers: 0,
 })
 
-const uid = Number(sessionStorage.getItem('uid'))
+const route = useRoute()
+const uid = route.params.id
+const currentUid = sessionStorage.getItem('uid')
 
 interface myWork {
   id: number
@@ -61,7 +64,6 @@ onBeforeMount(() => {
 })
 
 async function fetchUserInfo() {
-  console.log("sessionStorage", sessionStorage)
   if (!uid) {
     console.error('用户未登录，无法获取用户信息')
     return
@@ -293,7 +295,7 @@ function getDefaultFavorites(): favorite[] {
         </div>
       </div>
       <!-- 添加设置按钮 -->
-      <div class="profile-actions">
+      <div class="profile-actions" v-if="uid === currentUid">
         <button class="edit-profile-btn" @click="goToEditProfile">
           <svg class="settings-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
             <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>

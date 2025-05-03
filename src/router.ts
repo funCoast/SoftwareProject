@@ -88,7 +88,7 @@ const routes = [
         component: () => import("./components/agent/AgentDetail.vue"),
       },
       {
-        path: "profile",
+        path: "profile/:id",
         name: "Profile",
         component: () => import("./components/profile/Profile.vue"),
       },

@@ -1,3 +1,306 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeMount } from 'vue'
+import { ElMessage } from 'element-plus'
+import axios from 'axios'
+import router from "../../router";
+
+const agentIdentifier = router.currentRoute.value.params.id
+
+interface Workflow {
+  workflow_id: number
+  name: string
+  description: string
+  icon: string
+  hover?: boolean
+}
+
+onMounted(() => {
+  getKnowledgeBases()
+  getWorkflows()
+  getPlugins()
+  getAgentInfo()
+})
+
+// 智能体信息
+const agentInfo = ref({
+  name: 'AI讲师' + agentIdentifier,
+  description: 'AI讲师',
+  system_prompt: '',
+  avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png',
+  selectedKbs: ref<number[]>([]),
+  selectedPlugins: ref<number[]>([]),
+  selectedWorkflows: ref<number[]>([])
+})
+
+onBeforeMount(() => {
+  getAvatar()
+  fetchUserInfo()
+})
+
+const useravatar = ref('')
+function getAvatar() {
+  axios({
+    method: 'get',
+    url: 'user/getAvatar',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      useravatar.value = 'http://127.0.0.1:8000' + response.data.avatar
+      console.log(useravatar.value)
+    } else {
+      alert(response.data.message)
+    }
+  })
+}
+
+const userInfo = ref({
+  name: '',
+  account: '',
+  description: '',
+  following: 0,
+  followers: 0,
+})
+function fetchUserInfo() {
+  axios({
+    method: 'get',
+    url: '/user/fetchProfile',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      userInfo.value = response.data.data
+      console.log('获取用户信息成功')
+    } else {
+      console.log(response.data.message)
+    }
+  })
+}
+
+// 知识库列表
+const knowledgeBases = ref([])
+
+// 获取知识库列表
+async function getKnowledgeBases() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/rl/getKnowledgeBases',
+      params: {
+        uid: sessionStorage.getItem('uid')
+      },
+    })
+
+    if (response.data.code === 0) {
+      knowledgeBases.value = response.data.knowledgeBases
+      console.log('获取知识库列表成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取知识库列表失败:', error)
+  }
+}
+
+// 插件相关
+const plugins = ref([])
+
+async function getPlugins() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/plugins/getPlugins',
+      params: {
+        uid: sessionStorage.getItem('uid')
+      },
+    })
+
+    if (response.data.code === 0) {
+      plugins.value = response.data.plugins
+      console.log('获取插件列表成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取插件列表失败:', error)
+  }
+}
+
+// 工作流相关
+const workflows = ref([])
+
+// 获取所有工作流
+async function getWorkflows() {
+  try {
+    const uid = sessionStorage.getItem('uid')
+    if (!uid) {
+      console.error('用户ID不存在')
+      return
+    }
+
+    const response = await axios({
+      method: 'get',
+      url: '/workflow/fetchAll',
+      params: {
+        uid
+      }
+    })
+
+    if (response.data.code === 0) {
+      workflows.value = response.data.workflows.map((workflow: Workflow) => ({
+        ...workflow,
+        icon: 'http://127.0.0.1:8000' + workflow.icon,
+        hover: false
+      }))
+      console.log('获取工作流列表成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取工作流列表失败:', error)
+  }
+}
+
+async function getAgentInfo() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'agent/getAgentInfo',
+      params: {
+        ag_id: agentIdentifier
+      },
+    })
+    if (response.data.code === 0) {
+      agentInfo.value = response.data.agentInfo
+      console.log('获取配置成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取配置失败:', error)
+  }
+}
+
+// 计算选中的列表
+const selectedKbsList = computed(() =>
+    knowledgeBases.value.filter(kb => agentInfo.value.selectedKbs.includes(kb.id))
+)
+
+const selectedPluginsList = computed(() =>
+    plugins.value.filter(plugin => agentInfo.value.selectedPlugins.includes(plugin.id))
+)
+
+const selectedWorkflowsList = computed(() =>
+    workflows.value.filter(workflow => agentInfo.value.selectedWorkflows.includes(workflow.id))
+)
+
+// 聊天相关
+const messageInput = ref('')
+const chatHistory = ref([
+  {
+    type: 'user',
+    sender: 'Herry',
+    content: '北京限行规则是什么？',
+    time: '2025-04-28 11:08',
+    avatar: 'http://127.0.0.1:8000/media/avatars/2.jpg'
+  },
+  {
+    type: 'assistant',
+    sender: 'AI讲师',
+    content: '根据2025年最新政策，北京市工作日实行机动车尾号限行，限行时间为早7:00至晚20:00，限行范围为五环路以内（不含五环路）。具体规则如下：\n' +
+        '周一：限行尾号1和6\n' +
+        '周二：限行尾号2和7\n' +
+        '周三：限行尾号3和8\n' +
+        '周四：限行尾号4和9\n' +
+        '周五：限行尾号5和0\n' +
+        '（节假日不限行）\n' +
+        '请注意规则会每年调整一次，建议出行前查询官方通知。',
+    time: '2025-04-28 11:09',
+    avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
+  }
+])
+
+async function sendsendMessage() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/sendMessage',
+      params: {
+        type: 'user',
+        sender: userInfo.value.name,
+        content: messageInput.value,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        avatar: useravatar.value
+      },
+    })
+    if (response.data.code === 0) {
+      chatHistory.value.push({
+        type: response.data.type,
+        sender: response.data.sender,
+        content: response.data.content,
+        time: response.data.time,
+        avatar: response.data.avatar
+      })
+      console.log('信息发送成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('信息发送失败:', error)
+  }
+}
+
+// 发送消息
+const sendMessage = () => {
+  if (!messageInput.value.trim()) return
+  sendsendMessage()
+  chatHistory.value.push({
+    type: 'user',
+    sender: userInfo.value.name,
+    content: messageInput.value,
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+    avatar: useravatar.value
+  })
+
+  messageInput.value = ''
+}
+
+async function updateAgentInfo() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/updateAgentInfo',
+      params: {
+        ag_id: agentIdentifier,
+        name: agentInfo.value.name,
+        description: agentInfo.value.description,
+        system_prompt: agentInfo.value.system_prompt,
+        avatar: agentInfo.value.avatar,
+        selectedKbs: agentInfo.value.selectedKbs,
+        selectedPlugins: agentInfo.value.selectedPlugins,
+        selectedWorkflows: agentInfo.value.selectedWorkflows
+      },
+    })
+    if (response.data.code === 0) {
+      console.log('配置更新成功')
+      alert("配置已保存")
+      ElMessage.success('配置已保存')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('配置更新失败:', error)
+  }
+}
+
+// 确认按钮处理函数
+const handleConfirm = () => {
+  updateAgentInfo()
+}
+</script>
+
 <template>
   <div class="agent-edit">
     <!-- 头部信息 -->
@@ -184,320 +487,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted, onBeforeMount } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import axios from 'axios'
-import router from "../../router";
-
-const agentIdentifier = router.currentRoute.value.params.id
-
-interface Workflow {
-  workflow_id: number
-  name: string
-  description: string
-  icon: string
-  hover?: boolean
-}
-
-onMounted(() => {
-  getKnowledgeBases()
-  getWorkflows()
-  getPlugins()
-  getAgentInfo()
-})
-
-// 智能体信息
-const agentInfo = ref({
-  name: 'AI讲师' + agentIdentifier,
-  description: 'AI讲师',
-  system_prompt: '',
-  avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png',
-  selectedKbs: ref<number[]>([]),
-  selectedPlugins: ref<number[]>([]),
-  selectedWorkflows: ref<number[]>([])
-})
-
-onBeforeMount(() => {
-  getAvatar()
-  fetchUserInfo()
-})
-
-const useravatar = ref('')
-function getAvatar() {
-  axios({
-    method: 'get',
-    url: 'user/getAvatar',
-    params: {
-      uid: sessionStorage.getItem('uid')
-    }
-  }).then(function (response) {
-    if (response.data.code === 0) {
-      useravatar.value = 'http://127.0.0.1:8000' + response.data.avatar
-      console.log(useravatar.value)
-    } else {
-      alert(response.data.message)
-    }
-  })
-}
-
-const userInfo = ref({
-  name: '',
-  account: '',
-  description: '',
-  following: 0,
-  followers: 0,
-})
-function fetchUserInfo() {
-  axios({
-    method: 'get',
-      url: '/user/fetchProfile',
-    params: {
-      uid: sessionStorage.getItem('uid')
-    }
-  }).then(function (response) {
-    if (response.data.code === 0) {
-      userInfo.value = response.data.data
-      console.log('获取用户信息成功')
-    } else {
-      console.log(response.data.message)
-    }
-  })
-}
-
-
-
-
-// 知识库列表
-const knowledgeBases = ref([])
-
-// 获取知识库列表
-async function getKnowledgeBases() {
-  try {
-    const response = await axios({
-      method: 'get',
-      url: '/rl/getKnowledgeBases',
-      params: {
-        uid: sessionStorage.getItem('uid')
-      },
-    })
-    
-    if (response.data.code === 0) {
-      knowledgeBases.value = response.data.knowledgeBases
-      console.log('获取知识库列表成功')
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('获取知识库列表失败:', error)
-  }
-}
-
-// 插件相关
-const plugins = ref([])
-
-async function getPlugins() {
-  try {
-    const response = await axios({
-      method: 'get',
-      url: '/plugins/getPlugins',
-      params: {
-        uid: sessionStorage.getItem('uid')
-      },
-    })
-    
-    if (response.data.code === 0) {
-      plugins.value = response.data.plugins
-      console.log('获取插件列表成功')
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('获取插件列表失败:', error)
-  }
-}
-
-// 工作流相关
-const workflows = ref([])
-
-// 获取所有工作流
-async function getWorkflows() {
-  try {
-    const uid = sessionStorage.getItem('uid')
-    if (!uid) {
-      console.error('用户ID不存在')
-      return
-    }
-
-    const response = await axios({
-      method: 'get',
-      url: '/workflow/fetchAll',
-      params: {
-        uid
-      }
-    })
-    
-    if (response.data.code === 0) {
-      workflows.value = response.data.workflows.map((workflow: Workflow) => ({
-        ...workflow,
-        icon: 'http://127.0.0.1:8000' + workflow.icon,
-        hover: false
-      }))
-      console.log('获取工作流列表成功')
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('获取工作流列表失败:', error)
-  }
-}
-
-async function getAgentInfo() {
-  try {
-    const response = await axios({
-      method: 'get',
-      url: 'agent/getAgentInfo',
-      params: {
-        ag_id: agentIdentifier
-      },
-    })
-    if (response.data.code === 0) {
-      agentInfo.value = response.data.agentInfo
-      console.log('获取配置成功')
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('获取配置失败:', error)
-  }
-}
-
-// 计算选中的列表
-const selectedKbsList = computed(() => 
-  knowledgeBases.value.filter(kb => agentInfo.value.selectedKbs.includes(kb.id))
-)
-
-const selectedPluginsList = computed(() => 
-  plugins.value.filter(plugin => agentInfo.value.selectedPlugins.includes(plugin.id))
-)
-
-const selectedWorkflowsList = computed(() => 
-  workflows.value.filter(workflow => agentInfo.value.selectedWorkflows.includes(workflow.id))
-)
-
-// 聊天相关
-const messageInput = ref('')
-const chatHistory = ref([
-  // {
-  //   type: 'assistant',
-  //   sender: '天气助手',
-  //   content: '你好！我是你的天气助手，可以为你提供天气预报和穿衣建议。',
-  //   time: '10:00',
-  //   avatar: 'https://example.com/weather-bot-avatar.png'
-  // },
-  {
-    type: 'user',
-    sender: 'Herry',
-    content: '北京限行规则是什么？',
-    time: '2025-04-28 11:08',
-    avatar: 'http://127.0.0.1:8000/media/avatars/2.jpg'
-  },
-  {
-    type: 'assistant',
-    sender: 'AI讲师',
-    content: '根据2025年最新政策，北京市工作日实行机动车尾号限行，限行时间为早7:00至晚20:00，限行范围为五环路以内（不含五环路）。具体规则如下：\n' +
-        '周一：限行尾号1和6\n' +
-        '周二：限行尾号2和7\n' +
-        '周三：限行尾号3和8\n' +
-        '周四：限行尾号4和9\n' +
-        '周五：限行尾号5和0\n' +
-        '（节假日不限行）\n' +
-        '请注意规则会每年调整一次，建议出行前查询官方通知。',
-    time: '2025-04-28 11:09',
-    avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
-  }
-])
-
-async function sendsendMessage() {
-  try {
-    const response = await axios({
-      method: 'post',
-      url: 'agent/sendMessage',
-      params: {
-        type: 'user',
-        sender: userInfo.value.name,
-        content: messageInput.value,
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-        avatar: useravatar.value
-      },
-    })
-    if (response.data.code === 0) {
-      chatHistory.value.push({
-        type: response.data.type,
-        sender: response.data.sender,
-        content: response.data.content,
-        time: response.data.time,
-        avatar: response.data.avatar
-      })
-      console.log('信息发送成功')
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('信息发送失败:', error)
-  }
-}
-
-// 发送消息
-const sendMessage = () => {
-  if (!messageInput.value.trim()) return
-  sendsendMessage()
-  chatHistory.value.push({
-    type: 'user',
-    sender: userInfo.value.name,
-    content: messageInput.value,
-    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-    avatar: useravatar.value
-  })
-  
-  messageInput.value = ''
-}
-
-async function updateAgentInfo() {
-  try {
-    const response = await axios({
-      method: 'post',
-      url: 'agent/updateAgentInfo',
-      params: {
-        ag_id: agentIdentifier,
-        name: agentInfo.value.name,
-        description: agentInfo.value.description,
-        system_prompt: agentInfo.value.system_prompt,
-        avatar: agentInfo.value.avatar,
-        selectedKbs: agentInfo.value.selectedKbs,
-        selectedPlugins: agentInfo.value.selectedPlugins,
-        selectedWorkflows: agentInfo.value.selectedWorkflows
-      },
-    })
-    if (response.data.code === 0) {
-      console.log('配置更新成功')
-      alert("配置已保存")
-      ElMessage.success('配置已保存')
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('配置更新失败:', error)
-  }
-}
-
-// 确认按钮处理函数
-const handleConfirm = () => {
-  updateAgentInfo()
-}
-</script>
 
 <style scoped>
 .agent-edit {

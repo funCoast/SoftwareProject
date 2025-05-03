@@ -67,7 +67,7 @@ function handleNavigation(path: string) {
 }
 
 function handleProfileNavigation() {
-  router.push('/profile')
+  router.push(`/profile/${sessionStorage.getItem('uid')}`)
 }
 function toMessage() {
   router.push('/message')
