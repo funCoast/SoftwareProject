@@ -186,7 +186,8 @@ class Agent(models.Model):
     likes_count = models.PositiveIntegerField(default=0)
     favorites_count = models.PositiveIntegerField(default=0)
     is_modifiable = models.BooleanField(default=True)  # 1-允许修改，0-不允许修改
-
+    icon_url = models.URLField(max_length=500, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agents')
     def __str__(self):
         return self.agent_name
 
