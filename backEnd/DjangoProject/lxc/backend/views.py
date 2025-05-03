@@ -1,6 +1,8 @@
 import uuid
 import random
 from openai import OpenAI
+import dashscope
+from http import HTTPStatus
 from smtplib import SMTPException
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
@@ -13,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord
 from django.db.models import Q
 import base64
 import json
@@ -736,7 +738,6 @@ def create_kb(request):
 
 ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
 
-
 @csrf_exempt
 def upload_kb_file(request):
     if request.method != 'POST':
@@ -771,22 +772,15 @@ def upload_kb_file(request):
         segment_mode=segment_mode
     )
 
+    kb.updated_at = timezone.now()
+    kb.save()
+
     try:
-        # 1. 分段
         segment_file_and_save_chunks(saved_file, segment_mode)
-
-        # 2. 查出分段并生成嵌入
-        chunks = KnowledgeChunk.objects.filter(file=saved_file)
-        for chunk in chunks:
-            embedding = get_tongyi_embedding(chunk.content)
-            if embedding:
-                chunk.embedding = json.dumps(embedding)  # 序列化存入 TextField
-                chunk.save()
-
     except Exception as e:
         return JsonResponse({
             "code": -1,
-            "message": f"上传成功但分段/嵌入失败: {str(e)}"
+            "message": f"上传成功但处理失败: {str(e)}"
         })
 
     return JsonResponse({
@@ -794,26 +788,29 @@ def upload_kb_file(request):
         "message": "上传成功"
     })
 
-
 def get_tongyi_embedding(text):
-    url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
-    headers = {
-        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "text-embedding-v1",
-        "input": [text]
-    }
+    # 从 settings 中获取 API KEY
+    dashscope.api_key = getattr(settings, "DASHSCOPE_API_KEY", None)
+
+    if not dashscope.api_key:
+        print("[通义嵌入失败] 未配置 DASHSCOPE_API_KEY")
+        return None
 
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=10)
-        data = response.json()
-        return data["output"]["embeddings"][0]  # 向量列表
+        resp = dashscope.TextEmbedding.call(
+            model=dashscope.TextEmbedding.Models.text_embedding_v3,
+            input=text,
+            dimension=1024,
+            output_type="dense&sparse"
+        )
+        if resp.status_code == HTTPStatus.OK:
+            return resp.output["embeddings"][0]["embedding"]  # 取出嵌入向量
+        else:
+            print(f"[通义嵌入异常返回] {resp}")
+            return None
     except Exception as e:
         print(f"[通义嵌入失败] {str(e)}")
         return None
-
 
 @csrf_exempt
 def get_kb_files(request):
@@ -845,7 +842,6 @@ def get_kb_files(request):
         "texts": file_list
     })
 
-
 def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
     text = extract_text_from_file(file_obj.file.path)
     kb = file_obj.kb
@@ -855,7 +851,14 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
     if segment_mode == 'auto':
         paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
         for i, para in enumerate(paragraphs):
-            KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=para, order=i)
+            embedding = get_tongyi_embedding(para)
+            KnowledgeChunk.objects.create(
+                kb=kb,
+                file=file_obj,
+                content=para,
+                embedding=json.dumps(embedding) if embedding else None,
+                order=i
+            )
 
     elif segment_mode == 'custom':
         words = text.split()
@@ -863,7 +866,14 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
         order = 0
         while i < len(words):
             chunk_text = ' '.join(words[i:i + max_length])
-            KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=chunk_text, order=order)
+            embedding = get_tongyi_embedding(chunk_text)
+            KnowledgeChunk.objects.create(
+                kb=kb,
+                file=file_obj,
+                content=chunk_text,
+                embedding=json.dumps(embedding) if embedding else None,
+                order=order
+            )
             i += max_length
             order += 1
 
@@ -873,14 +883,27 @@ def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
         order = 0
         for line in lines:
             if line.startswith("#"):
-                current_parent = KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order)
+                embedding = get_tongyi_embedding(line.strip())
+                current_parent = KnowledgeChunk.objects.create(
+                    kb=kb,
+                    file=file_obj,
+                    content=line.strip(),
+                    embedding=json.dumps(embedding) if embedding else None,
+                    order=order
+                )
             elif line.strip():
-                KnowledgeChunk.objects.create(kb=kb, file=file_obj, content=line.strip(), order=order,
-                                              parent=current_parent)
+                embedding = get_tongyi_embedding(line.strip())
+                KnowledgeChunk.objects.create(
+                    kb=kb,
+                    file=file_obj,
+                    content=line.strip(),
+                    embedding=json.dumps(embedding) if embedding else None,
+                    order=order,
+                    parent=current_parent
+                )
             order += 1
     else:
         raise ValueError("不支持的分段方式")
-
 
 @csrf_exempt
 def get_text_content(request):
@@ -958,7 +981,8 @@ def get_knowledge_bases(request):
             "name": kb.kb_name,
             "description": kb.kb_description or "",
             "icon": kb.icon or "",  # 从数据库读取 icon 路径
-            "updateTime": kb.updated_at.strftime("%Y-%m-%d %H:%M:%S")
+            "updateTime": kb.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "createTime": kb.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         })
 
     return JsonResponse({
@@ -1019,6 +1043,9 @@ def upload_picture_kb_file(request):
         embedding="[]",
         order=0
     )
+
+    kb.updated_at = timezone.now()
+    kb.save()
 
     return JsonResponse({
         "code": 0,
@@ -1166,41 +1193,74 @@ def upload_table_kb_file(request):
 
     try:
         user = User.objects.get(user_id=uid)
-    except User.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "用户不存在"})
-
-    try:
         kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
-    except KnowledgeBase.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
 
-    # 保存表格文件
-    saved_file = KnowledgeFile.objects.create(
-        kb=kb,
-        file=file,
-        name=file.name,
-        segment_mode='auto'  # 表格默认标记为auto
-    )
+    kb.updated_at = timezone.now()
+    kb.save()
+
+    # 获取当前表格文件
+    table_files = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx'))
 
     try:
-        # 读取表格内容并生成嵌入
-        table_text = extract_table_text(saved_file.file.path)
-        table_text = preprocess_text(table_text)
-        embedding = get_tongyi_embedding(table_text)
+        new_df = pd.read_csv(file) if ext == '.csv' else pd.read_excel(file)
 
-        if embedding:
-            KnowledgeChunk.objects.create(
-                kb=kb,
-                file=saved_file,
-                content=table_text,
-                embedding=json.dumps(embedding),
-                order=0
-            )
+        if table_files.exists():
+            # 有已有表格，取第一个（按你的要求只允许一个表格）
+            existing_file = table_files.first()
+            existing_path = existing_file.file.path
+            existing_ext = os.path.splitext(existing_path)[-1].lower()
+            existing_df = pd.read_csv(existing_path) if existing_ext == '.csv' else pd.read_excel(existing_path)
+
+            # 确保表头一致
+            if list(existing_df.columns) != list(new_df.columns):
+                return JsonResponse({"code": -1, "message": "表头不一致"})
+
+            # 拼接表格
+            combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+
+            # 覆盖保存文件
+            save_path = existing_file.file.path
+            if existing_ext == '.csv':
+                combined_df.to_csv(save_path, index=False)
+            else:
+                combined_df.to_excel(save_path, index=False)
+
+            # 只增加新增部分的 chunks
+            start_order = existing_df.shape[0]
+            for i, row in new_df.iterrows():
+                row_text = ', '.join([f"{col}: {row[col]}" for col in new_df.columns])
+                embedding = get_tongyi_embedding(row_text)
+                if embedding:
+                    KnowledgeChunk.objects.create(
+                        kb=kb,
+                        file=existing_file,
+                        content=row_text,
+                        embedding=json.dumps(embedding),
+                        order=start_order + i
+                    )
+
         else:
-            return JsonResponse({
-                "code": -1,
-                "message": "表格嵌入生成失败"
-            })
+            # 没有表格文件，新建
+            saved_file = KnowledgeFile.objects.create(
+                kb=kb,
+                file=file,
+                name=file.name,
+                segment_mode='auto'
+            )
+
+            for i, row in new_df.iterrows():
+                row_text = ', '.join([f"{col}: {row[col]}" for col in new_df.columns])
+                embedding = get_tongyi_embedding(row_text)
+                if embedding:
+                    KnowledgeChunk.objects.create(
+                        kb=kb,
+                        file=saved_file,
+                        content=row_text,
+                        embedding=json.dumps(embedding),
+                        order=i
+                    )
 
     except Exception as e:
         return JsonResponse({
@@ -1212,29 +1272,6 @@ def upload_table_kb_file(request):
         "code": 0,
         "message": "上传成功"
     })
-
-
-def extract_table_text(file_path):
-    ext = os.path.splitext(file_path)[-1].lower()
-    try:
-        if ext == '.csv':
-            df = pd.read_csv(file_path)
-        elif ext == '.xlsx':
-            df = pd.read_excel(file_path)
-        else:
-            raise ValueError("不支持的表格文件格式")
-
-        # 把表格每行变成自然语言文本
-        rows = []
-        for idx, row in df.iterrows():
-            line = ', '.join([f"{col}: {row[col]}" for col in df.columns])
-            rows.append(line)
-
-        return '\n'.join(rows)
-
-    except Exception as e:
-        print(f"[表格解析失败] {str(e)}")
-        return ""
 
 @csrf_exempt
 def get_table_data(request):
@@ -1249,53 +1286,102 @@ def get_table_data(request):
 
     try:
         user = User.objects.get(user_id=uid)
-    except User.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "用户不存在"})
-
-    try:
         kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
-    except KnowledgeBase.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
 
-    # 找到所有表格文件
-    table_files = kb.files.filter(name__iendswith=('.csv', '.xlsx'))
-
-    if not table_files.exists():
+    table_file = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx')).first()
+    if not table_file:
         return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
 
-    all_tables = []
-
-    for table_file in table_files:
+    try:
         file_path = table_file.file.path
         ext = os.path.splitext(file_path)[-1].lower()
+        df = pd.read_csv(file_path) if ext == '.csv' else pd.read_excel(file_path)
 
-        try:
-            if ext == '.csv':
-                df = pd.read_csv(file_path)
-            elif ext == '.xlsx':
-                df = pd.read_excel(file_path)
-            else:
-                continue  # 不支持的格式，跳过
+        columns = list(df.columns)
+        data = df.fillna("").to_dict(orient='records')
 
-            columns = list(df.columns)
-            data = df.fillna("").to_dict(orient='records')
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "columns": columns,
+            "data": data
+        })
 
-            all_tables.append({
-                "file_id": table_file.id,
-                "file_name": table_file.name,
-                "columns": columns,
-                "data": data
-            })
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": f"读取表格失败: {str(e)}"
+        })
 
-        except Exception as e:
-            print(f"[解析表格文件失败: {table_file.name}] {str(e)}")
-            continue  # 如果某个表格解析失败，跳过，继续处理其他表格
+@csrf_exempt
+def update_table(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-    return JsonResponse({
-        "code": 0,
-        "message": "获取成功",
-        "tables": all_tables
-    })
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        uid = body.get('uid')
+        kb_id = body.get('kb_id')
+        row_index = body.get('rowIndex')
+        prop = body.get('prop')
+        value = body.get('value')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+
+    if not uid or not kb_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    table_file = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx')).first()
+    if not table_file:
+        return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
+
+    try:
+        file_path = table_file.file.path
+        ext = os.path.splitext(file_path)[-1].lower()
+        df = pd.read_csv(file_path) if ext == '.csv' else pd.read_excel(file_path)
+
+        # 更新指定行列
+        if int(row_index) >= len(df):
+            return JsonResponse({"code": -1, "message": "行索引超出范围"})
+        if prop not in df.columns:
+            return JsonResponse({"code": -1, "message": "字段不存在"})
+
+        df.at[int(row_index), prop] = value
+
+        # 保存回文件
+        if ext == '.csv':
+            df.to_csv(file_path, index=False)
+        else:
+            df.to_excel(file_path, index=False)
+
+        # 更新 KnowledgeChunk
+        row_text = ', '.join([f"{col}: {df.at[int(row_index), col]}" for col in df.columns])
+        embedding = get_tongyi_embedding(row_text)
+        if embedding:
+            # 找到对应 chunk 并更新
+            chunk = KnowledgeChunk.objects.filter(
+                kb=kb, file=table_file, order=int(row_index)
+            ).first()
+            if chunk:
+                chunk.content = row_text
+                chunk.embedding = json.dumps(embedding)
+                chunk.save()
+
+        kb.updated_at = timezone.now()
+        kb.save()
+
+        return JsonResponse({"code": 0, "message": "更新成功"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"更新失败: {str(e)}"})
 
 @csrf_exempt
 def delete_resource(request):
@@ -1392,6 +1478,9 @@ def delete_picture(request):
     # 删除文件记录
     file.delete()
 
+    kb.updated_at = timezone.now()
+    kb.save()
+
     return JsonResponse({
         "code": 0,
         "message": "删除成功"
@@ -1424,6 +1513,9 @@ def update_picture(request):
         file = KnowledgeFile.objects.get(id=picture_id, kb=kb)
     except KnowledgeFile.DoesNotExist:
         return JsonResponse({"code": -1, "message": "图片文件不存在"})
+
+    kb.updated_at = timezone.now()
+    kb.save()
 
     # 更新chunk里的content
     chunk = KnowledgeChunk.objects.filter(file=file).first()
@@ -1476,6 +1568,9 @@ def delete_text(request):
 
     # 删除文件记录
     file.delete()
+
+    kb.updated_at = timezone.now()
+    kb.save()
 
     return JsonResponse({
         "code": 0,
@@ -1679,6 +1774,97 @@ def workflow_delete(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
+
+@csrf_exempt
+def check_sensitive_words(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "仅支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        text = data.get('text', '')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    sensitive_words = SensitiveWord.objects.all()
+    detected = [word.word_content for word in sensitive_words if word.word_content in text]
+
+    if detected:
+        return JsonResponse({
+            "code": 1,
+            "message": f"内容包含敏感词：{', '.join(detected)}",
+            "detected_words": detected
+        })
+    else:
+        return JsonResponse({
+            "code": 0,
+            "message": "未检测到敏感词"
+        })
+
+@csrf_exempt
+def add_sensitive_word(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "仅支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        word_content = data.get('word')
+        replacement = data.get('replacement', '')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not word_content:
+        return JsonResponse({"code": -1, "message": "缺少 word 参数"})
+
+    if SensitiveWord.objects.filter(word_content=word_content).exists():
+        return JsonResponse({"code": -1, "message": "敏感词已存在"})
+
+    SensitiveWord.objects.create(word_content=word_content, replacement=replacement)
+    return JsonResponse({"code": 0, "message": "敏感词添加成功"})
+
+@csrf_exempt
+def delete_sensitive_word(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "仅支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body)
+        word_id = data.get('id')
+        word_content = data.get('word')
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if word_id:
+        try:
+            word = SensitiveWord.objects.get(word_id=word_id)
+            word.delete()
+            return JsonResponse({"code": 0, "message": "敏感词删除成功（通过ID）"})
+        except SensitiveWord.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "敏感词ID不存在"})
+    elif word_content:
+        try:
+            word = SensitiveWord.objects.get(word_content=word_content)
+            word.delete()
+            return JsonResponse({"code": 0, "message": "敏感词删除成功（通过word）"})
+        except SensitiveWord.DoesNotExist:
+            return JsonResponse({"code": -1, "message": "敏感词不存在"})
+    else:
+        return JsonResponse({"code": -1, "message": "缺少 id 或 word 参数"})
+
+@csrf_exempt
+def list_sensitive_words(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "仅支持 GET 请求"})
+
+    words = SensitiveWord.objects.all().values('word_id', 'word_content', 'replacement')
+    word_list = list(words)
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "sensitive_words": word_list
+    })
+
 
 def agent_fetch_all(request):
     uid = request.GET.get('uid')

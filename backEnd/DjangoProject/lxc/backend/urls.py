@@ -38,6 +38,7 @@ urlpatterns = [
     path('kb/deletePicture', views.delete_picture, name='delete_picture'),
     path('kb/updatePicture', views.update_picture, name='update_picture'),
     path('kb/deleteText', views.delete_text, name='delete_text'),
+    path('kb/updateTable', views.update_table, name='update_table'),
 
     # 工作流
     path('workflow/run',views.workflow_run, name='workflow_run'),
@@ -45,6 +46,13 @@ urlpatterns = [
     path('workflow/fetch',views.workflow_fetch, name='workflow_fetch'),
     path('workflow/save',views.workflow_save, name='workflow_save'),
     path('workflow/fetchAll',views.workflow_fetchAll, name='workflow_fetchAll'),
+    path('workflow/delete',views.workflow_delete, name='workflow_delete'),
+
+    # 敏感词
+    path('sensitive/check', views.check_sensitive_words, name='check_sensitive_words'),
+    path('sensitive/add', views.add_sensitive_word, name='add_sensitive_word'),
+    path('sensitive/delete', views.delete_sensitive_word, name='delete_sensitive_word'),
+    path('sensitive/list', views.list_sensitive_words, name='list_sensitive_words'),
     path('workflow/delete',views.workflow_delete, name='workflow_delete'),
 
     #智能体

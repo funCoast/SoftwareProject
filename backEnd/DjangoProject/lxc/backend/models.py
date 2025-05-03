@@ -175,6 +175,12 @@ class AgentKnowledgeEntry(models.Model):
 
 # 12. 智能体表（Agent）
 class Agent(models.Model):
+    STATUS_CHOICES = [
+        ('private', '私有'),
+        ('check', '待审核'),
+        ('published', '已发布'),
+    ]
+
     agent_id = models.AutoField(primary_key=True)
     agent_name = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
@@ -188,6 +194,8 @@ class Agent(models.Model):
     is_modifiable = models.BooleanField(default=True)  # 1-允许修改，0-不允许修改
     icon_url = models.URLField(max_length=500, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agents')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='private')
+
     def __str__(self):
         return self.agent_name
 
