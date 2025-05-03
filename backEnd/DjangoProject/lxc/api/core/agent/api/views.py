@@ -213,53 +213,93 @@ class AgentUpdateView(View):
 class AgentCreateView(View):
     """
     POST /agent/create
-    接收 multipart/form-data:
-      - name: 智能体名称 (必填)
-      - description: 描述 (可选)
-      - icon: 图标文件 (可选)
+    接收 multipart/form-data 或 application/json:
+      - uid: 创建者用户 ID（required）
+      - name: 智能体名称（required）
+      - description: 描述（optional）
+      - icon: 图标文件（optional）
     返回 JSON:
       {
-        "code": 0 或 -1,
-        "message": "创建成功" 或 错误信息,
-        "agent_id": 新建智能体的 ID (创建成功时)
+        "code": 0/-1,
+        "message": "...",
+        "agent_id": <新建智能体ID>  # 仅成功时返回
       }
     """
     def post(self, request):
-        name = request.POST.get('name')
-        description = request.POST.get('description', '')
-        icon = request.FILES.get('icon')
+        # 1. 解析 body（支持 JSON 或 form-data）
+        if request.content_type.startswith("application/json"):
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse(
+                    {"code": -1, "message": "JSON 格式错误"},
+                    status=400, json_dumps_params={'ensure_ascii': False}
+                )
+            uid = data.get("uid")
+            name = data.get("name")
+            description = data.get("description", "")
+            icon = None
+        else:
+            uid = request.POST.get("uid")
+            name = request.POST.get("name")
+            description = request.POST.get("description", "")
+            icon = request.FILES.get("icon")
 
+        if not uid:
+            return JsonResponse(
+                {"code": -1, "message": "缺少 uid 参数"},
+                status=400, json_dumps_params={'ensure_ascii': False}
+            )
         if not name:
             return JsonResponse(
                 {"code": -1, "message": "缺少 name 参数"},
-                status=400,
-                json_dumps_params={'ensure_ascii': False}
+                status=400, json_dumps_params={'ensure_ascii': False}
             )
 
-        # 创建 Agent
-        agent = Agent.objects.create(
-            agent_name=name,
-            description=description,
-            opening_line='',
-            prompt='',
-            persona='',
-            category='',
-            status='private',
-            is_modifiable=True,
-        )
+        # 验证用户
+        try:
+            user = User.objects.get(pk=uid)
+        except User.DoesNotExist:
+            return JsonResponse(
+                {"code": -1, "message": "uid 对应的用户不存在"},
+                status=404, json_dumps_params={'ensure_ascii': False}
+            )
 
         # icon 上传
+        icon_url = None
         if icon:
             icon_dir = os.path.join(settings.MEDIA_ROOT, 'agent_icons')
             os.makedirs(icon_dir, exist_ok=True)
 
             _, ext = os.path.splitext(icon.name)
-            filename = f"{agent.agent_id}_{uuid.uuid4().hex}{ext}"
+            filename = f"{uuid.uuid4().hex}{ext}"
             filepath = os.path.join(icon_dir, filename)
 
             with open(filepath, 'wb+') as dst:
                 for chunk in icon.chunks():
                     dst.write(chunk)
+
+            icon_url = f"{settings.MEDIA_URL}agent_icons/{filename}"
+
+        # 创建 Agent 实例
+        try:
+            agent = Agent.objects.create(
+                agent_name=name,
+                description=description,
+                opening_line="",
+                prompt="",
+                persona="",
+                category="uncategorized",
+                icon_url=icon_url,
+                user=user,
+                status='private',
+                is_modifiable=True,
+            )
+        except Exception as e:
+            return JsonResponse(
+                {"code": -1, "message": f"创建失败：{str(e)}"},
+                status=500, json_dumps_params={'ensure_ascii': False}
+            )
 
         return JsonResponse(
             {"code": 0, "message": "创建成功", "agent_id": agent.agent_id},
