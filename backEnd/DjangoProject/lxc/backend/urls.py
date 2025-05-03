@@ -53,4 +53,22 @@ urlpatterns = [
     path('sensitive/add', views.add_sensitive_word, name='add_sensitive_word'),
     path('sensitive/delete', views.delete_sensitive_word, name='delete_sensitive_word'),
     path('sensitive/list', views.list_sensitive_words, name='list_sensitive_words'),
+    path('workflow/delete',views.workflow_delete, name='workflow_delete'),
+
+    #智能体
+    path('agent/fetchAll',views.agent_fetch_all,name='agent_fetch_all'),
+    path('agent/release',views.agent_release, name='agent_release'),
+    path('agent/remove',views.agent_remove, name='agent_remove'),
+    path('agent/delete',views.agent_delete, name='agent_delete'),
+
+    #社区
+    path('community/agentFetchBasicInfo',views.community_agent_fetch_basic_info, name='community_agent_fetch_basic_info'),
+    path('community/agentFetchUserActions',views.community_agent_fetch_user_actions, name='community_agent_fetch_user_actions'),
+    path('community/agentFetchComments',views.community_agent_fetch_comments, name='community_agent_fetch_comments'),
+    path('community/agentHandleLike',views.community_agent_handle_like, name='community_agent_handle_like'),
+    path('community/agentHandleFavorite',views.community_agent_handle_Favorite, name='community_agent_handle_Favorite'),
+    path('community/agentHandleFollow',views.community_agent_handle_Follow, name='community_agent_handle_Follow'),
+    path('community/agentHandleCopy',views.community_agent_handle_copy, name='community_agent_handle_copy'),
+    path('community/agentSendComment',views.community_agent_send_comment, name='community_agent_send_comment')
+
 ]

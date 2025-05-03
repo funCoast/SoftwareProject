@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow ,SensitiveWord
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord
 from django.db.models import Q
 import base64
 import json
@@ -1865,3 +1865,490 @@ def list_sensitive_words(request):
         "sensitive_words": word_list
     })
 
+
+def agent_fetch_all(request):
+    uid = request.GET.get('uid')
+
+    if not uid:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agents = Agent.objects.filter(user=user).order_by('-agent_id')
+
+        agent_list = []
+        for agent in agents:
+            # 将 is_published 映射为 status 数字：0=private，1=under review，2=public
+            if agent.is_published:
+                status = 2
+            else:
+                status = 0  # 默认私有，除非你后续定义审核状态字段
+
+            agent_list.append({
+                "id": agent.agent_id,
+                "icon": agent.icon_url,
+                "name": agent.agent_name,
+                "description": agent.description,
+                "status": status,
+                "publishedTime": agent.registered_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(agent, 'registered_at') and agent.registered_at else None
+            })
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "agents": agent_list
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from .models import User, Agent
+
+@require_POST
+def agent_release(request):
+    uid = request.POST.get('uid')
+    agent_id = request.POST.get('agent_id')
+
+    if not uid or not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 或 agent_id 参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agent = Agent.objects.get(agent_id=agent_id, user=user)
+
+        # 发布操作：将状态置为 1（审核中）
+        agent.is_published = True  # 可选保留为 False，如你有额外 status 字段请设置为 1
+        agent.save()
+
+        return JsonResponse({
+            "code": 0,
+            "message": "发布成功"
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "智能体不存在或不属于该用户"
+        })
+def agent_remove(request):
+    uid = request.POST.get('uid')
+    agent_id = request.POST.get('agent_id')
+
+    if not uid or not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 或 agent_id 参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agent = Agent.objects.get(agent_id=agent_id, user=user)
+
+        agent.is_published = False  # 可选同步标记为未发布
+        agent.save()
+
+        return JsonResponse({
+            "code": 0,
+            "message": "下架成功"
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "智能体不存在或不属于该用户"
+        })
+
+def agent_delete(request):
+    uid = request.POST.get('uid')
+    agent_id = request.POST.get('agent_id')
+
+    if not uid or not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 或 agent_id 参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agent = Agent.objects.get(agent_id=agent_id, user=user)
+
+        agent.delete()  # 彻底删除该智能体记录
+
+        return JsonResponse({
+            "code": 0,
+            "message": "删除成功"
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "智能体不存在或不属于该用户"
+        })
+
+
+
+def community_agent_fetch_basic_info(request):
+    agent_id = request.GET.get('agent_id')
+    if not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 agent_id 参数"
+        })
+
+    try:
+        agent = Agent.objects.select_related('user').get(agent_id=agent_id)
+        user = agent.user  # 外键字段
+        data = {
+            "code": 0,
+            "message": "获取成功",
+            "basicInfo": {
+                "id": agent.agent_id,
+                "name": agent.agent_name,
+                "description": agent.description,
+                "icon": agent.icon_url,
+                "author": {
+                    "id": user.user_id,
+                    "account": user.email,
+                    "name": user.username,  # 如果你有真实姓名字段可替换这里
+                    "avatar": user.avatar_url
+                },
+                "stats": {
+                    "usage": 0,  # 按你要求置为 0
+                    "likes": agent.likes_count,
+                    "favorites": agent.favorites_count
+                }
+            }
+        }
+        return JsonResponse(data)
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "Agent 不存在"
+        })
+
+def community_agent_fetch_user_actions(request):
+    uid = request.GET.get('uid')
+    agent_id = request.GET.get('agent_id')
+
+    if not uid or not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 或 agent_id 参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agent = Agent.objects.select_related('user').get(agent_id=agent_id)
+        author = agent.user  # 智能体作者
+
+        # 查询是否点赞或收藏
+        try:
+            interaction = UserInteraction.objects.get(user=user, agent=agent)
+            is_liked = interaction.is_liked
+            is_favorited = interaction.is_favorited
+        except UserInteraction.DoesNotExist:
+            is_liked = False
+            is_favorited = False
+
+        # 查询是否关注作者
+        is_followed = FollowRelationship.objects.filter(follower=user, followee=author).exists()
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "actions": {
+                "isLiked": is_liked,
+                "isFavorited": is_favorited,
+                "isFollowed": is_followed
+            }
+        })
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "智能体不存在"
+        })
+
+
+def community_agent_fetch_comments(request):
+    agent_id = request.GET.get('agent_id')
+
+    if not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 agent_id 参数"
+        })
+
+    try:
+        agent = Agent.objects.get(agent_id=agent_id)
+        comments = Comment.objects.select_related('user').filter(agent=agent).order_by('-comment_time')
+
+        comment_list = []
+        for comment in comments:
+            comment_list.append({
+                "id": comment.comment_id,
+                "name": comment.user.username,  # 如果有昵称字段可以换成昵称
+                "userId": comment.user.user_id,
+                "userAccount": comment.user.email,
+                "avatar": comment.user.avatar_url,
+                "content": comment.content,
+                "time": comment.comment_time.strftime('%Y-%m-%d %H:%M:%S'),
+            })
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "comments": comment_list
+        })
+
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "智能体不存在"
+        })
+
+def community_agent_handle_like(request):
+    uid = request.POST.get('uid')
+    agent_id = request.POST.get('agent_id')
+
+    if not uid or not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 或 agent_id 参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agent = Agent.objects.get(agent_id=agent_id)
+
+        interaction, created = UserInteraction.objects.get_or_create(user=user, agent=agent)
+
+        if interaction.is_liked:
+            # 取消点赞
+            interaction.is_liked = False
+            agent.likes_count = max(0, agent.likes_count - 1)
+            message = "取消点赞成功"
+        else:
+            # 点赞
+            interaction.is_liked = True
+            agent.likes_count += 1
+            message = "点赞成功"
+
+        interaction.save()
+        agent.save()
+
+        return JsonResponse({
+            "code": 0,
+            "message": message
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "智能体不存在"
+        })
+
+def community_agent_handle_Favorite(request):
+    uid = request.POST.get('uid')
+    agent_id = request.POST.get('agent_id')
+
+    if not uid or not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 或 agent_id 参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agent = Agent.objects.get(agent_id=agent_id)
+
+        interaction, created = UserInteraction.objects.get_or_create(user=user, agent=agent)
+
+        if interaction.is_favorited:
+            # 取消收藏
+            interaction.is_favorited = False
+            agent.favorites_count = max(0, agent.favorites_count - 1)
+            message = "取消收藏成功"
+        else:
+            # 收藏
+            interaction.is_favorited = True
+            agent.favorites_count += 1
+            message = "收藏成功"
+
+        interaction.save()
+        agent.save()
+
+        return JsonResponse({
+            "code": 0,
+            "message": message
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "智能体不存在"
+        })
+
+def community_agent_handle_Follow(request):
+    uid = request.POST.get('uid')
+    author_id = request.POST.get('author_id')
+
+    if not uid or not author_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 或 author_id 参数"
+        })
+
+    if uid == author_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "不能关注自己"
+        })
+
+    try:
+        follower = User.objects.get(user_id=uid)
+        followee = User.objects.get(user_id=author_id)
+
+        existing = FollowRelationship.objects.filter(follower=follower, followee=followee).first()
+
+        if existing:
+            # 取消关注
+            existing.delete()
+            message = "取消关注成功"
+        else:
+            # 添加关注
+            FollowRelationship.objects.create(follower=follower, followee=followee)
+            message = "关注成功"
+
+        return JsonResponse({
+            "code": 0,
+            "message": message
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+
+def community_agent_handle_copy(request):
+    uid = request.POST.get('uid')
+    agent_id = request.POST.get('agent_id')
+
+    if not uid or not agent_id:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少 uid 或 agent_id 参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        original_agent = Agent.objects.get(agent_id=agent_id)
+
+        copied_agent = Agent.objects.create(
+            agent_name=original_agent.agent_name + " - 副本",
+            description=original_agent.description,
+            opening_line=original_agent.opening_line,
+            prompt=original_agent.prompt,
+            persona=original_agent.persona,
+            category=original_agent.category,
+            icon_url=original_agent.icon_url,
+            user=user,
+            is_published=False,
+            is_modifiable=True,
+            likes_count=0,
+            favorites_count=0
+        )
+
+        return JsonResponse({
+            "code": 0,
+            "message": "复制成功"
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "原始智能体不存在"
+        })
+
+def community_agent_send_comment(request):
+    uid = request.POST.get('uid')
+    agent_id = request.POST.get('agent_id')
+    comment_content = request.POST.get('comment')
+
+    if not uid or not agent_id or not comment_content:
+        return JsonResponse({
+            "code": -1,
+            "message": "缺少必要参数"
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agent = Agent.objects.get(agent_id=agent_id)
+
+        Comment.objects.create(
+            user=user,
+            agent=agent,
+            content=comment_content
+        )
+
+        return JsonResponse({
+            "code": 0,
+            "message": "发布成功"
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "用户不存在"
+        })
+    except Agent.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "智能体不存在"
+        })
