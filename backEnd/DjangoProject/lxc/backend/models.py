@@ -175,10 +175,15 @@ class AgentKnowledgeEntry(models.Model):
 
 # 12. 智能体表（Agent）
 class Agent(models.Model):
+    STATUS_CHOICES = [
+        ('private', '私有'),
+        ('check', '待审核'),
+        ('published', '已发布'),
+    ]
+
     agent_id = models.AutoField(primary_key=True)
     agent_name = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
-    is_published = models.BooleanField(default=False)
     opening_line = models.CharField(max_length=255, null=True, blank=True)
     prompt = models.TextField(null=True, blank=True)
     persona = models.TextField(null=True, blank=True)
@@ -186,6 +191,7 @@ class Agent(models.Model):
     likes_count = models.PositiveIntegerField(default=0)
     favorites_count = models.PositiveIntegerField(default=0)
     is_modifiable = models.BooleanField(default=True)  # 1-允许修改，0-不允许修改
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='private')
 
     def __str__(self):
         return self.agent_name
