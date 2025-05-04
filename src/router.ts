@@ -32,92 +32,93 @@ const routes = [
         redirect: "/workspace/agentDevelopment",
         component: () => import("./components/workspace/Workspace.vue"),
         children: [
-            {
-                path: 'home',
-                name: 'Home',
-                component: () => import('./components/home/Home.vue'),
-            },
-            {
-                path: 'workspace',
-                name: 'Workspace',
-                redirect: '/workspace/agentDevelopment',
-                component: () => import('./components/workspace/Workspace.vue'),
-                children: [
-                    {
-                        path: 'agentDevelopment',
-                        name: 'AgentDevelopment',
-                        component: () => import('./components/workspace/AgentDevelopment.vue'),
-                    },
-                    {
-                        path: 'resourceLibrary',
-                        name: 'ResourceLibrary',
-                        component: () => import('./components/workspace/ResourceLibrary.vue'),
-                    },
-                    {
-                        path: 'pictureBase/:id',
-                        name: 'PictureBase',
-                        component: () => import('./components/knowledgeBase/PictureBase.vue'),
-                        meta: { authReq: authRequired },
-                    },
-                    {
-                        path: 'textBase/:id',
-                        name: 'TextBase',
-                        component: () => import('./components/knowledgeBase/TextBase.vue'),
-                        meta: { authReq: authRequired },
-                    },
-                    {
-                        path: 'tableBase/:id',
-                        name: 'TableBase',
-                        component: () => import('./components/knowledgeBase/TableBase.vue'),
-                        meta: { authReq: authRequired },
-                    },
-                    {
-                        path: 'pictureBase/:id/upload',
-                        name: 'UploadPicture',
-                        component: () => import('./components/knowledgeBase/UploadPicture.vue'),
-                        meta: { authReq: authRequired },
-                    },
-                    {
-                        path: 'textBase/:id/upload',
-                        name: 'UploadText',
-                        component: () => import('./components/knowledgeBase/UploadText.vue'),
-                        meta: { authReq: authRequired },
-                    },
-                    {
-                        path: 'tableBase/:id/upload',
-                        name: 'UploadTable',
-                        component: () => import('./components/knowledgeBase/UploadTable.vue'),
-                        meta: { authReq: authRequired },
-                    }
-                ],
-            },
-            {
-                path: 'community',
-                name: 'Community',
-                component: () => import('./components/community/Community.vue'),
-            },
-            {
-                path: 'agentDetail',
-                name: 'AgentDetail',
-                component: () => import('./components/agent/AgentDetail.vue'),
-            },
-            {
-                path: 'profile',
-                name: 'Profile',
-                component: () => import('./components/profile/Profile.vue'),
-            },
-            {
-                path: 'editProfile',
-                name: 'EditProfile',
-                component: () => import('./components/profile/EditProfile.vue'),
-            },
+          {
+            path: "agentDevelopment",
+            name: "AgentDevelopment",
+            component: () =>
+                import("./components/workspace/AgentDevelopment.vue"),
+          },
+          {
+            path: "resourceLibrary",
+            name: "ResourceLibrary",
+            component: () =>
+                import("./components/workspace/ResourceLibrary.vue"),
+          },
+          {
+            path: "pictureBase/:id",
+            name: "PictureBase",
+            component: () =>
+                import("./components/knowledgeBase/PictureBase.vue"),
+            meta: { authReq: authRequired },
+          },
+          {
+            path: "textBase/:id",
+            name: "TextBase",
+            component: () => import("./components/knowledgeBase/TextBase.vue"),
+            meta: { authReq: authRequired },
+          },
+          {
+            path: "tableBase/:id",
+            name: "TableBase",
+            component: () => import("./components/knowledgeBase/TableBase.vue"),
+            meta: { authReq: authRequired },
+          },
+          {
+            path: 'pictureBase/:id/upload',
+            name: 'UploadPicture',
+            component: () => import('./components/knowledgeBase/UploadPicture.vue'),
+            meta: { authReq: authRequired },
+          },
+          {
+            path: 'textBase/:id/upload',
+            name: 'UploadText',
+            component: () => import('./components/knowledgeBase/UploadText.vue'),
+            meta: { authReq: authRequired },
+          },
+          {
+            path: "workflow/:id",
+            name: "WorkflowCanvas",
+            component: () => import("./components/workflow/WorkflowCanvas.vue"),
+          },
         ],
-    },
-    {
-        path: '/workflow',
-        name: 'WorkflowCanvas',
-        component: () => import('./components/workflow/WorkflowCanvas.vue'),
-    },
+      },
+      {
+        path: "community",
+        name: "Community",
+        component: () => import("./components/community/Community.vue"),
+      },
+      {
+        path: "publish-anno",
+        name: "PublishAnno",
+        component: () => import("./components/admin/PublishAnno.vue")
+      },
+      {
+        path: "review-agent",
+        name: "ReviewAgent",
+        component: () => import("./components/admin/ReviewAgent.vue")
+      },
+      {
+        path: "agentDetail/:id",
+        name: "AgentDetail",
+        component: () => import("./components/agent/AgentDetail.vue"),
+      },
+      {
+        path: "profile/:id",
+        name: "Profile",
+        component: () => import("./components/profile/Profile.vue"),
+      },
+      {
+        path: "editProfile",
+        name: "EditProfile",
+        component: () => import("./components/profile/EditProfile.vue"),
+      },
+      {
+        path: "agentEdit/:id",
+        name: "AgentEdit",
+        component: () => import("./components/agent/AgentEdit.vue"),
+      },
+    ],
+  }
 ];
 
 const router = createRouter({
