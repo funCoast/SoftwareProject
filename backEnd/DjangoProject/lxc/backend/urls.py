@@ -39,6 +39,8 @@ urlpatterns = [
     path('kb/updatePicture', views.update_picture, name='update_picture'),
     path('kb/deleteText', views.delete_text, name='delete_text'),
     path('kb/updateTable', views.update_table, name='update_table'),
+    path('kb/addTableRow', views.add_table_row, name='add_table_row'),
+    path('kb/deleteTableRows', views.delete_table_rows, name='delete_table_rows'),
 
     # 工作流
     path('workflow/run',views.workflow_run, name='workflow_run'),
