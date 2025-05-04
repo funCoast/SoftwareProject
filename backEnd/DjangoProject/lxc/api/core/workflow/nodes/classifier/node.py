@@ -41,7 +41,7 @@ def classify_question(question, categories):
 
 @register_node("classifier")
 def run_classifier_node(node,inputs):
-    question = inputs[0]
+    question = inputs[0].get("value", "")
     # 获取分类列表
     classes = node["data"]["classes"]  # 每项包含 description 和 next_node
 

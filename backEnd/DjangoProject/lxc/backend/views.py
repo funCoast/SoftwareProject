@@ -2910,3 +2910,38 @@ class FetchFollowWorksView(View):
             {"code": 0, "message": "获取成功", "data": data},
             json_dumps_params={'ensure_ascii': False}
         )
+
+from api.core.workflow.registry import NODE_REGISTRY
+from api.core.workflow.nodes import loader
+def workflow_run_single(request):
+    try:
+        workflow_id = request.GET.get('workflow_id')
+        node_id = int(request.GET.get('node_id'))
+        raw_inputs = request.GET.get('inputs', '{}')  # JSON 字符串
+        inputs = json.loads(raw_inputs)
+
+        # 获取工作流
+        workflow = Workflow.objects.get(workflow_id=workflow_id)
+        nodes = json.loads(workflow.nodes)
+
+        # 查找对应的节点
+        node = next((n for n in nodes if n['id'] == node_id), None)
+        if not node:
+            return JsonResponse({"code": -1, "message": "节点未找到"})
+
+        node_type = node.get("type")
+        func = NODE_REGISTRY.get(node_type)
+        if not func:
+            return JsonResponse({"code": -2, "message": f"未注册的节点类型: {node_type}"})
+        result = func(node,inputs)
+        return JsonResponse({
+            "code": 1,
+            "message": "节点执行成功",
+            "output": result
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "code": 0,
+            "message": f"服务器错误: {str(e)}"
+        })
