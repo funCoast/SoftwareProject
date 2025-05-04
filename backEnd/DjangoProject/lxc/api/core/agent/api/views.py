@@ -63,7 +63,7 @@ def temp_send_message(request):
         return JsonResponse({
             "code": -1,
             "message": "发送失败",
-            "content": "",
+            "content": str(e),
             "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
         }, status=500)
 
