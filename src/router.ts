@@ -45,22 +45,22 @@ const routes = [
                 import("./components/workspace/ResourceLibrary.vue"),
           },
           {
-            path: "pictureBase/:id",
-            name: "PictureBase",
-            component: () =>
-                import("./components/knowledgeBase/PictureBase.vue"),
-            meta: { authReq: authRequired },
-          },
-          {
             path: "textBase/:id",
             name: "TextBase",
             component: () => import("./components/knowledgeBase/TextBase.vue"),
             meta: { authReq: authRequired },
           },
           {
-            path: "tableBase/:id",
-            name: "TableBase",
-            component: () => import("./components/knowledgeBase/TableBase.vue"),
+            path: 'textBase/:id/upload',
+            name: 'UploadText',
+            component: () => import('./components/knowledgeBase/UploadText.vue'),
+            meta: { authReq: authRequired },
+          },
+          {
+            path: "pictureBase/:id",
+            name: "PictureBase",
+            component: () =>
+                import("./components/knowledgeBase/PictureBase.vue"),
             meta: { authReq: authRequired },
           },
           {
@@ -70,9 +70,15 @@ const routes = [
             meta: { authReq: authRequired },
           },
           {
-            path: 'textBase/:id/upload',
-            name: 'UploadText',
-            component: () => import('./components/knowledgeBase/UploadText.vue'),
+            path: "tableBase/:id",
+            name: "TableBase",
+            component: () => import("./components/knowledgeBase/TableBase.vue"),
+            meta: { authReq: authRequired },
+          },
+          {
+            path: 'tableBase/:id/upload',
+            name: 'UploadTable',
+            component: () => import('./components/knowledgeBase/UploadTable.vue'),
             meta: { authReq: authRequired },
           },
           {
