@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import uuid
 from datetime import timezone
 
@@ -55,9 +56,19 @@ def temp_send_message(request):
         total_message = prompt + input_str + plugin_str + kb_str + workflow_str
         response = llm_client.generate_response(total_message)
 
-        return JsonResponse({"response": response})
+        return JsonResponse({
+            "code": 0,
+            "message": "发送成功",
+            "content": response,
+            "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+        })
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        return JsonResponse({
+            "code": -1,
+            "message": "发送失败",
+            "content": "",
+            "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+        }, status=500)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -105,7 +116,9 @@ def send_agent_message(request):
 
         return JsonResponse({"response": response})
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        return JsonResponse({
+            "status": "error", "message": str(e)
+        }, status=500)
 
 class AgentInfoView(View):
     """
@@ -302,7 +315,7 @@ class AgentCreateView(View):
                 user=user,
                 status='private',
                 is_modifiable=True,
-                publish_time=timezone.now(),
+                publish_time=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
             )
         except Exception as e:
             return JsonResponse(
