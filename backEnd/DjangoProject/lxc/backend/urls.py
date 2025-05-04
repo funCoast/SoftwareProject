@@ -1,6 +1,6 @@
 from django.urls import path
 from backend import views
-from backend.views import FetchWorksView, FetchLikesView
+from backend.views import FetchWorksView, FetchLikesView, FetchFavoritesView
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -23,6 +23,7 @@ urlpatterns = [
     path('anno/get', views.announcement_list, name='announcement_list'),
     path('user/fetchWorks', FetchWorksView.as_view(), name='user-fetch-works'),
     path('user/fetchLikes', FetchLikesView.as_view(), name='user-fetch-likes'),
+    path('user/fetchFavorites', FetchFavoritesView.as_view(), name='user-fetch-Favorites'),
 
     # 更新密码
     path('user/updatePassword', views.user_update_password, name='user_update_password'),
