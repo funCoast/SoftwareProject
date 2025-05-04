@@ -1321,7 +1321,10 @@ def update_table(request):
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
     try:
-        body = json.loads(request.body.decode('utf-8'))
+        if request.content_type == 'application/json':
+            body = json.loads(request.body.decode('utf-8'))
+        else:
+            body = request.POST
         uid = body.get('uid')
         kb_id = body.get('kb_id')
         row_index = body.get('rowIndex')
