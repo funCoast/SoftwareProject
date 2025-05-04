@@ -231,14 +231,12 @@ const startNode = computed(() => {
 
 onMounted(async () => {
   try {
-    const workflow_id = route.params.id;
-    const uid = sessionStorage.getItem('uid')
-    console.log("uid: ", uid)
-    console.log("workflow_id: ", workflow_id)
-    const response = await axios.get('/workflow/fetch', {
+    const response = await axios({
+      method: 'get',
+      url: '/workflow/fetch',
       params: {
-        uid,
-        workflow_id
+        uid: sessionStorage.getItem('uid'),
+        workflow_id: route.params.id
       }
     })
     if (response.data.code === 0) {
