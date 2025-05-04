@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import axios from "axios";
-import router from "../../router";
+import { computed, ref } from "vue"
+import axios from "axios"
+import router from "../../router"
 
 interface RowData {
-  [key: string]: any; // 动态字段
+  [key: string]: any // 动态字段
 }
 
-const tableData = ref<RowData[]>([]); // 表格数据
-const tableColumns = ref<string[]>([]); // 表格列配置，只包含列名称
-let originalValue = ""; // 用于存储单元格的原始值
-
+const tableData = ref<RowData[]>([]) // 表格数据
+const tableColumns = ref<string[]>([]) // 表格列配置，只包含列名称
+let originalValue = "" // 用于存储单元格的原始值
+const selectedRows = ref<number[]>([]) // 存储选中行的索引
+const haveSelected = computed(() => {
+  return (selectedRows.value.length > 0)
+}); // 判断是否有选中行
+const newRowIndexes = ref<number[]>([]); // 用于存储新增行的序号
 
 const getData = () => {
   axios({
@@ -22,40 +26,124 @@ const getData = () => {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      tableColumns.value = response.data.columns; // 设置表格列配置
-      tableData.value = response.data.data; // 设置表格数据
+      const table = response.data // 获取表格数据
+      tableColumns.value = table.columns // 设置表格列配置
+      tableData.value = table.data // 设置表格数据
     } else {
-      console.log(response.data.message);
+      console.log(response.data.message)
     }
-  });
-};
+  })
+}
 
 // 记录单元格的原始值
 const handleFocus = (value: string) => {
-  originalValue = value;
-};
+  originalValue = value
+}
 
 // 处理失去焦点事件
 const handleBlur = (row: RowData, prop: string, index: number) => {
-  const newValue = row[prop];
+  const newValue = row[prop]
   if (originalValue !== newValue) {
-    updateBackend(row, prop, index);
+    if (newRowIndexes.value.includes(index)) {
+      // 如果是新增行，调用新增接口
+      uploadNewRow(row, index);
+    } else {
+      // 如果是已有行，调用更新接口
+      updateTable(row, prop, index);
+    }
   }
 }
 
 function goToUploadPage() {
-  router.push(router.currentRoute.value.path + "/upload");
+  router.push(router.currentRoute.value.path + "/upload")
 }
 
-// 模拟更新到后端的方法
-const updateBackend = (row: RowData, prop: string, index: number) => {
-  console.log(`更新第 ${index + 1} 行，字段 ${prop} 的值为：${row[prop]}`);
-  // 在这里调用后端接口，例如：
-  // axios.post('/api/update', { rowIndex: index, id: row.id, field: prop, value: row[prop] });
+const updateTable = (row: RowData, prop: string, index: number) => {
+  axios({
+    method: 'post',
+    url: '/kb/updateTable',
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+      rowIndex: index,  // 更新的行索引
+      prop: prop,       // 更新的字段
+      value: row[prop], // 更新的值
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      alert("更新成功！")
+    } else {
+      alert("更新失败！" + response.data.message)
+    }
+  })
+  console.log(`更新第 ${index + 1} 行，字段 ${prop} 的值为：${row[prop]}`)
+}
+
+// 新增一行空白数据
+const addRow = () => {
+  const newRow: RowData = {}; // 创建一个空白行
+  tableColumns.value.forEach((column) => {
+    newRow[column] = ""; // 初始化每列为空字符串
+  });
+  tableData.value.push(newRow); // 将新行添加到表格数据中
+  newRowIndexes.value.push(tableData.value.length - 1); // 记录新增行的序号
+  console.log("新增行序号：", newRowIndexes.value);
 };
 
+const uploadNewRow = (row: RowData, index: number) => {
+  axios({
+    method: "post",
+    url: "/kb/addTableRow",
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+      rowData: row, // 新增行的数据
+    },
+  })
+    .then((response) => {
+      if (response.data.code === 0) {
+        alert("新增行已上传！");
+        newRowIndexes.value = newRowIndexes.value.filter((i) => i !== index); // 移除已上传的行序号
+      } else {
+        alert("新增行上传失败！" + response.data.message);
+      }
+    })
+    .catch((error) => {
+      console.error("新增行上传失败：", error);
+    });
+};
+
+const deleteSelectedRows = () => {
+  if (selectedRows.value.length === 0) {
+    alert("请先选择要删除的行！")
+    return
+  }
+  axios({
+    method: "post",
+    url: "/kb/deleteTableRows",
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+      rows: selectedRows.value, // 选中行的索引
+    },
+  }).then((response) => {
+    if (response.data.code === 0) {
+      alert("删除成功！")
+      selectedRows.value = []
+      getData()
+    } else {
+      alert("删除失败！" + response.data.message)
+    }
+  })
+}
+
+// 更新选中行的索引
+const handleSelectionChange = (selectedRowsData: RowData[]) => {
+  selectedRows.value = selectedRowsData.map((row) => tableData.value.indexOf(row))
+}
+
 // 初始化数据
-getData();
+getData()
 </script>
 
 <template>
@@ -71,7 +159,15 @@ getData();
     </div>
 
     <!-- 表格展示区域 -->
-    <el-table :data="tableData" stripe class="data-table">
+    <el-table
+      :data="tableData"
+      stripe
+      class="data-table"
+      @selection-change="handleSelectionChange"
+    >
+      <!-- 勾选框列 -->
+      <el-table-column type="selection" width="55" />
+
       <!-- 动态生成表格列 -->
       <el-table-column
         v-for="column in tableColumns"
@@ -92,6 +188,12 @@ getData();
         </template>
       </el-table-column>
     </el-table>
+
+    <!-- 新增一行按钮 -->
+    <div class="add-row-container">
+      <el-button type="success" @click="addRow">新增一行</el-button>
+      <el-button type="danger" @click="deleteSelectedRows" :disabled="!haveSelected">删除选中行</el-button>
+    </div>
   </div>
 </template>
 
@@ -164,5 +266,41 @@ getData();
   white-space: nowrap; /* 防止单元格内容换行 */
   text-overflow: ellipsis; /* 超出部分显示省略号 */
   overflow: hidden;
+}
+
+.add-row-container {
+  display: flex;
+  margin-top: 20px;
+}
+
+.add-row-btn {
+  height: 40px;
+  padding: 8px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-row-btn:hover {
+  background: #45a049;
+}
+
+.delete-row-btn {
+  height: 40px;
+  padding: 8px 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.delete-row-btn:hover {
+  background: #e53935;
 }
 </style>

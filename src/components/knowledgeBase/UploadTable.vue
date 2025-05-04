@@ -27,7 +27,7 @@ function openDialog() {
   dialogVisible.value = true
 }
 
-function uploadPicture(options: UploadRequestOptions) {
+function uploadTable(options: UploadRequestOptions) {
   const formData = new FormData()
   formData.append("file", options.file)
   formData.append("uid", sessionStorage.getItem("uid") as string)
@@ -43,7 +43,7 @@ function uploadPicture(options: UploadRequestOptions) {
   }).then(function (response) {
     if (response.data.code === 0) {
       console.log(response.data.message)
-      router.push('/workspace/pictureBase/' + router.currentRoute.value.params.id)
+      router.push('/workspace/tableBase/' + router.currentRoute.value.params.id)
     } else {
       console.log(response.data.message)
     }
@@ -72,7 +72,7 @@ function clear() {
         class="upload-demo"
         action=""
         drag
-        :http-request="uploadPicture" 
+        :http-request="uploadTable" 
         accept=".xls, .xlsx, .csv"
         :auto-upload="false"
         :on-change="handleChange"

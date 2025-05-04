@@ -160,7 +160,7 @@ function handleDelete() {
 }
 
 const filterCriteria = ref({
-  sortBy: "name", // 排序方式
+  sortBy: "updateTime", // 排序方式
   type: "all", // 资源类型
   search: "", // 搜索关键字
 });
@@ -196,7 +196,7 @@ const filteredResources = computed(() => {
   if (filterCriteria.value.sortBy === "updateTime") {
     filtered.sort((a, b) => new Date(b.updateTime).getTime() - new Date(a.updateTime).getTime());
   } else if (filterCriteria.value.sortBy === "createTime") {
-    filtered.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+    filtered.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
   } else if (filterCriteria.value.sortBy === "name") {
     filtered.sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -276,7 +276,10 @@ const filteredResources = computed(() => {
           <h3>{{ resource.name }}</h3>
           <p>{{ resource.description }}</p>
           <div class="resource-meta">
-            <span class="update-time">最后更新：{{ resource.updateTime }}</span>
+            <span class="update-time">
+              {{ filterCriteria.sortBy === 'createTime' ? '创建时间：' : '编辑时间：' }}
+              {{ filterCriteria.sortBy === 'createTime' ? resource.createTime : resource.updateTime }}
+            </span>
           </div>
         </div>
         <!-- 删除图标 -->
