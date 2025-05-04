@@ -6,7 +6,7 @@ import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
-const agentId = route.params.id
+const agent_id = route.params.id
 const uid = Number(sessionStorage.getItem('uid'))
 const baseImageUrl = "http://122.9.33.84:8000"
 
@@ -72,21 +72,6 @@ interface Comment {
 const newComment = ref('')
 const comments = ref<Comment[]>([])
 
-const messages = ref([
-  {
-    id: 1,
-    sender: 'user',
-    content: '帮我写一篇关于人工智能对未来教育影响的文章，要求：1. 1500字左右 2. 包含具体案例 3. 重点讨论利弊',
-    time: '14:23'
-  },
-  {
-    id: 2,
-    sender: 'assistant',
-    content: '好的，我来帮你写一篇关于人工智能对未来教育影响的文章。以下是文章大纲：\n\n1. 引言：AI 教育变革的时代背景\n2. AI 在教育中的应用现状\n3. AI 教育的优势分析\n4. 潜在的挑战和风险\n5. 案例分析\n6. 未来展望和建议',
-    time: '14:24'
-  }
-])
-
 // 获取智能体基本信息
 async function fetchAgentInfo() {
   try {
@@ -94,7 +79,7 @@ async function fetchAgentInfo() {
       method: 'get',
       url: `community/agentFetchBasicInfo`,
       params: {
-        agent_id: agentId,
+        agent_id: agent_id,
       }
     })
     if (response.data.code === 0) {
@@ -109,6 +94,55 @@ async function fetchAgentInfo() {
   }
 }
 
+interface Message {
+  sender: 'user' | 'assistant'
+  content: string
+  time: string
+}
+
+// 聊天相关
+const messageInput = ref('')
+const chatHistory = ref<Message[]>([])
+
+// 发送消息
+const trySendMessage = () => {
+  if (!messageInput.value.trim()) return
+  sendMessage()
+  chatHistory.value.push({
+    sender: 'user',
+    content: messageInput.value,
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+  })
+
+  messageInput.value = ''
+}
+
+async function sendMessage() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/sendMessage',
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agent_id,
+        content: messageInput.value
+      },
+    })
+    if (response.data.code === 0) {
+      chatHistory.value.push({
+        sender: 'assistant',
+        content: response.data.content,
+        time: response.data.time,
+      })
+      console.log('信息发送成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('信息发送失败:', error)
+  }
+}
+
 // 获取用户操作状态
 async function fetchUserActions() {
   try {
@@ -116,7 +150,7 @@ async function fetchUserActions() {
       method: 'get',
       url: `community/agentFetchUserActions`,
       params: {
-        agent_id: agentId,
+        agent_id: agent_id,
         uid: sessionStorage.getItem('uid')
       }
     })
@@ -137,7 +171,7 @@ async function fetchComments() {
       method: 'get',
       url: `community/agentFetchComments`,
       params: {
-        agent_id: agentId
+        agent_id: agent_id
       }
     })
     if (response.data.code === 0) {
@@ -159,7 +193,7 @@ async function handleLike() {
       url: `community/agentHandleLike`,
       data: {
         uid: sessionStorage.getItem('uid'),
-        agent_id: agentId
+        agent_id: agent_id
       }
     })
     if (response.data.code === 0) {
@@ -183,7 +217,7 @@ async function handleFavorite() {
       url: `community/agentHandleFavorite`,
       data: {
         uid: sessionStorage.getItem('uid'),
-        agent_id: agentId
+        agent_id: agent_id
       }
     })
     if (response.data.code === 0) {
@@ -230,7 +264,7 @@ async function handleCopy() {
       url: `community/agentHandleCopy`,
       data: {
         uid: sessionStorage.getItem('uid'),
-        agent_id: agentId
+        agent_id: agent_id
       }
     })
     if (response.data.code === 0) {
@@ -252,7 +286,7 @@ async function handleReport() {
       url: `community/agentHandleReport`,
       data: {
         uid: sessionStorage.getItem('uid'),
-        agent_id: agentId
+        agent_id: agent_id
       }
     })
     if (response.data.code === 0) {
@@ -278,7 +312,7 @@ async function publishComment() {
       url: `community/agentSendComment`,
       data: {
         uid: sessionStorage.getItem('uid'),
-        agent_id: agentId,
+        agent_id: agent_id,
         comment: newComment.value
       }
     })
@@ -345,8 +379,7 @@ onMounted(() => {
 
           <!-- 遍历消息 -->
           <div
-            v-for="message in messages"
-            :key="message.id"
+            v-for="message in chatHistory"
             :class="['message', message.sender]"
           >
             <!-- 用户消息 -->
@@ -380,15 +413,16 @@ onMounted(() => {
         <div class="chat-input-area">
           <div class="input-container">
             <textarea
+                class="chat-input"
+                v-model="messageInput"
                 placeholder="输入消息..."
                 rows="1"
-                class="chat-input"
             ></textarea>
             <div class="input-actions">
               <button class="action-btn" title="上传文件">
                 <img src="https://api.iconify.design/material-symbols:attach-file.svg" alt="上传" class="action-icon">
               </button>
-              <button class="send-btn" title="发送">
+              <button class="send-btn" title="发送" @click="trySendMessage">
                 <img src="https://api.iconify.design/material-symbols:send.svg" alt="发送" class="action-icon">
               </button>
             </div>

@@ -360,7 +360,7 @@ async function sendsendMessage() {
     })
     if (response.data.code === 0) {
       chatHistory.value.push({
-        sender: response.data.sender,
+        sender: 'assistant',
         content: response.data.content,
         time: response.data.time,
       })
