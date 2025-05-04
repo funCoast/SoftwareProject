@@ -2423,3 +2423,34 @@ def review_agent(request):
         return JsonResponse({"code": 0, "message": "操作成功"})
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"操作失败: {str(e)}"})
+
+@csrf_exempt
+def fetch_all_published_agents(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    try:
+        published_agents = Agent.objects.filter(status='published')
+        agents_list = []
+        for agent in published_agents:
+            agents_list.append({
+                "id": agent.agent_id,
+                "name": agent.agent_name,
+                "category": agent.category,
+                "description": agent.description,
+                "image": agent.icon_url,
+                "likes": agent.likes_count,
+                "favorites": agent.favorites_count,
+                "author": {
+                    "id": agent.user.user_id,
+                    "name": agent.user.username,
+                    "avatar": agent.user.avatar_url
+                }
+            })
+        return JsonResponse({
+            "code": 0,
+            "message": "操作成功",
+            "agents": agents_list
+        })
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"获取失败: {str(e)}"})

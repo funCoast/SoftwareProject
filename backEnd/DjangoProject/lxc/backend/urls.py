@@ -71,6 +71,7 @@ urlpatterns = [
     path('community/agentHandleFavorite',views.community_agent_handle_Favorite, name='community_agent_handle_Favorite'),
     path('community/agentHandleFollow',views.community_agent_handle_Follow, name='community_agent_handle_Follow'),
     path('community/agentHandleCopy',views.community_agent_handle_copy, name='community_agent_handle_copy'),
-    path('community/agentSendComment',views.community_agent_send_comment, name='community_agent_send_comment')
+    path('community/agentSendComment',views.community_agent_send_comment, name='community_agent_send_comment'),
+    path('community/fetchAllAgents', views.fetch_all_published_agents, name='fetch_all_agents'),
 
 ]
