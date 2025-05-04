@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import router from '../../router'
 import axios from 'axios'
 
 interface resource {
   id: number
   type: string
+  type: string
   name: string
   description: string
   icon: string
+  createTime: string
   createTime: string
   updateTime: string
   hover?: boolean
@@ -84,6 +87,49 @@ function handleIconChange(event: Event) {
     baseInfo.value.icon = input.files[0] // 将文件存储到 baseInfo.icon
     reader.readAsDataURL(file) // 读取文件内容
   }
+function createKB() {
+  KBDialog.value = true
+}
+
+function getKnowledgeBases() {
+  axios({
+    method: 'get',
+    url: '/rl/getKnowledgeBases',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      resources.value = resources.value.concat(response.data.knowledgeBases)
+    } else {
+      console.log(response.data.message)
+    }
+  })
+}
+
+function triggerFileInput() {
+  iconUploader.value?.click()
+}
+
+// 处理图标上传
+function handleIconChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+
+    // 验证文件大小和类型
+    if (file.size > 5 * 1024 * 1024) {
+      alert("图片大小不能超过5MB")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      iconUpload.value = e.target?.result as string // 设置预览 URL
+    }
+    baseInfo.value.icon = input.files[0] // 将文件存储到 baseInfo.icon
+    reader.readAsDataURL(file) // 读取文件内容
+  }
 }
 
 // 提交表单
@@ -115,6 +161,11 @@ function submitKB() {
   KBDialog.value = false // 关闭弹窗
 }
 
+function goToResource(resource: resource) {
+  router.push(`/workspace/${resource.type}/${resource.id}`)
+}
+
+// 打开工作流弹窗
 function createWorkflow() {
   router.push('/workflow')
 }
@@ -297,10 +348,15 @@ const filteredResources = computed(() => {
 
     <!-- 知识库创建弹窗 -->
     <el-dialog v-model="KBDialog" title="创建知识库" width="500px" class="custom-dialog">
+    <el-dialog v-model="KBDialog" title="创建知识库" width="500px" class="custom-dialog">
       <div class="dialog-body">
         <!-- 类型 -->
         <div class="form-row">
           <label class="form-label">类型</label>
+          <el-select v-model="baseInfo.type" placeholder="请选择类型" class="form-input">
+            <el-option label="文本" value="text"></el-option>
+            <el-option label="表格" value="table"></el-option>
+            <el-option label="图像" value="picture"></el-option>
           <el-select v-model="baseInfo.type" placeholder="请选择类型" class="form-input">
             <el-option label="文本" value="text"></el-option>
             <el-option label="表格" value="table"></el-option>
@@ -311,6 +367,7 @@ const filteredResources = computed(() => {
         <!-- 名称 -->
         <div class="form-row">
           <label class="form-label">名称</label>
+          <el-input v-model="baseInfo.name" placeholder="请输入知识库名称" class="form-input" />
           <el-input v-model="baseInfo.name" placeholder="请输入知识库名称" class="form-input" />
         </div>
 
@@ -334,9 +391,20 @@ const filteredResources = computed(() => {
             <input type="file" ref="iconUploader" style="display: none" accept="image/*" @change="handleIconChange"/>
           </div>
         </div>
+
+        <!-- 上传图标 -->
+        <div class="form-row">
+          <label class="form-label">图标</label>
+          <div class="icon-upload">
+            <img :src="iconPreview" alt="图标预览" class="icon-preview" @click="triggerFileInput"/>
+            <input type="file" ref="iconUploader" style="display: none" accept="image/*" @change="handleIconChange"/>
+          </div>
+        </div>
       </div>
 
       <template #footer>
+        <el-button @click="KBDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitKB">创建</el-button>
         <el-button @click="KBDialog = false">取消</el-button>
         <el-button type="primary" @click="submitKB">创建</el-button>
       </template>
@@ -447,6 +515,8 @@ const filteredResources = computed(() => {
   gap: 16px;
   cursor: pointer;
   position: relative;
+  cursor: pointer;
+  position: relative;
 }
 
 .resource-card:hover {
@@ -530,6 +600,22 @@ const filteredResources = computed(() => {
   background: #f5f5f5;
 }
 
+.delete-icon {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: white;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.delete-icon:hover {
+  background: #f5f5f5;
+}
+
 /* 自定义弹窗样式 */
 .custom-dialog {
   border-radius: 12px;
@@ -565,6 +651,21 @@ const filteredResources = computed(() => {
 .form-input {
   width: 100%;
   border-radius: 6px;
+}
+
+.icon-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .icon-upload {

@@ -1,299 +1,510 @@
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-import { WorkflowNode } from '@/types/workflow'
-
-const props = defineProps<{
-  node: WorkflowNode
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: WorkflowNode): void
-}>()
-
-const nodeData = ref({
-  knowledgeBaseId: props.node.data?.knowledgeBaseId || '',
-  searchMethod: props.node.data?.searchMethod || 'semantic',
-  similarityThreshold: props.node.data?.similarityThreshold || 0.7,
-  maxResults: props.node.data?.maxResults || 5,
-  useCache: props.node.data?.useCache || true,
-  includeMetadata: props.node.data?.includeMetadata || false,
-  metadataFields: props.node.data?.metadataFields || [],
-  includeContext: props.node.data?.includeContext || false,
-  contextLength: props.node.data?.contextLength || 200
-})
-
-// 可用知识库列表（示例数据）
-const availableKnowledgeBases = ref([
-  { id: '1', name: '产品知识库' },
-  { id: '2', name: '技术文档库' },
-  { id: '3', name: '常见问题库' }
-])
-
-watch(nodeData, (newData) => {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...newData
-    }
-  }
-  emit('update:node', updatedNode)
-}, { deep: true })
-
-function updateNode() {
-  const updatedNode = {
-    ...props.node,
-    data: {
-      ...props.node.data,
-      ...nodeData.value
-    }
-  }
-  emit('update:node', updatedNode)
-}
-
-function addMetadataField() {
-  nodeData.value.metadataFields.push({ name: '' })
-  updateNode()
-}
-
-function removeMetadataField(index: number) {
-  nodeData.value.metadataFields.splice(index, 1)
-  updateNode()
-}
-</script>
-
 <template>
   <div class="knowledge-node-detail">
-    <div class="form-group">
-      <label>知识库选择</label>
-      <select v-model="nodeData.knowledgeBaseId" @change="updateNode">
-        <option value="">请选择知识库</option>
-        <option v-for="kb in availableKnowledgeBases" :key="kb.id" :value="kb.id">
-          {{ kb.name }}
-        </option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>检索方式</label>
-      <select v-model="nodeData.searchMethod" @change="updateNode">
-        <option value="semantic">语义检索</option>
-        <option value="keyword">关键词检索</option>
-        <option value="hybrid">混合检索</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>检索参数</label>
-      <div class="search-params">
-        <div class="param-item">
-          <label>相似度阈值</label>
-          <input
-            type="range"
-            v-model="nodeData.similarityThreshold"
-            @input="updateNode"
-            min="0"
-            max="1"
-            step="0.01"
-          >
-          <span class="threshold-value">{{ nodeData.similarityThreshold }}</span>
-        </div>
-        <div class="param-item">
-          <label>返回结果数</label>
-          <input
-            type="number"
-            v-model="nodeData.maxResults"
-            @input="updateNode"
-            min="1"
-            max="10"
-          >
-        </div>
+    <!-- 输入配置 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>输入变量</h4>
       </div>
-    </div>
+      
+      <div class="input-config">
+        <div class="form-group">
+          <label>选择上游输出</label>
+          <el-select
+            :model-value="generateSelectValue(input.value)"
+            placeholder="选择上游节点的输出变量"
+            size="small"
+            class="source-select"
+            @change="onSelectChange"
+          >
+            <template v-for="node in allUpstreamNodes" :key="node.id">
+              <el-option
+                v-for="(nodeOutput, idx) in node.outputs"
+                :key="`${node.id}-${idx}`"
+                :label="`${node.name}: ${nodeOutput.name}`"
+                :value="`${node.id}|${nodeOutput.id}`"
+              />
+            </template>
+          </el-select>
+        </div>
 
-    <div class="form-group">
-      <label>高级设置</label>
-      <div class="advanced-settings">
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            v-model="nodeData.useCache"
-            @change="updateNode"
-          />
-          使用缓存
-        </label>
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            v-model="nodeData.includeMetadata"
-            @change="updateNode"
-          />
-          包含元数据
-        </label>
-        <div v-if="nodeData.includeMetadata" class="metadata-settings">
-          <div class="setting-item">
-            <label>元数据字段</label>
-            <div class="metadata-fields">
-              <div v-for="(field, index) in nodeData.metadataFields" :key="index" class="field-item">
-                <input
-                  type="text"
-                  v-model="field.name"
-                  @input="updateNode"
-                  placeholder="字段名"
-                >
-                <button @click="removeMetadataField(index)" class="remove-field">×</button>
-              </div>
-              <button @click="addMetadataField" class="add-field">+ 添加字段</button>
-            </div>
+        <div v-if="input.value.nodeId !== -1" class="input-info">
+          <div class="info-item">
+            <label>变量名称:</label>
+            <span>{{ input.name }}</span>
+          </div>
+          <div class="info-item">
+            <label>变量类型:</label>
+            <span>{{ input.type }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="form-group">
-      <label>输出设置</label>
-      <div class="output-settings">
-        <label class="checkbox-label">
-          <input
-            type="checkbox"
-            v-model="nodeData.includeContext"
-            @change="updateNode"
+    <!-- 知识库配置 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>知识库配置</h4>
+      </div>
+      
+      <div class="form-group">
+        <label>选择知识库</label>
+        <el-select
+          v-model="selectedKbs"
+          multiple
+          placeholder="请选择知识库"
+          size="small"
+          class="kb-select"
+          @change="onKbsChange"
+        >
+          <el-option
+            v-for="kb in knowledgeBases"
+            :key="kb.id"
+            :label="kb.name"
+            :value="kb.id"
           />
-          包含上下文
-        </label>
-        <div v-if="nodeData.includeContext" class="setting-item">
-          <label>上下文长度</label>
-          <input
-            type="number"
-            v-model="nodeData.contextLength"
-            @input="updateNode"
-            min="1"
-            max="1000"
-          >
+        </el-select>
+      </div>
+    </div>
+
+    <!-- 输出信息 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>输出变量</h4>
+      </div>
+      
+      <div class="output-info">
+        <div class="info-item">
+          <label>变量名称:</label>
+          <span>content</span>
+        </div>
+        <div class="info-item">
+          <label>变量类型:</label>
+          <span>string</span>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- 运行面板 -->
+  <el-dialog
+    v-model="showRunPanel"
+    title="运行知识库查询"
+    width="500px"
+    :close-on-click-modal="false"
+  >
+    <div class="run-panel">
+      <div class="run-input">
+        <label>查询内容</label>
+        <el-input
+          v-model="runInput"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入查询内容"
+        />
+      </div>
+    </div>
+
+    <div v-if="runStatus" class="run-result-section">
+      <div class="run-result-header">
+        <h4>运行结果</h4>
+        <span :class="['status-badge', runStatus]">
+          {{ runStatus === 'running' ? '运行中' : 
+             runStatus === 'success' ? '成功' : '失败' }}
+        </span>
+      </div>
+      
+      <div v-if="runStatus === 'success' && runResult" 
+           class="result-content success">
+        <pre>{{ runResult }}</pre>
+      </div>
+      
+      <div v-if="runStatus === 'error' && runError" 
+           class="result-content error">
+        <pre>{{ runError }}</pre>
+      </div>
+      
+      <div v-if="runStatus === 'running'" class="result-content loading">
+        <div class="loading-spinner"></div>
+        <span>正在运行中...</span>
+      </div>
+    </div>
+
+    <template #footer>
+      <el-button @click="showRunPanel = false">取消</el-button>
+      <el-button
+        type="primary"
+        :loading="isRunning"
+        @click="run"
+      >
+        运行
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+import axios from 'axios'
+
+interface Input {
+  id: number
+  name: string
+  type: string
+  value: {
+    type: number // 1: 上游节点的输出
+    nodeId: number
+    outputId: number,
+    text: string
+  }
+}
+
+interface Output {
+  id: number
+  name: 'content'
+  type: 'string'
+}
+
+interface KnowledgeBase {
+  id: number
+  name: string
+}
+
+const props = defineProps<{
+  node: {
+    id: number
+    type: string
+    name: string
+    inputs: Input[]
+    outputs: Output[]
+    data: {
+      uid: number
+      kbs: Array<{
+        id: number
+      }>
+    }
+  }
+  allNodes: any[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: any): void
+}>()
+
+// 获取所有上游节点
+const allUpstreamNodes = computed(() => {
+  return getAllUpstreamNodes(props.node, props.allNodes)
+})
+
+// 初始化输入
+const input = ref<Input>(props.node.inputs?.[0] || {
+  id: 0,
+  name: '',
+  type: 'string',
+  value: {
+    type: 1,
+    nodeId: -1,
+    outputId: -1,
+    text: ''
+  }
+})
+
+// 知识库列表
+const knowledgeBases = ref<KnowledgeBase[]>([])
+const selectedKbs = ref<number[]>(props.node.data?.kbs?.map(kb => kb.id) || [])
+
+// 运行相关状态
+const showRunPanel = ref(false)
+const isRunning = ref(false)
+const runStatus = ref<'running' | 'success' | 'error' | null>(null)
+const runResult = ref<string | null>(null)
+const runError = ref<string | null>(null)
+const runInput = ref('')
+
+// 获取知识库列表
+async function getKnowledgeBases() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/rl/getKnowledgeBases',
+      params: {
+        uid: sessionStorage.getItem('uid')
+      },
+    })
+    
+    if (response.data.code === 0) {
+      knowledgeBases.value = response.data.knowledgeBases
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取知识库列表失败:', error)
+  }
+}
+
+// 生成选择器的值
+function generateSelectValue(val?: Input['value']): string {
+  if (!val?.type || val.type !== 1) return ''
+  return `${val.nodeId}|${val.outputId}`
+}
+
+// 处理选择变化
+function onSelectChange(val: string) {
+  if (!val) return
+  const [nodeId, outputId] = val.split('|').map(Number)
+  const node = allUpstreamNodes.value.find(n => n.id === nodeId)
+  const output = node?.outputs?.find(o => o.id === outputId)
+  
+  input.value = {
+    id: 0,
+    name: output?.name || '',
+    type: output?.type || 'string',
+    value: {
+      type: 1,
+      nodeId,
+      outputId,
+      text: ''
+    }
+  }
+  updateNode()
+}
+
+// 处理知识库选择变化
+function onKbsChange() {
+  updateNode()
+}
+
+// 更新节点
+function updateNode() {
+  emit('update:node', {
+    ...props.node,
+    inputs: [input.value],
+    outputs: [{
+      id: 0,
+      name: 'content',
+      type: 'string'
+    }],
+    data: {
+      uid: Number(sessionStorage.getItem('uid')),
+      kbs: selectedKbs.value.map(id => ({ id }))
+    }
+  })
+}
+
+// 运行模型
+async function run() {
+  // isRunning.value = true
+  // runStatus.value = 'running'
+  // runResult.value = null
+  // runError.value = null
+  //
+  // try {
+  //   const response = await axios({
+  //     method: 'post',
+  //     url: '/kb/query',
+  //     data: {
+  //       uid: sessionStorage.getItem('uid'),
+  //       kb_ids: selectedKbs.value,
+  //       query: runInput.value
+  //     }
+  //   })
+  //
+  //   if (response.data.code === 0) {
+  //     runResult.value = response.data.result
+  //     runStatus.value = 'success'
+  //   } else {
+  //     runStatus.value = 'error'
+  //     runError.value = response.data.message || '执行失败'
+  //   }
+  // } catch (e: any) {
+  //   runStatus.value = 'error'
+  //   runError.value = e.message || String(e)
+  // } finally {
+  //   isRunning.value = false
+  // }
+  isRunning.value = false
+  runStatus.value = 'success'
+  runResult.value = '晴天。温度范围：15℃～20℃。穿搭建议：长袖卫衣+牛仔裤，带一件薄外套'
+  runError.value = null
+}
+
+// 暴露方法给父组件
+defineExpose({
+  openRunPanel: () => {
+    runInput.value = input.value.value.text || ''
+    showRunPanel.value = true
+  }
+})
+
+// 组件挂载时获取知识库列表
+onMounted(() => {
+  getKnowledgeBases()
+})
+</script>
 
 <style scoped>
 .knowledge-node-detail {
+  padding: 16px;
+}
+
+.section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.section-header {
+  margin-bottom: 16px;
+}
+
+.section-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.source-select,
+.kb-select {
+  width: 100%;
+}
+
+.input-info,
+.output-info {
+  background: #f5f7fa;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.info-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-item label {
+  margin: 0;
+  color: #606266;
+}
+
+.info-item span {
+  color: #2c3e50;
+  font-family: monospace;
+}
+
+.run-panel {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.form-group {
+.run-input {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-label {
-  font-weight: 500;
-  color: #333;
+.run-result-section {
+  margin-top: 16px;
+  border-top: 1px solid #eee;
+  padding-top: 16px;
 }
 
-select, input[type="text"], input[type="number"], input[type="range"] {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.search-params {
+.run-result-header {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
-.param-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.threshold-value {
-  text-align: right;
-  color: #666;
+.run-result-header h4 {
+  margin: 0;
+  color: #2c3e50;
   font-size: 14px;
 }
 
-.advanced-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.running {
+  background: #e3f2fd;
+  color: #2196f3;
+}
+
+.status-badge.success {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.status-badge.error {
+  background: #ffebee;
+  color: #f44336;
+}
+
+.result-content {
   background: #f8f9fa;
   border-radius: 4px;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.metadata-settings {
+  padding: 12px;
   margin-top: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
-.metadata-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.result-content.error {
+  background: #ffebee;
+  color: #d32f2f;
 }
 
-.field-item {
-  display: flex;
-  gap: 8px;
+.result-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
-.field-item input {
-  flex: 1;
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e3e3e3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: spin 1s linear infinite;
 }
 
-.remove-field {
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: #ff6b6b;
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.result-content.loading {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.add-field {
-  padding: 8px;
-  border: 1px dashed #ddd;
-  border-radius: 4px;
-  background: none;
-  cursor: pointer;
   color: #666;
-}
-
-.add-field:hover {
-  border-color: #4a90e2;
-  color: #4a90e2;
-}
-
-.output-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 4px;
-}
-
-.setting-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
 }
 </style> 

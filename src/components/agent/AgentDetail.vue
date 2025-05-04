@@ -1,137 +1,299 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
+const route = useRoute()
+const router = useRouter()
+const agentId = route.params.id
+const uid = Number(sessionStorage.getItem('uid'))
+const baseImageUrl = "http://122.9.33.84:8000"
+
+// 智能体基本信息
+const agentInfo = ref({
+  id: 0,
+  name: '',
+  description: '',
+  icon: '',
+  author: {
+    id: '',
+    account: '',
+    name: '',
+    avatar: ''
+  },
+  stats: {
+    usage: 0,
+    likes: 0,
+    favorites: 0
+  }
+})
+
+// 用户操作状态
+const userActions = ref({
+  isLiked: false,
+  isFavorited: false,
+  isFollowed: false
+})
+
+// 评论相关
 const newComment = ref('')
-interface commnet {
+const comments = ref<Comment[]>([])
+
+interface Comment {
   id: number
   name: string
   userId: string
+  userAccount: string
   avatar: string
   content: string
   time: string
 }
-const comments = ref<commnet[]> ([
-  {
-    id: 1,
-    name: '创意达人',
-    userId: '@creative_master',
-    avatar: 'https://picsum.photos/40/40?random=4',
-    content: '这个写作助手真的很棒！帮我完成了很多高质量的文章，特别是在优化文章结构方面非常专业。',
-    time: '2024-03-15 14:30'
-  },
-  {
-    id: 2,
-    name: '科技探索者',
-    userId: '@tech_explorer',
-    avatar: 'https://picsum.photos/40/40?random=5',
-    content: '使用了一周，文章质量明显提升，特别是在专业术语的使用上很准确。',
-    time: '2024-03-15 13:25'
-  },
-  {
-    id: 3,
-    name: '内容创作者',
-    userId: '@content_creator',
-    avatar: 'https://picsum.photos/40/40?random=6',
-    content: '界面简洁，操作方便，生成的内容很有创意，推荐给需要写作帮助的朋友们！',
-    time: '2024-03-15 12:18'
-  },
-  {
-    id: 4,
-    name: '数据分析师',
-    userId: '@data_analyst',
-    avatar: 'https://picsum.photos/40/40?random=7',
-    content: '作为一个经常需要写报告的人，这个助手帮我节省了很多时间，而且质量很好。',
-    time: '2024-03-15 11:45'
-  },
-  {
-    id: 5,
-    name: '营销专家',
-    userId: '@marketing_pro',
-    avatar: 'https://picsum.photos/40/40?random=8',
-    content: '文案创作必备工具，特别适合需要大量内容创作的营销人员。',
-    time: '2024-03-15 10:30'
-  },
-  {
-    id: 6,
-    name: '学术研究者',
-    userId: '@researcher',
-    avatar: 'https://picsum.photos/40/40?random=9',
-    content: '学术写作方面表现出色，参考文献的引用格式也很规范。',
-    time: '2024-03-15 09:20'
-  },
-  {
-    id: 7,
-    name: '自媒体人',
-    userId: '@media_creator',
-    avatar: 'https://picsum.photos/40/40?random=10',
-    content: '日常创作的得力助手，文章的逻辑性和可读性都很好。',
-    time: '2024-03-14 23:15'
-  },
-  {
-    id: 8,
-    name: '编辑总监',
-    userId: '@editor_chief',
-    avatar: 'https://picsum.photos/40/40?random=11',
-    content: '作为专业编辑，我认为这个AI助手的输出质量很高，需要的修改很少。',
-    time: '2024-03-14 22:40'
-  },
-  {
-    id: 9,
-    name: '写作爱好者',
-    userId: '@writing_lover',
-    avatar: 'https://picsum.photos/40/40?random=12',
-    content: '对新手很友好，会给出很多有建设性的修改建议。',
-    time: '2024-03-14 21:55'
-  },
-  {
-    id: 10,
-    name: '产品经理',
-    userId: '@product_manager',
-    avatar: 'https://picsum.photos/40/40?random=13',
-    content: '产品文档写作的好帮手，专业术语运用准确，逻辑清晰。',
-    time: '2024-03-14 20:30'
-  },
-  {
-    id: 11,
-    name: '技术博主',
-    userId: '@tech_blogger',
-    avatar: 'https://picsum.photos/40/40?random=14',
-    content: '技术文章写作效果很好，能够准确理解和表达技术概念。',
-    time: '2024-03-14 19:15'
-  },
-  {
-    id: 12,
-    name: '教育工作者',
-    userId: '@educator',
-    avatar: 'https://picsum.photos/40/40?random=15',
-    content: '很适合用来辅助教案编写，生成的内容通俗易懂。',
-    time: '2024-03-14 18:40'
-  },
-  {
-    id: 13,
-    name: '新闻记者',
-    userId: '@journalist',
-    avatar: 'https://picsum.photos/40/40?random=16',
-    content: '新闻写作的好助手，能快速整理要点，生成初稿。',
-    time: '2024-03-14 17:25'
-  },
-  {
-    id: 14,
-    name: '小说作家',
-    userId: '@novelist',
-    avatar: 'https://picsum.photos/40/40?random=17',
-    content: '在创意写作方面表现出色，能给出很多有趣的故事发展建议。',
-    time: '2024-03-14 16:10'
-  },
-  {
-    id: 15,
-    name: '广告文案',
-    userId: '@copywriter',
-    avatar: 'https://picsum.photos/40/40?random=18',
-    content: '文案创作效果很好，能抓住重点，文字简洁有力。',
-    time: '2024-03-14 15:00'
+
+interface AgentInfo {
+  id: number
+  name: string
+  description: string
+  icon: string
+  author: {
+    id: number
+    account: string
+    name: string
+    avatar: string
   }
-])
+  stats: {
+    usage: number
+    likes: number
+    favorites: number
+  }
+}
+
+// 获取智能体基本信息
+async function fetchAgentInfo() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: `community/agentFetchBasicInfo`,
+      params: {
+        agent_id: agentId,
+      }
+    })
+    if (response.data.code === 0) {
+      agentInfo.value = response.data.basicInfo
+      console.log(agentInfo.value)
+    } else {
+      ElMessage.error('获取智能体信息失败：' + response.data.message)
+    }
+  } catch (error) {
+    console.error('获取智能体信息异常：', error)
+    ElMessage.error('获取智能体信息失败')
+  }
+}
+
+// 获取用户操作状态
+async function fetchUserActions() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: `community/agentFetchUserActions`,
+      params: {
+        agent_id: agentId,
+        uid: sessionStorage.getItem('uid')
+      }
+    })
+    if (response.data.code === 0) {
+      userActions.value = response.data.actions
+    } else {
+      ElMessage.error('获取用户操作状态失败：' + response.data.message)
+    }
+  } catch (error) {
+    console.error('获取用户操作状态异常：', error)
+  }
+}
+
+// 获取评论列表
+async function fetchComments() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: `community/agentFetchComments`,
+      params: {
+        agent_id: agentId
+      }
+    })
+    if (response.data.code === 0) {
+      comments.value = response.data.comments
+    } else {
+      ElMessage.error('获取评论失败：' + response.data.message)
+    }
+  } catch (error) {
+    console.error('获取评论异常：', error)
+    ElMessage.error('获取评论失败')
+  }
+}
+
+// 点赞操作
+async function handleLike() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: `community/agentHandleLike`,
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agentId
+      }
+    })
+    if (response.data.code === 0) {
+      userActions.value.isLiked = !userActions.value.isLiked
+      agentInfo.value.stats.likes += userActions.value.isLiked ? 1 : -1
+      ElMessage.success(userActions.value.isLiked ? '点赞成功' : '取消点赞成功')
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('点赞操作异常：', error)
+    ElMessage.error('操作失败')
+  }
+}
+
+// 收藏操作
+async function handleFavorite() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: `community/agentHandleFavorite`,
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agentId
+      }
+    })
+    if (response.data.code === 0) {
+      userActions.value.isFavorited = !userActions.value.isFavorited
+      agentInfo.value.stats.favorites += userActions.value.isFavorited ? 1 : -1
+      ElMessage.success(userActions.value.isFavorited ? '收藏成功' : '取消收藏成功')
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('收藏操作异常：', error)
+    ElMessage.error('操作失败')
+  }
+}
+
+// 关注操作
+async function handleFollow() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: `community/agentHandleFollow`,
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        author_id: agentInfo.value.author.id
+      }
+    })
+    if (response.data.code === 0) {
+      userActions.value.isFollowed = !userActions.value.isFollowed
+      ElMessage.success(userActions.value.isFollowed ? '关注成功' : '取消关注成功')
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('关注操作异常：', error)
+    ElMessage.error('操作失败')
+  }
+}
+
+// 复制操作
+async function handleCopy() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: `community/agentHandleCopy`,
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agentId
+      }
+    })
+    if (response.data.code === 0) {
+      ElMessage.success('复制成功')
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('复制操作异常：', error)
+    ElMessage.error('操作失败')
+  }
+}
+
+// 举报操作
+async function handleReport() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: `community/agentHandleReport`,
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agentId
+      }
+    })
+    if (response.data.code === 0) {
+      ElMessage.success('举报成功')
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('举报操作异常：', error)
+    ElMessage.error('操作失败')
+  }
+}
+
+// 发布评论
+async function publishComment() {
+  if (!newComment.value.trim()) {
+    ElMessage.warning('请输入评论内容')
+    return
+  }
+  try {
+    const response = await axios({
+      method: 'post',
+      url: `community/agentSendComment`,
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agentId,
+        comment: newComment.value
+      }
+    })
+    if (response.data.code === 0) {
+      newComment.value = ''
+      await fetchComments()
+      ElMessage.success('评论发布成功')
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('发布评论异常：', error)
+    ElMessage.error('发布评论失败')
+  }
+}
+
+function navigateToProfile(userId: number) {
+  router.push(`/profile/${userId}`)
+}
+
+function goToChat() {
+  router.push({
+    path: '/chat',
+    query: {
+      receiver_id: agentInfo.value.author.id
+    }
+  })
+}
+
+onMounted(() => {
+  fetchAgentInfo()
+  fetchUserActions()
+  fetchComments()
+})
 </script>
 
 <template>
@@ -142,26 +304,26 @@ const comments = ref<commnet[]> ([
         <!-- 聊天头部 -->
         <div class="chat-header">
           <div class="chat-header-left">
-            <img src="https://api.iconify.design/material-symbols:robot.svg" alt="智能体" class="agent-icon">
+            <img :src="baseImageUrl + agentInfo.icon" alt="智能体" class="agent-icon">
             <div class="agent-status">
-              <span class="agent-name">智能写作助手</span>
+              <span class="agent-name">{{ agentInfo.name }}</span>
               <span class="status-badge online">在线</span>
             </div>
           </div>
-          <div class="chat-actions">
-            <button class="action-btn" title="清空对话">
-              <img src="https://api.iconify.design/material-symbols:delete-outline.svg" alt="清空" class="action-icon">
-            </button>
-            <button class="action-btn" title="导出对话">
-              <img src="https://api.iconify.design/material-symbols:download.svg" alt="导出" class="action-icon">
-            </button>
-          </div>
+<!--          <div class="chat-actions">-->
+<!--            <button class="action-btn" title="清空对话">-->
+<!--              <img src="https://api.iconify.design/material-symbols:delete-outline.svg" alt="清空" class="action-icon">-->
+<!--            </button>-->
+<!--            <button class="action-btn" title="导出对话">-->
+<!--              <img src="https://api.iconify.design/material-symbols:download.svg" alt="导出" class="action-icon">-->
+<!--            </button>-->
+<!--          </div>-->
         </div>
 
         <!-- 聊天内容区 -->
         <div class="chat-content">
           <div class="chat-day-divider">今天</div>
-          
+
           <!-- 系统消息 -->
           <div class="message system">
             <div class="message-content">
@@ -248,10 +410,10 @@ const comments = ref<commnet[]> ([
         <!-- 输入区域 -->
         <div class="chat-input-area">
           <div class="input-container">
-            <textarea 
-              placeholder="输入消息..." 
-              rows="1"
-              class="chat-input"
+            <textarea
+                placeholder="输入消息..."
+                rows="1"
+                class="chat-input"
             ></textarea>
             <div class="input-actions">
               <button class="action-btn" title="上传文件">
@@ -273,56 +435,105 @@ const comments = ref<commnet[]> ([
     <div class="agent-info">
       <!-- 基本信息板块 -->
       <div class="info-panel basic-info">
-        <div class="agent-header">
-          <img src="https://picsum.photos/100/100?random=2" alt="智能体图片" class="agent-photo">
-          <div class="agent-meta">
-            <h2>智能写作助手</h2>
-            <p class="description">专业的AI写作助手，帮助你创作高质量文章，优化文章结构，改进表达方式。支持多种写作风格，让你的文章更具感染力。</p>
-            <div class="stats">
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:bar-chart.svg" alt="使用量" class="stat-icon">
-                <span>使用量 12,345</span>
-              </div>
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="stat-icon">
-                <span>点赞 2,456</span>
-              </div>
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="stat-icon">
-                <span>收藏 1,234</span>
-              </div>
+        <!-- 智能体基本信息区域 -->
+        <div class="agent-basic">
+          <div class="agent-header">
+            <img :src="baseImageUrl + agentInfo.icon" alt="智能体图片" class="agent-photo">
+            <div class="agent-meta">
+              <h2>{{ agentInfo.name }}</h2>
+              <p class="description">{{ agentInfo.description }}</p>
             </div>
           </div>
         </div>
 
-        <div class="author-info">
-          <img src="https://picsum.photos/40/40?random=3" alt="作者头像" class="author-avatar">
-          <div class="author-meta">
-            <span class="author-name">创新实验室</span>
-            <span class="author-id">@innovation_lab</span>
+        <!-- 分隔线 -->
+        <div class="divider"></div>
+
+        <!-- 统计信息区域 -->
+        <div class="stats-section">
+          <div class="stats">
+            <div class="stat-item">
+              <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="stat-icon">
+              <span>点赞 {{ agentInfo.stats.likes }}</span>
+            </div>
+            <div class="stat-item">
+              <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="stat-icon">
+              <span>收藏 {{ agentInfo.stats.favorites }}</span>
+            </div>
           </div>
-          <button class="follow-btn">
-            <img src="https://api.iconify.design/material-symbols:person-add-outline.svg" alt="关注" class="action-icon">
-            <span>关注</span>
+        </div>
+
+        <!-- 分隔线 -->
+        <div class="divider"></div>
+
+        <!-- 作者信息区域 -->
+        <div class="author-info">
+          <img 
+            :src="baseImageUrl + agentInfo.author.avatar"
+            alt="作者头像" 
+            class="author-avatar"
+            @click="navigateToProfile(agentInfo.author.id)"
+          >
+          <div class="author-meta">
+            <span 
+              class="author-name"
+              @click="navigateToProfile(agentInfo.author.id)"
+            >{{ agentInfo.author.name }}</span>
+            <span class="author-id">{{ agentInfo.author.account }}</span>
+          </div>
+          <button
+            class="follow-btn"
+            v-if="uid !== agentInfo.author.id"
+            :class="{ 'followed': userActions.isFollowed }"
+            @click="handleFollow"
+          >
+            <img 
+              :src="userActions.isFollowed 
+                ? 'https://api.iconify.design/material-symbols:person-check.svg'
+                : 'https://api.iconify.design/material-symbols:person-add-outline.svg'" 
+              alt="关注" 
+              class="action-icon"
+            >
+            <span>{{ userActions.isFollowed ? '已关注' : '关注' }}</span>
           </button>
         </div>
 
+        <!-- 分隔线 -->
+        <div class="divider"></div>
+
+        <!-- 操作按钮区域 -->
         <div class="action-buttons">
-          <button class="action-btn primary">
-            <img src="https://api.iconify.design/material-symbols:favorite-outline.svg" alt="点赞" class="action-icon">
-            <span>点赞</span>
+          <button 
+            class="action-btn primary" 
+            :class="{ 'active': userActions.isLiked }"
+            @click="handleLike"
+          >
+            <img 
+              :src="userActions.isLiked 
+                ? 'https://api.iconify.design/material-symbols:favorite.svg'
+                : 'https://api.iconify.design/material-symbols:favorite-outline.svg'" 
+              alt="点赞" 
+              class="action-icon"
+            >
+            <span>{{ userActions.isLiked ? '已点赞' : '点赞' }}</span>
           </button>
-          <button class="action-btn primary">
-            <img src="https://api.iconify.design/material-symbols:bookmark-outline.svg" alt="收藏" class="action-icon">
-            <span>收藏</span>
+          <button 
+            class="action-btn primary" 
+            :class="{ 'active': userActions.isFavorited }"
+            @click="handleFavorite"
+          >
+            <img 
+              :src="userActions.isFavorited 
+                ? 'https://api.iconify.design/material-symbols:bookmark.svg'
+                : 'https://api.iconify.design/material-symbols:bookmark-outline.svg'" 
+              alt="收藏" 
+              class="action-icon"
+            >
+            <span>{{ userActions.isFavorited ? '已收藏' : '收藏' }}</span>
           </button>
-          <button class="action-btn secondary">
+          <button class="action-btn secondary" @click="handleCopy">
             <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
             <span>复制</span>
-          </button>
-          <button class="action-btn secondary">
-            <img src="https://api.iconify.design/material-symbols:flag.svg" alt="举报" class="action-icon">
-            <span>举报</span>
           </button>
         </div>
       </div>
@@ -334,10 +545,18 @@ const comments = ref<commnet[]> ([
           <div v-for="comment in comments" :key="comment.id" class="comment-card">
             <div class="comment-header">
               <div class="comment-user">
-                <img :src="comment.avatar" :alt="comment.name" class="comment-avatar">
+                <img 
+                  :src="baseImageUrl + comment.avatar"
+                  :alt="comment.name" 
+                  class="comment-avatar"
+                  @click="navigateToProfile(comment.userId)"
+                >
                 <div class="user-info">
-                  <span class="comment-name">{{ comment.name }}</span>
-                  <span class="comment-id">{{ comment.userId }}</span>
+                  <span 
+                    class="comment-name"
+                    @click="navigateToProfile(comment.userId)"
+                  >{{ comment.name }}</span>
+                  <span class="comment-id">{{ comment.userAccount }}</span>
                 </div>
               </div>
               <span class="comment-time">{{ comment.time }}</span>
@@ -345,17 +564,18 @@ const comments = ref<commnet[]> ([
             <p class="comment-text">{{ comment.content }}</p>
           </div>
         </div>
-        
+
         <!-- 发布评论区域 -->
         <div class="comment-publish">
           <div class="publish-content">
-            <textarea 
-              placeholder="写下你的评论..." 
-              class="comment-textarea"
-              v-model="newComment"
-              rows="1"
+            <textarea
+                placeholder="写下你的评论..."
+                class="comment-textarea"
+                v-model="newComment"
+                rows="1"
+                @keydown.enter.prevent="publishComment"
             ></textarea>
-            <button class="publish-btn">
+            <button class="publish-btn" @click="publishComment">
               <img src="https://api.iconify.design/material-symbols:send.svg" alt="发布" class="action-icon">
             </button>
           </div>
@@ -739,14 +959,16 @@ const comments = ref<commnet[]> ([
   margin-bottom: 16px;
 }
 
+.stats-section {
+  padding: 16px 0;
+}
+
 .stats {
   display: flex;
   gap: 20px;
-  margin-top: 16px;
   padding: 12px 16px;
   background: #f8f9fa;
   border-radius: 8px;
-  margin-left: -120px;
 }
 
 .stat-item {
@@ -779,6 +1001,12 @@ const comments = ref<commnet[]> ([
   border-radius: 50%;
   border: 2px solid #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.author-avatar:hover {
+  transform: scale(1.05);
 }
 
 .author-meta {
@@ -790,6 +1018,12 @@ const comments = ref<commnet[]> ([
 .author-name {
   font-weight: 600;
   color: #2c3e50;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.author-name:hover {
+  color: #3498db;
 }
 
 .author-id {
@@ -829,7 +1063,7 @@ const comments = ref<commnet[]> ([
 .action-buttons {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-top: 16px;
 }
 
 .action-btn {
@@ -948,6 +1182,12 @@ const comments = ref<commnet[]> ([
   border-radius: 50%;
   border: 2px solid #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.comment-avatar:hover {
+  transform: scale(1.05);
 }
 
 .user-info {
@@ -960,6 +1200,12 @@ const comments = ref<commnet[]> ([
   font-weight: 600;
   color: #2c3e50;
   font-size: 14px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.comment-name:hover {
+  color: #3498db;
 }
 
 .comment-id {
@@ -1042,5 +1288,33 @@ const comments = ref<commnet[]> ([
   width: 20px;
   height: 20px;
   filter: brightness(0) invert(1);
+}
+
+.follow-btn.followed {
+  background: #2c3e50;
+  color: white;
+}
+
+.follow-btn.followed .action-icon {
+  filter: brightness(0) invert(1);
+}
+
+.action-btn.active {
+  background: #2c3e50;
+  color: white;
+}
+
+.action-btn.active .action-icon {
+  filter: brightness(0) invert(1);
+}
+
+.agent-basic {
+  margin-bottom: 16px;
+}
+
+.divider {
+  height: 1px;
+  background: #eee;
+  margin: 0;
 }
 </style>

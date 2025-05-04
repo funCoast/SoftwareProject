@@ -1,20 +1,36 @@
-import { createRouter, createWebHashHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from "vue-router";
 
 const authRequired = true; // 是否需要登录
 
 const routes = [
-    { 
-        path: '/login',
-        name: 'Login',
-        meta: { authReq: false },
-        component: () => import('./components/login/Login.vue'),
-    },
-    {
-        path: '/',
-        name: 'Main',
-        redirect: '/home',
-        meta: { authReq: authRequired },
-        component: () => import('./components/Main.vue'),
+  {
+    path: "/login",
+    name: "Login",
+    meta: { authReq: false },
+    component: () => import("./components/login/Login.vue"),
+  },
+  {
+    path: "/",
+    name: "Main",
+    redirect: "/home",
+    meta: { authReq: authRequired },
+    component: () => import("./components/Main.vue"),
+    children: [
+      {
+        path: "home",
+        name: "Home",
+        component: () => import("./components/home/Home.vue"),
+      },
+      {
+        path: "message",
+        name: "Message",
+        component: () => import("./components/message/Message.vue"),
+      },
+      {
+        path: "workspace",
+        name: "Workspace",
+        redirect: "/workspace/agentDevelopment",
+        component: () => import("./components/workspace/Workspace.vue"),
         children: [
             {
                 path: 'home',
@@ -105,25 +121,25 @@ const routes = [
 ];
 
 const router = createRouter({
-    history: createWebHashHistory(),
-    routes,
+  history: createWebHashHistory(),
+  routes,
 });
 
 router.beforeEach((to, from, next) => {
-    console.log('from:', from);
-    console.log('to:', to);
+  console.log("from:", from);
+  console.log("to:", to);
 
-    // 检查是否需要登录
-    if (to.meta.authReq === true) {
-        if (sessionStorage.getItem('token')) {
-            next();
-        } else {
-            alert("请登录！");
-            next({ name: 'Login' });
-        }
+  // 检查是否需要登录
+  if (to.meta.authReq === true) {
+    if (sessionStorage.getItem("token")) {
+      next();
     } else {
-        next();
+      alert("请登录！");
+      next({ name: "Login" });
     }
+  } else {
+    next();
+  }
 });
 
 export default router;

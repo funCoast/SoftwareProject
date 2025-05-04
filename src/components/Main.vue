@@ -53,6 +53,16 @@ const navItems = ref<NavItem[]>([
     path: '/community',
     label: '社区',
     icon: 'https://api.iconify.design/material-symbols:groups.svg'
+  },
+  {
+    path: '/publish-anno',
+    label: '公告管理',
+    icon: 'https://api.iconify.design/material-symbols:announcement.svg'
+  },
+  {
+    path: '/review-agent',
+    label: '智能体审核',
+    icon: 'https://api.iconify.design/material-symbols:check-circle.svg'
   }
 ])
 
@@ -66,7 +76,10 @@ function handleNavigation(path: string) {
 }
 
 function handleProfileNavigation() {
-  router.push('/profile')
+  router.push(`/profile/${sessionStorage.getItem('uid')}`)
+}
+function toMessage() {
+  router.push('/message')
 }
 </script>
 
@@ -81,10 +94,12 @@ function handleProfileNavigation() {
         </div>
         <div class="message-icon">
           <i class="fas fa-envelope"></i>
-          <span class="message-badge">3</span>
+          <i @click="toMessage">
+            <img src="https://api.iconify.design/material-symbols:chat.svg" alt="私信" class="nav-icon">
+          </i>
         </div>
       </div>
-      
+
       <!-- 导航菜单 -->
       <nav>
         <ul>
@@ -272,7 +287,7 @@ nav ul li.active .nav-icon {
   .side-nav {
     width: 180px;
     padding: 15px;
-    
+
     nav ul li {
       padding: 12px 15px;
     }

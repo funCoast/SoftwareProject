@@ -2,8 +2,10 @@
 import { ref, onBeforeMount, inject } from 'vue'
 import axios from 'axios'
 import router from '../../router'
+import {useRoute} from "vue-router";
+import { ElMessage } from 'element-plus'
 
-const avatar = inject('avatar') as string
+const avatar = ref()
 
 const currentTab = ref('works')
 const tabs = ref([
@@ -20,7 +22,9 @@ const userInfo = ref({
   followers: 0,
 })
 
-const uid = Number(sessionStorage.getItem('uid'))
+const route = useRoute()
+const uid = route.params.id
+const currentUid = sessionStorage.getItem('uid')
 
 interface myWork {
   id: number
@@ -28,13 +32,13 @@ interface myWork {
   category: string
   description: string
   image: string
-  usage: string
-  likes: string
-  favorites: string
+  likes: number
+  favorites: number
 }
 
 interface work extends myWork {
   author: {
+    id?: number
     name: string
     avatar: string
   }
@@ -55,13 +59,30 @@ const error = ref({
 
 onBeforeMount(() => {
   fetchUserInfo()
+  getAvatar()
   //fetchWorks()
   //fetchLikes()
   //fetchFavorites()
 })
 
+function getAvatar() {
+  axios({
+    method: 'get',
+    url: 'user/getAvatar',
+    params: {
+      uid
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar
+      console.log(avatar.value)
+    } else {
+      alert(response.data.message)
+    }
+  })
+}
+
 async function fetchUserInfo() {
-  console.log("sessionStorage", sessionStorage)
   if (!uid) {
     console.error('用户未登录，无法获取用户信息')
     return
@@ -95,7 +116,7 @@ async function fetchWorks() {
       params: { uid }
     })
     if (response.data.code === 0) {
-      myWorks.value = response.data.data || []
+      myWorks.value = response.data.agents || []
     } else {
       console.error('获取作品列表失败:', response.data.message)
       error.value.works = response.data.message || '获取作品列表失败'
@@ -118,7 +139,7 @@ async function fetchLikes() {
       params: { uid }
     })
     if (response.data.code === 0) {
-      likes.value = response.data.data || []
+      likes.value = response.data.agents || []
     } else {
       console.error('获取喜欢列表失败:', response.data.message)
       error.value.likes = response.data.message || '获取喜欢列表失败'
@@ -141,7 +162,7 @@ async function fetchFavorites() {
       params: { uid }
     })
     if (response.data.code === 0) {
-      favorites.value = response.data.data || []
+      favorites.value = response.data.agents || []
     } else {
       console.error('获取收藏列表失败:', response.data.message)
       error.value.favorites = response.data.message || '获取收藏列表失败'
@@ -164,6 +185,31 @@ function goToEditProfile() {
   });
 }
 
+async function sendMessage() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'user/sendMessage',
+      data: {
+        sender: currentUid,
+        receiver: uid,
+        message: "你好"
+      }
+    })
+    if (response.data.code === 0) {
+      ElMessage.success('消息发送成功')
+      console.log('成功')
+      await router.push('/message');
+    } else {
+      ElMessage.error(response.data.message)
+      console.log('失败：', response.data.message)
+    }
+  } catch (error) {
+    console.error('发送消息失败：', error)
+    ElMessage.error('发送消息失败')
+  }
+}
+
 // 默认数据
 function getDefaultWorks(): myWork[] {
   return [
@@ -173,9 +219,8 @@ function getDefaultWorks(): myWork[] {
       category: '对话助手',
       description: '基于大语言模型的智能对话系统，支持多轮对话和上下文理解',
       image: 'https://picsum.photos/300/300?random=1',
-      usage: '2.3k',
-      likes: '1.2k',
-      favorites: '856'
+      likes: 1200,
+      favorites: 856
     },
     {
       id: 2,
@@ -183,9 +228,8 @@ function getDefaultWorks(): myWork[] {
       category: '数据分析',
       description: '专业的数据分析工具，支持多种数据可视化和预测分析',
       image: 'https://picsum.photos/300/300?random=2',
-      usage: '1.5k',
-      likes: '890',
-      favorites: '654'
+      likes: 890,
+      favorites: 654
     },
     {
       id: 3,
@@ -193,9 +237,8 @@ function getDefaultWorks(): myWork[] {
       category: '图像处理',
       description: '智能图像处理工具，支持多种图像编辑和优化功能',
       image: 'https://picsum.photos/300/300?random=3',
-      usage: '980',
-      likes: '678',
-      favorites: '432'
+      likes: 678,
+      favorites: 432
     }
   ]
 }
@@ -208,9 +251,8 @@ function getDefaultLikes(): work[] {
       category: '对话助手',
       description: '支持多种语言互译的智能助手，提供实时翻译和语言学习建议',
       image: 'https://picsum.photos/300/300?random=4',
-      usage: '1.8k',
-      likes: '980',
-      favorites: '765',
+      likes: 980,
+      favorites: 765,
       author: {
         name: '语言专家',
         avatar: 'https://picsum.photos/50/50?random=4'
@@ -222,9 +264,8 @@ function getDefaultLikes(): work[] {
       category: '开发工具',
       description: '智能代码审查工具，提供代码质量分析和优化建议',
       image: 'https://picsum.photos/300/300?random=5',
-      usage: '950',
-      likes: '580',
-      favorites: '345',
+      likes: 580,
+      favorites: 345,
       author: {
         name: '代码专家',
         avatar: 'https://picsum.photos/50/50?random=5'
@@ -241,9 +282,8 @@ function getDefaultFavorites(): favorite[] {
       category: '语音工具',
       description: '高质量语音合成工具，支持多种音色和情感表达',
       image: 'https://picsum.photos/300/300?random=6',
-      usage: '780',
-      likes: '520',
-      favorites: '234',
+      likes: 520,
+      favorites: 234,
       author: {
         name: '语音专家',
         avatar: 'https://picsum.photos/50/50?random=6'
@@ -255,9 +295,8 @@ function getDefaultFavorites(): favorite[] {
       category: '数据分析',
       description: '用户行为分析工具，提供用户画像和行为路径分析',
       image: 'https://picsum.photos/300/300?random=7',
-      usage: '1.1k',
-      likes: '690',
-      favorites: '456',
+      likes: 690,
+      favorites: 456,
       author: {
         name: '用户研究专家',
         avatar: 'https://picsum.photos/50/50?random=7'
@@ -293,12 +332,20 @@ function getDefaultFavorites(): favorite[] {
         </div>
       </div>
       <!-- 添加设置按钮 -->
-      <div class="profile-actions">
+      <div class="profile-actions" v-if="uid === currentUid">
         <button class="edit-profile-btn" @click="goToEditProfile">
           <svg class="settings-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
             <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
           </svg>
           <span>编辑资料</span>
+        </button>
+      </div>
+      <div class="profile-actions" v-if="uid !== currentUid">
+        <button class="edit-profile-btn" @click="sendMessage">
+          <svg class="settings-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+          </svg>
+          <span>私信</span>
         </button>
       </div>
     </div>
@@ -335,12 +382,12 @@ function getDefaultFavorites(): favorite[] {
             </div>
             <p class="agent-description">{{ agent.description }}</p>
             <div class="agent-stats">
-              <span class="stat-item" title="使用量">
-                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>
-                </svg>
-                {{ agent.usage }}
-              </span>
+<!--              <span class="stat-item" title="使用量">-->
+<!--                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">-->
+<!--                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>-->
+<!--                </svg>-->
+<!--                {{ agent.usage }}-->
+<!--              </span>-->
               <span class="stat-item" title="点赞量">
                 <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
@@ -375,12 +422,12 @@ function getDefaultFavorites(): favorite[] {
             </div>
             <p class="agent-description">{{ agent.description }}</p>
             <div class="agent-stats">
-              <span class="stat-item" title="使用量">
-                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>
-                </svg>
-                {{ agent.usage }}
-              </span>
+<!--              <span class="stat-item" title="使用量">-->
+<!--                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">-->
+<!--                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>-->
+<!--                </svg>-->
+<!--                {{ agent.usage }}-->
+<!--              </span>-->
               <span class="stat-item" title="点赞量">
                 <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
@@ -415,12 +462,12 @@ function getDefaultFavorites(): favorite[] {
             </div>
             <p class="agent-description">{{ agent.description }}</p>
             <div class="agent-stats">
-              <span class="stat-item" title="使用量">
-                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>
-                </svg>
-                {{ agent.usage }}
-              </span>
+<!--              <span class="stat-item" title="使用量">-->
+<!--                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">-->
+<!--                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>-->
+<!--                </svg>-->
+<!--                {{ agent.usage }}-->
+<!--              </span>-->
               <span class="stat-item" title="点赞量">
                 <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>

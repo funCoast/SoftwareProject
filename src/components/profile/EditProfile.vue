@@ -94,9 +94,10 @@ function handleAvatarChange(event: Event) {
 }
 
 function updateBasicInfo() {
+  console.log(sessionStorage.getItem('uid'))
   axios({
     method: 'post',
-    url: 'user/updateBasicInfo',
+    url: 'user/updateProfile',
     data: {
       uid: sessionStorage.getItem('uid'),
       name: name.value,
@@ -136,7 +137,7 @@ function updatePwd() {
 
 // 返回个人资料页面
 function goBack() {
-  router.push('/profile');
+  router.push(`/profile/${sessionStorage.getItem('uid')}`);
 }
   
 </script>
