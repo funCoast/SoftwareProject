@@ -5,7 +5,7 @@ import router from '../../router'
 import {useRoute} from "vue-router";
 import { ElMessage } from 'element-plus'
 
-const avatar = ref()
+const avatar = inject('avatar') as string
 
 const currentTab = ref('works')
 const tabs = ref([
@@ -59,28 +59,10 @@ const error = ref({
 
 onBeforeMount(() => {
   fetchUserInfo()
-  getAvatar()
   //fetchWorks()
   //fetchLikes()
   //fetchFavorites()
 })
-
-function getAvatar() {
-  axios({
-    method: 'get',
-    url: 'user/getAvatar',
-    params: {
-      uid
-    }
-  }).then(function (response) {
-    if (response.data.code === 0) {
-      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar
-      console.log(avatar.value)
-    } else {
-      alert(response.data.message)
-    }
-  })
-}
 
 async function fetchUserInfo() {
   if (!uid) {

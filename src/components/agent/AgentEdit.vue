@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeMount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeMount, watch, inject } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import {useRoute} from "vue-router";
 
 const route = useRoute()
 const agent_id = route.params.id
-const baseImageUrl = "http://122.9.33.84:8000"
+const userAvatar = inject('avatar') as string
 
 interface KnowledgeBase {
   id: number
@@ -52,7 +52,6 @@ onMounted(() => {
 })
 
 onBeforeMount(() => {
-  getAvatar()
   fetchUserInfo()
 })
 
@@ -70,26 +69,8 @@ const agentInfo = ref<AgentInfo>({
   }
 })
 
-const useravatar = ref('')
-function getAvatar() {
-  axios({
-    method: 'get',
-    url: 'user/getAvatar',
-    params: {
-      uid: sessionStorage.getItem('uid')
-    }
-  }).then(function (response) {
-    if (response.data.code === 0) {
-      useravatar.value = 'http://122.9.33.84:8000' + response.data.avatar
-    } else {
-      alert(response.data.message)
-    }
-  })
-}
 
-const userInfo = ref({
-  name: '',
-})
+const userName = ref('')
 function fetchUserInfo() {
   axios({
     method: 'get',
@@ -99,7 +80,7 @@ function fetchUserInfo() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      userInfo.value = response.data.data
+      userName.value = response.data.data.name
       console.log('获取用户信息成功')
     } else {
       console.log(response.data.message)
@@ -124,7 +105,7 @@ async function getKnowledgeBases() {
     if (response.data.code === 0) {
       knowledgeBases.value = response.data.knowledgeBases.map((kb: KnowledgeBase) => ({
         ...kb,
-        icon: 'http://122.9.33.84:8000' + kb.icon
+        icon: 'http://122.9.33.84:8000/' + kb.icon
       }))
       console.log('获取知识库列表成功')
     } else {
@@ -242,6 +223,7 @@ async function getAgentInfo() {
     })
     if (response.data.code === 0) {
       agentInfo.value = response.data
+      console.log(agentInfo.value)
       console.log("智能体：", response.data.status)
       console.log('获取配置成功')
     } else {
@@ -355,52 +337,32 @@ watch(selectedWorkflows, (newVal) => {
   }
 })
 
+interface Message {
+  sender: 'user' | 'assistant'
+  content: string
+  time: string
+}
+
 // 聊天相关
 const messageInput = ref('')
-const chatHistory = ref([
-  {
-    type: 'user',
-    sender: 'Herry',
-    content: '北京限行规则是什么？',
-    time: '2025-04-28 11:08',
-    avatar: 'http://122.9.33.84:8000/media/avatars/2.jpg'
-  },
-  {
-    type: 'assistant',
-    sender: 'AI讲师',
-    content: '根据2025年最新政策，北京市工作日实行机动车尾号限行，限行时间为早7:00至晚20:00，限行范围为五环路以内（不含五环路）。具体规则如下：\n' +
-        '周一：限行尾号1和6\n' +
-        '周二：限行尾号2和7\n' +
-        '周三：限行尾号3和8\n' +
-        '周四：限行尾号4和9\n' +
-        '周五：限行尾号5和0\n' +
-        '（节假日不限行）\n' +
-        '请注意规则会每年调整一次，建议出行前查询官方通知。',
-    time: '2025-04-28 11:09',
-    avatar: 'http://122.9.33.84:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
-  }
-])
+const chatHistory = ref<Message[]>([])
 
 async function sendsendMessage() {
   try {
     const response = await axios({
       method: 'post',
       url: 'agent/sendMessage',
-      params: {
-        type: 'user',
-        sender: userInfo.value.name,
-        content: messageInput.value,
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-        avatar: useravatar.value
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agent_id,
+        content: messageInput.value
       },
     })
     if (response.data.code === 0) {
       chatHistory.value.push({
-        type: response.data.type,
         sender: response.data.sender,
         content: response.data.content,
         time: response.data.time,
-        avatar: response.data.avatar
       })
       console.log('信息发送成功')
     } else {
@@ -416,11 +378,9 @@ const sendMessage = () => {
   if (!messageInput.value.trim()) return
   sendsendMessage()
   chatHistory.value.push({
-    type: 'user',
-    sender: userInfo.value.name,
+    sender: 'user',
     content: messageInput.value,
     time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-    avatar: useravatar.value
   })
 
   messageInput.value = ''
@@ -437,7 +397,7 @@ const handleConfirm = () => {
     <!-- 头部信息 -->
     <div class="agent-header">
       <div class="agent-info">
-        <el-avatar :size="50" :src="baseImageUrl + agentInfo.icon" />
+        <el-avatar :size="50" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
         <div class="agent-meta">
           <h2>{{ agentInfo.name }}</h2>
           <p>{{ agentInfo.description }}</p>
@@ -589,8 +549,8 @@ const handleConfirm = () => {
       <div class="chat-panel">
         <div class="chat-messages" ref="chatMessages">
           <div v-for="(message, index) in chatHistory" :key="index" 
-               :class="['message', message.type]">
-            <template v-if="message.type === 'user'">
+               :class="['message', message.sender]">
+            <template v-if="message.sender === 'user'">
               <div class="message-content user-message">
                 <div class="message-info">
                   <span class="message-time">{{ message.time }}</span>
@@ -598,10 +558,10 @@ const handleConfirm = () => {
                 </div>
                 <div class="message-text" style="white-space: pre-line;">{{ message.content }}</div>
               </div>
-              <el-avatar class="user-avatar" :size="40" :src="message.avatar" />
+              <el-avatar class="user-avatar" :size="40" :src="userAvatar" />
             </template>
             <template v-else>
-              <el-avatar class="assistant-avatar" :size="40" :src="message.avatar" />
+              <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
               <div class="message-content assistant-message">
                 <div class="message-info">
                   <span class="sender-name">{{ message.sender }}</span>
