@@ -2302,8 +2302,15 @@ def community_agent_fetch_comments(request):
         })
 
 def community_agent_handle_like(request):
-    uid = request.POST.get('uid')
-    agent_id = request.POST.get('agent_id')
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        agent_id = data.get('agent_id')
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "code": -1,
+            "message": "json数据格式错误"
+        })
 
     if not uid or not agent_id:
         return JsonResponse({
@@ -2348,8 +2355,15 @@ def community_agent_handle_like(request):
         })
 
 def community_agent_handle_Favorite(request):
-    uid = request.POST.get('uid')
-    agent_id = request.POST.get('agent_id')
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        agent_id = data.get('agent_id')
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "code": -1,
+            "message": "json数据格式错误"
+        })
 
     if not uid or not agent_id:
         return JsonResponse({
@@ -2394,8 +2408,15 @@ def community_agent_handle_Favorite(request):
         })
 
 def community_agent_handle_Follow(request):
-    uid = request.POST.get('uid')
-    author_id = request.POST.get('author_id')
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        author_id = data.get('author_id')
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "code": -1,
+            "message": "json数据格式错误"
+        })
 
     if not uid or not author_id:
         return JsonResponse({
@@ -2419,10 +2440,18 @@ def community_agent_handle_Follow(request):
             # 取消关注
             existing.delete()
             message = "取消关注成功"
+            follower.following_count = follower.following_count - 1
+            follower.save()
+            followee.fans_count = followee.fans_count - 1
+            followee.save()
         else:
             # 添加关注
             FollowRelationship.objects.create(follower=follower, followee=followee)
             message = "关注成功"
+            follower.following_count = follower.following_count + 1
+            follower.save()
+            followee.fans_count = followee.fans_count + 1
+            followee.save()
 
         return JsonResponse({
             "code": 0,
@@ -2436,8 +2465,15 @@ def community_agent_handle_Follow(request):
         })
 
 def community_agent_handle_copy(request):
-    uid = request.POST.get('uid')
-    agent_id = request.POST.get('agent_id')
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        agent_id = data.get('agent_id')
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "code": -1,
+            "message": "json数据格式错误"
+        })
 
     if not uid or not agent_id:
         return JsonResponse({
@@ -2481,9 +2517,16 @@ def community_agent_handle_copy(request):
         })
 
 def community_agent_send_comment(request):
-    uid = request.POST.get('uid')
-    agent_id = request.POST.get('agent_id')
-    comment_content = request.POST.get('comment')
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        agent_id = data.get('agent_id')
+        comment_content = data.get('comment')
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "code": -1,
+            "message": "json数据格式错误"
+        })
 
     if not uid or not agent_id or not comment_content:
         return JsonResponse({
