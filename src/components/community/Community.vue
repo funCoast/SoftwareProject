@@ -23,33 +23,6 @@ interface agent {
   }
 }
 const agents = ref<agent[]> ([
-  // 模板智能体
-  {
-    id: 21,
-    name: '通用对话模板',
-    category: '对话助手',
-    description: '适用于各类对话场景的基础模板，支持自定义角色和对话风格',
-    image: 'https://picsum.photos/300/300?random=21',
-    likes: 890,
-    favorites: 543,
-    author: {
-      name: '模板专家',
-      avatar: 'https://picsum.photos/50/50?random=21'
-    }
-  },
-  {
-    id: 22,
-    name: '数据分析模板',
-    category: '数据分析',
-    description: '标准数据分析流程模板，包含数据清洗、分析和可视化步骤',
-    image: 'https://picsum.photos/300/300?random=22',
-    likes: 756,
-    favorites: 432,
-    author: {
-      name: '数据专家',
-      avatar: 'https://picsum.photos/50/50?random=22'
-    }
-  }
 ])
 
 async function fetchAllAgents() {

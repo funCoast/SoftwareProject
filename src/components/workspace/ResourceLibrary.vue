@@ -156,6 +156,10 @@ function handleImageUpload(event: Event) {
 
 // 提交工作流表单并跳转
 async function submitWorkflow() {
+  if (!workflowForm.value.name) {
+    alert('请输入工作流名称')
+    return
+  }
   formData.append('description', workflowForm.value.description)
   formData.append('name', workflowForm.value.name)
   formData.append('uid', sessionStorage.getItem('uid') as string)
@@ -173,7 +177,7 @@ async function submitWorkflow() {
       const workflow_id = response.data.workflow_id
       localStorage.removeItem('workflowNodes')
       localStorage.removeItem('connections')
-      await router.push(`/workflow/${workflow_id}`);
+      await router.push(`/workspace/workflow/${workflow_id}`);
     } else {
       console.log(response.data.message)
     }
@@ -243,6 +247,7 @@ function handleDelete() {
       alert("删除成功！")
       resources.value = []
       getKnowledgeBases()
+      getWorkflows()
       deleteDialog.value = false
       deleteTarget.value = null
     } else {
@@ -441,20 +446,23 @@ const filteredResources = computed(() => {
       <div class="dialog-body">
         <!-- 名称 -->
         <div class="form-row">
-          <label class="form-label">名称</label>
-          <el-input v-model="workflowForm.name" placeholder="请输入工作流名称" class="form-input" />
+          <label class="form-label">名称 <span class="required">*</span></label>
+          <el-input v-model="workflowForm.name" placeholder="给工作流起一个独一无二的名字" maxlength="20" class="form-input" />
+          <span class="char-count">{{ workflowForm.name.length }}/20</span>
         </div>
 
         <!-- 描述 -->
         <div class="form-row">
-          <label class="form-label">描述</label>
+          <label class="form-label">功能介绍</label>
           <el-input
-              v-model="workflowForm.description"
-              type="textarea"
-              placeholder="请输入工作流描述"
-              :rows="4"
-              class="form-input"
+            v-model="workflowForm.description"
+            type="textarea"
+            placeholder="介绍工作流的功能，将会展示给工作流的用户"
+            maxlength="500"
+            :rows="4"
+            class="form-input"
           />
+          <span class="char-count">{{ workflowForm.description.length }}/500</span>
         </div>
 
         <!-- 图片上传 -->
@@ -484,7 +492,7 @@ const filteredResources = computed(() => {
     <!-- 删除确认弹窗 -->
     <el-dialog v-model="deleteDialog" title="确认删除" width="400px" class="custom-dialog">
       <div class="dialog-body">
-        <p>确定要删除“{{ deleteTarget?.name }}”吗？此操作不可撤销。</p>
+        <p>确定要删除"{{ deleteTarget?.name }}"吗？此操作不可撤销。</p>
       </div>
       <template #footer>
         <el-button @click="deleteDialog = false">取消</el-button>
@@ -719,5 +727,87 @@ const filteredResources = computed(() => {
   border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.image-upload {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.upload-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+}
+
+.upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-button {
+  position: relative;
+  width: 120px;
+  height: 100px;
+  border: 2px dashed #e9ecef;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-button:hover {
+  border-color: #3498db;
+  color: #3498db;
+}
+
+.upload-button.has-image {
+  width: 100px;
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-button svg {
+  color: #95a5a6;
+}
+
+.upload-button:hover svg {
+  color: #3498db;
+}
+
+.upload-button span {
+  font-size: 12px;
+  color: #95a5a6;
+}
+
+.upload-button:hover span {
+  color: #3498db;
+}
+
+.required {
+  color: red;
+}
+
+.char-count {
+  text-align: right;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #95a5a6;
 }
 </style>
