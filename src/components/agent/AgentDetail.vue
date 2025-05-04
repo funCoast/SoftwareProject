@@ -11,23 +11,45 @@ const uid = Number(sessionStorage.getItem('uid'))
 const baseImageUrl = "http://122.9.33.84:8000"
 
 // 智能体基本信息
-const agentInfo = ref({
+interface Author {
+  uid: number;
+  account: string;
+  name: string;
+  avatar: string;
+}
+
+interface Stats {
+  usage: number;
+  likes: number;
+  favorites: number;
+}
+
+interface AgentInfo {
+  id: number;
+  name: string;
+  description: string;
+  icon: string;
+  author: Author;
+  stats: Stats;
+}
+
+const agentInfo = ref<AgentInfo>({
   id: 0,
-  name: '',
-  description: '',
-  icon: '',
+  name: "",
+  description: "",
+  icon: "",
   author: {
-    id: '',
-    account: '',
-    name: '',
-    avatar: ''
+    uid: 0,
+    account: "",
+    name: "",
+    avatar: "",
   },
   stats: {
     usage: 0,
     likes: 0,
-    favorites: 0
-  }
-})
+    favorites: 0,
+  },
+});
 
 // 用户操作状态
 const userActions = ref({
@@ -36,37 +58,34 @@ const userActions = ref({
   isFollowed: false
 })
 
-// 评论相关
-const newComment = ref('')
-const comments = ref<Comment[]>([])
-
 interface Comment {
   id: number
   name: string
-  userId: string
+  userId: number
   userAccount: string
   avatar: string
   content: string
   time: string
 }
 
-interface AgentInfo {
-  id: number
-  name: string
-  description: string
-  icon: string
-  author: {
-    id: number
-    account: string
-    name: string
-    avatar: string
+// 评论相关
+const newComment = ref('')
+const comments = ref<Comment[]>([])
+
+const messages = ref([
+  {
+    id: 1,
+    sender: 'user',
+    content: '帮我写一篇关于人工智能对未来教育影响的文章，要求：1. 1500字左右 2. 包含具体案例 3. 重点讨论利弊',
+    time: '14:23'
+  },
+  {
+    id: 2,
+    sender: 'assistant',
+    content: '好的，我来帮你写一篇关于人工智能对未来教育影响的文章。以下是文章大纲：\n\n1. 引言：AI 教育变革的时代背景\n2. AI 在教育中的应用现状\n3. AI 教育的优势分析\n4. 潜在的挑战和风险\n5. 案例分析\n6. 未来展望和建议',
+    time: '14:24'
   }
-  stats: {
-    usage: number
-    likes: number
-    favorites: number
-  }
-}
+])
 
 // 获取智能体基本信息
 async function fetchAgentInfo() {
@@ -188,7 +207,7 @@ async function handleFollow() {
       url: `community/agentHandleFollow`,
       data: {
         uid: sessionStorage.getItem('uid'),
-        author_id: agentInfo.value.author.id
+        author_id: agentInfo.value.author.uid
       }
     })
     if (response.data.code === 0) {
@@ -284,7 +303,7 @@ function goToChat() {
   router.push({
     path: '/chat',
     query: {
-      receiver_id: agentInfo.value.author.id
+      receiver_id: agentInfo.value.author.uid
     }
   })
 }
@@ -324,86 +343,36 @@ onMounted(() => {
         <div class="chat-content">
           <div class="chat-day-divider">今天</div>
 
-          <!-- 系统消息 -->
-          <div class="message system">
-            <div class="message-content">
-              我是你的智能写作助手，可以帮你：
-              <ul>
-                <li>优化文章结构和表达</li>
-                <li>检查语法和用词</li>
-                <li>生成创意内容</li>
-                <li>提供写作建议</li>
-              </ul>
-              让我们开始创作吧！
-            </div>
-          </div>
-
-          <!-- 用户消息 -->
-          <div class="message user">
-            <div class="message-avatar">
-              <img src="https://picsum.photos/40/40?random=1" alt="用户头像">
-            </div>
-            <div class="message-content">
-              帮我写一篇关于人工智能对未来教育影响的文章，要求：
-              1. 1500字左右
-              2. 包含具体案例
-              3. 重点讨论利弊
-            </div>
-            <div class="message-time">14:23</div>
-          </div>
-
-          <!-- 助手消息 -->
-          <div class="message assistant">
-            <div class="message-avatar">
-              <img src="https://api.iconify.design/material-symbols:robot.svg" alt="助手头像">
-            </div>
-            <div class="message-content">
-              好的，我来帮你写一篇关于人工智能对未来教育影响的文章。以下是文章大纲：
-
-              <div class="outline-block">
-                <div class="outline-title">文章大纲：</div>
-                <div class="outline-content">
-                  1. 引言：AI 教育变革的时代背景
-                  2. AI 在教育中的应用现状
-                  3. AI 教育的优势分析
-                  4. 潜在的挑战和风险
-                  5. 案例分析
-                  6. 未来展望和建议
-                </div>
+          <!-- 遍历消息 -->
+          <div
+            v-for="message in messages"
+            :key="message.id"
+            :class="['message', message.sender]"
+          >
+            <!-- 用户消息 -->
+            <template v-if="message.sender === 'user'">
+              <div class="message-avatar">
+                <img src="https://picsum.photos/40/40?random=1" alt="用户头像" />
               </div>
-
-              需要我按这个大纲展开写作吗？
-            </div>
-            <div class="message-time">14:24</div>
-          </div>
-
-          <!-- 用户消息 -->
-          <div class="message user">
-            <div class="message-avatar">
-              <img src="https://picsum.photos/40/40?random=1" alt="用户头像">
-            </div>
-            <div class="message-content">
-              好的，请帮我完整写出这篇文章
-            </div>
-            <div class="message-time">14:24</div>
-          </div>
-
-          <!-- 助手消息（带进度条） -->
-          <div class="message assistant">
-            <div class="message-avatar">
-              <img src="https://api.iconify.design/material-symbols:robot.svg" alt="助手头像">
-            </div>
-            <div class="message-content">
-              <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
+              <div class="message-content">
+                {{ message.content }}
               </div>
-              <div class="progress-bar">
-                <div class="progress" style="width: 65%"></div>
+              <div class="message-time">{{ message.time }}</div>
+            </template>
+
+            <!-- 助手消息 -->
+            <template v-else-if="message.sender === 'assistant'">
+              <div class="message-avatar">
+                <img
+                  src="https://api.iconify.design/material-symbols:robot.svg"
+                  alt="助手头像"
+                />
               </div>
-              <div class="progress-text">正在生成文章...</div>
-            </div>
+              <div class="message-content">
+                {{ message.content }}
+              </div>
+              <div class="message-time">{{ message.time }}</div>
+            </template>
           </div>
         </div>
 
@@ -472,18 +441,18 @@ onMounted(() => {
             :src="baseImageUrl + agentInfo.author.avatar"
             alt="作者头像" 
             class="author-avatar"
-            @click="navigateToProfile(agentInfo.author.id)"
+            @click="navigateToProfile(Number(agentInfo.author.uid))"
           >
           <div class="author-meta">
             <span 
               class="author-name"
-              @click="navigateToProfile(agentInfo.author.id)"
+              @click="navigateToProfile(agentInfo.author.uid)"
             >{{ agentInfo.author.name }}</span>
             <span class="author-id">{{ agentInfo.author.account }}</span>
           </div>
           <button
             class="follow-btn"
-            v-if="uid !== agentInfo.author.id"
+            v-if="uid !== agentInfo.author.uid"
             :class="{ 'followed': userActions.isFollowed }"
             @click="handleFollow"
           >
