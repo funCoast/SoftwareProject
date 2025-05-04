@@ -1937,7 +1937,7 @@ def agent_release(request):
         agent = Agent.objects.get(agent_id=agent_id, user=user)
 
         # 发布操作：将状态置为 1（审核中）
-        agent.status = 1
+        agent.status = 'check'
         agent.save()
 
         return JsonResponse({
