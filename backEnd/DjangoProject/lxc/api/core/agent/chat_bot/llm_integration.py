@@ -21,6 +21,10 @@ class LLMClient:
     def generate_response(self, prompt):
         return self._call(prompt)
 
+    def get_agent_response(self, messages):
+        completion = self.client.chat.completions.create(model="qwen-max", messages=messages)
+        return completion
+
     def _call(self, prompt):
         response = self.client.chat.completions.create(
             model=self.config['model'],

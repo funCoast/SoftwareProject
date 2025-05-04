@@ -32,11 +32,9 @@ def get_limited_session_history(session, max_messages=10):
 
 def generate_prompt_with_context(
         message,
-        session_history,
         plugin_response,
         kb_response,
-        workflow_response,
-        max_tokens=1024
+        workflow_response
 ):
     def count_tokens(text):
         return len(text.split())
@@ -44,17 +42,7 @@ def generate_prompt_with_context(
     prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
     input_str = f"\t- 输入: {message}\n"
     plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
-    context_str = "\t- 历史对话:\n"
     kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
     workflow_str = f"\t- 调用工作流得到结果：{workflow_response}\n"
 
-    total_tokens = count_tokens(prompt + input_str + plugin_str)
-
-    for msg in reversed(session_history):
-        msg_str = f"\t\t- {'User' if msg.is_user else 'Agent'}: {msg.content}\n"
-        if total_tokens + count_tokens(msg_str) > max_tokens * 0.8:
-            break
-        context_str += msg_str
-        total_tokens += count_tokens(msg_str)
-
-    return prompt + input_str + plugin_str + kb_str + workflow_str + context_str
+    return prompt + input_str + plugin_str + kb_str + workflow_str
