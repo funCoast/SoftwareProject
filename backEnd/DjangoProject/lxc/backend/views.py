@@ -1774,7 +1774,9 @@ def workflow_create(request):
             user=user,
             name=name,
             description=description,
-            icon_url=icon_url  # URLField 中保存图标路径
+            icon_url=icon_url,  # URLField 中保存图标路径
+            nodes= json.dumps([]),  # ✅ 初始化为空数组
+            edges= json.dumps([])
         )
 
         return JsonResponse({
