@@ -1982,8 +1982,15 @@ def agent_remove(request):
         })
 
 def agent_delete(request):
-    uid = request.POST.get('uid')
-    agent_id = request.POST.get('agent_id')
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        agent_id = data.get('agent_id')
+    except json.decoder.JSONDecodeError:
+        return JsonResponse({
+            "code": -1,
+            "message": "传入参数格式错误"
+        })
 
     if not uid or not agent_id:
         return JsonResponse({
