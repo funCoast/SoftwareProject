@@ -1822,8 +1822,8 @@ def workflow_fetch(request):
     return JsonResponse({
         "code": 0,
         "message": "获取成功",
-        "nodes": json.loads(workflow.nodes),
-        "edges": json.loads(workflow.edges),
+        "nodes": json.loads(workflow.nodes or '[]'),
+        "edges": json.loads(workflow.edges or '[]'),
         "icon": workflow.icon_url,
         "name": workflow.name,
         "descript": workflow.description
