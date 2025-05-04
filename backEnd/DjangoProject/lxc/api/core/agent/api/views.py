@@ -13,6 +13,7 @@ from api.core.agent.chat_bot.llm_integration import LLMClient
 from api.core.agent.chat_bot.session import get_or_create_session, save_message, get_limited_session_history, \
     generate_prompt_with_context
 from api.core.agent.skill.plugin_call.plugin_call import plugin_call
+from api.core.agent.skill.workflow_call import workflows_call
 from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation, KnowledgeBase, Workflow
 from backend.utils.queryKB import query_kb
 from lxc import settings
@@ -28,8 +29,10 @@ def temp_send_message(request):
         message = data.get('content')
         agent_id = data.get('agent_id')
 
+        input_str = f"\t- 用户输入: {message}\n"
         # 插件调用
         plugin_response = plugin_call(message)
+        plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
 
         # 知识库调用
         agent = Agent.objects.get(agent_id=agent_id)
@@ -38,15 +41,15 @@ def temp_send_message(request):
         kb_response = []
         for kb in kbs:
             kb_response.append(query_kb(user_id, kb.kb_id, message))
+        kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
 
         # 工作流调用
-
+        entries = AgentWorkflowRelation.objects.filter(agent=agent)
+        workflow_ids = [entry.workflow_id for entry in entries]
+        workflow_response = workflows_call(input_str + plugin_str + kb_str, workflow_ids)
+        workflow_str = f"\t- 调用工作流得到结果：{workflow_response}\n"
 
         prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
-        input_str = f"\t- 输入: {message}\n"
-        plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
-        kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
-        workflow_str = f"\t- 调用工作流得到结果：[]\n"
 
         total_message = prompt + input_str + plugin_str + kb_str + workflow_str
         response = llm_client.generate_response(total_message)
