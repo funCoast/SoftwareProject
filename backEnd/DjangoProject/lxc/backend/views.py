@@ -1881,11 +1881,13 @@ def agent_fetch_all(request):
 
         agent_list = []
         for agent in agents:
-            # 将 is_published 映射为 status 数字：0=private，1=under review，2=public
-            if agent.is_published:
+            # status 数字：0=private，1=under review，2=public
+            if agent.status == 'published':
                 status = 2
+            elif agent.status == 'private':
+                status = 0
             else:
-                status = 0  # 默认私有，除非你后续定义审核状态字段
+                status = 1
 
             agent_list.append({
                 "id": agent.agent_id,
@@ -1928,7 +1930,7 @@ def agent_release(request):
         agent = Agent.objects.get(agent_id=agent_id, user=user)
 
         # 发布操作：将状态置为 1（审核中）
-        agent.is_published = True  # 可选保留为 False，如你有额外 status 字段请设置为 1
+        agent.status = 1
         agent.save()
 
         return JsonResponse({
@@ -1960,7 +1962,7 @@ def agent_remove(request):
         user = User.objects.get(user_id=uid)
         agent = Agent.objects.get(agent_id=agent_id, user=user)
 
-        agent.is_published = False  # 可选同步标记为未发布
+        agent.status = 'private'
         agent.save()
 
         return JsonResponse({
@@ -2294,7 +2296,7 @@ def community_agent_handle_copy(request):
             category=original_agent.category,
             icon_url=original_agent.icon_url,
             user=user,
-            is_published=False,
+            status='private',
             is_modifiable=True,
             likes_count=0,
             favorites_count=0
