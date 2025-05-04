@@ -14,6 +14,7 @@ from api.core.agent.chat_bot.session import get_or_create_session, save_message,
     generate_prompt_with_context
 from api.core.agent.skill.plugin_call.plugin_call import plugin_call
 from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation, KnowledgeBase, Workflow
+from backend.utils.queryKB import query_kb
 from lxc import settings
 
 
@@ -31,7 +32,12 @@ def temp_send_message(request):
         plugin_response = plugin_call(message)
 
         # 知识库调用
-
+        agent = Agent.objects.get(agent_id=agent_id)
+        entries = AgentKnowledgeEntry.objects.filter(agent=agent)
+        kbs = [entry.kb for entry in entries]
+        kb_response = []
+        for kb in kbs:
+            kb_response.append(query_kb(user_id, kb.kb_id, message))
 
         # 工作流调用
 
@@ -39,7 +45,7 @@ def temp_send_message(request):
         prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
         input_str = f"\t- 输入: {message}\n"
         plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
-        kb_str = f"\t- 调用已有知识库中的内容，得到：[]\n"
+        kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
         workflow_str = f"\t- 调用工作流得到结果：[]\n"
 
         total_message = prompt + input_str + plugin_str + kb_str + workflow_str
