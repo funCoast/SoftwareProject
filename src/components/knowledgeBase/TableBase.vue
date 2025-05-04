@@ -1,58 +1,149 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import router from "../../router";
+import { computed, ref } from "vue"
+import axios from "axios"
+import router from "../../router"
 
 interface RowData {
-  [key: string]: any; // 动态字段
+  [key: string]: any // 动态字段
 }
 
-const tableData = ref<RowData[]>([]); // 表格数据
-const tableColumns = ref<{ prop: string; label: string; width?: number }[]>([]); // 表格列配置
-let originalValue = ""; // 用于存储单元格的原始值
+const tableData = ref<RowData[]>([]) // 表格数据
+const tableColumns = ref<string[]>([]) // 表格列配置，只包含列名称
+let originalValue = "" // 用于存储单元格的原始值
+const selectedRows = ref<number[]>([]) // 存储选中行的索引
+const haveSelected = computed(() => {
+  return (selectedRows.value.length > 0)
+}); // 判断是否有选中行
+const newRowIndexes = ref<number[]>([]); // 用于存储新增行的序号
 
-// 模拟从后端获取数据
-const fetchTableData = () => {
-  // 模拟后端返回的列配置
-  tableColumns.value = [
-    { prop: "id", label: "ID", width: 50 },
-    { prop: "name", label: "名称" },
-    { prop: "description", label: "描述" },
-    { prop: "createdAt", label: "创建时间", width: 150 },
-    { prop: "updatedAt", label: "更新时间", width: 150 },
-  ];
-
-  // 模拟后端返回的表格数据
-  tableData.value = [
-    { id: 1, name: "行1", description: "这是第一行的描述", createdAt: "2023-10-01", updatedAt: "2023-10-02" },
-    { id: 2, name: "行2", description: "这是第二行的描述", createdAt: "2023-10-03", updatedAt: "2023-10-04" },
-    { id: 3, name: "行3", description: "这是第三行的描述", createdAt: "2023-10-05", updatedAt: "2023-10-06" },
-    { id: 4, name: "行4", description: "这是第四行的描述", createdAt: "2023-10-07", updatedAt: "2023-10-08" },
-    { id: 5, name: "行5", description: "这是第五行的描述", createdAt: "2023-10-09", updatedAt: "2023-10-10" },
-  ];
-};
+const getData = () => {
+  axios({
+    method: 'get',
+    url: '/kb/getTables',
+    params: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      const table = response.data // 获取表格数据
+      tableColumns.value = table.columns // 设置表格列配置
+      tableData.value = table.data // 设置表格数据
+    } else {
+      console.log(response.data.message)
+    }
+  })
+}
 
 // 记录单元格的原始值
 const handleFocus = (value: string) => {
-  originalValue = value;
-};
+  originalValue = value
+}
 
 // 处理失去焦点事件
 const handleBlur = (row: RowData, prop: string, index: number) => {
-  const newValue = row[prop];
+  const newValue = row[prop]
   if (originalValue !== newValue) {
-    updateBackend(row, prop, index);
+    if (newRowIndexes.value.includes(index)) {
+      // 如果是新增行，调用新增接口
+      uploadNewRow(row, index);
+    } else {
+      // 如果是已有行，调用更新接口
+      updateTable(row, prop, index);
+    }
   }
+}
+
+function goToUploadPage() {
+  router.push(router.currentRoute.value.path + "/upload")
+}
+
+const updateTable = (row: RowData, prop: string, index: number) => {
+  axios({
+    method: 'post',
+    url: '/kb/updateTable',
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+      rowIndex: index,  // 更新的行索引
+      prop: prop,       // 更新的字段
+      value: row[prop], // 更新的值
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      alert("更新成功！")
+    } else {
+      alert("更新失败！" + response.data.message)
+    }
+  })
+  console.log(`更新第 ${index + 1} 行，字段 ${prop} 的值为：${row[prop]}`)
+}
+
+// 新增一行空白数据
+const addRow = () => {
+  const newRow: RowData = {}; // 创建一个空白行
+  tableColumns.value.forEach((column) => {
+    newRow[column] = ""; // 初始化每列为空字符串
+  });
+  tableData.value.push(newRow); // 将新行添加到表格数据中
+  newRowIndexes.value.push(tableData.value.length - 1); // 记录新增行的序号
+  console.log("新增行序号：", newRowIndexes.value);
 };
 
-// 模拟更新到后端的方法
-const updateBackend = (row: RowData, prop: string, index: number) => {
-  console.log(`更新第 ${index + 1} 行，字段 ${prop} 的值为：${row[prop]}`);
-  // 在这里调用后端接口，例如：
-  // axios.post('/api/update', { rowIndex: index, id: row.id, field: prop, value: row[prop] });
+const uploadNewRow = (row: RowData, index: number) => {
+  axios({
+    method: "post",
+    url: "/kb/addTableRow",
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+      rowData: row, // 新增行的数据
+    },
+  })
+      .then((response) => {
+        if (response.data.code === 0) {
+          alert("新增行已上传！");
+          newRowIndexes.value = newRowIndexes.value.filter((i) => i !== index); // 移除已上传的行序号
+        } else {
+          alert("新增行上传失败！" + response.data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("新增行上传失败：", error);
+      });
 };
+
+const deleteSelectedRows = () => {
+  if (selectedRows.value.length === 0) {
+    alert("请先选择要删除的行！")
+    return
+  }
+  axios({
+    method: "post",
+    url: "/kb/deleteTableRows",
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      kb_id: router.currentRoute.value.params.id,
+      rows: selectedRows.value, // 选中行的索引
+    },
+  }).then((response) => {
+    if (response.data.code === 0) {
+      alert("删除成功！")
+      selectedRows.value = []
+      getData()
+    } else {
+      alert("删除失败！" + response.data.message)
+    }
+  })
+}
+
+// 更新选中行的索引
+const handleSelectionChange = (selectedRowsData: RowData[]) => {
+  selectedRows.value = selectedRowsData.map((row) => tableData.value.indexOf(row))
+}
 
 // 初始化数据
-fetchTableData();
+getData()
 </script>
 
 <template>
@@ -62,34 +153,47 @@ fetchTableData();
       <img src="../../assets/icons/Back.svg" alt="返回" class="backIcon" @click="router.push('/workspace/resourcelibrary')" />
       <h2>表格知识库</h2>
       <p class="subtitle">行数量：{{ tableData.length }}</p>
-      <button class="add-btn" type="button" @click="router.push('/workspace/createPicture')">
+      <button class="add-btn" type="button" @click="goToUploadPage">
         添加数据
       </button>
     </div>
 
     <!-- 表格展示区域 -->
-    <el-table :data="tableData" stripe class="data-table">
+    <el-table
+        :data="tableData"
+        stripe
+        class="data-table"
+        @selection-change="handleSelectionChange"
+    >
+      <!-- 勾选框列 -->
+      <el-table-column type="selection" width="55" />
+
       <!-- 动态生成表格列 -->
       <el-table-column
           v-for="column in tableColumns"
-          :key="column.prop"
-          :prop="column.prop"
-          :label="column.label"
-          :width="column.width"
+          :key="column"
+          :prop="column"
+          :label="column"
       >
         <!-- 可编辑单元格 -->
         <template #default="scope">
           <input
-              v-model="scope.row[column.prop]"
+              v-model="scope.row[column]"
               type="text"
               class="editable-input"
               placeholder="请输入内容"
-              @focus="handleFocus(scope.row[column.prop])"
-              @blur="handleBlur(scope.row, column.prop, scope.$index)"
+              @focus="handleFocus(scope.row[column])"
+              @blur="handleBlur(scope.row, column, scope.$index)"
           />
         </template>
       </el-table-column>
     </el-table>
+
+    <!-- 新增一行按钮 -->
+    <div class="add-row-container">
+      <el-button type="success" @click="addRow">新增一行</el-button>
+      <el-button type="danger" @click="deleteSelectedRows" :disabled="!haveSelected">删除选中行</el-button>
+    </div>
   </div>
 </template>
 
@@ -149,5 +253,54 @@ fetchTableData();
 .editable-input:focus {
   outline: none;
   border-bottom: 1px solid #ccc;
+}
+
+/* 表格列标题自适应宽度 */
+.el-table th .cell {
+  white-space: nowrap; /* 防止列标题换行 */
+  text-overflow: ellipsis; /* 超出部分显示省略号 */
+  overflow: hidden;
+}
+
+.el-table td .cell {
+  white-space: nowrap; /* 防止单元格内容换行 */
+  text-overflow: ellipsis; /* 超出部分显示省略号 */
+  overflow: hidden;
+}
+
+.add-row-container {
+  display: flex;
+  margin-top: 20px;
+}
+
+.add-row-btn {
+  height: 40px;
+  padding: 8px 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-row-btn:hover {
+  background: #45a049;
+}
+
+.delete-row-btn {
+  height: 40px;
+  padding: 8px 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.delete-row-btn:hover {
+  background: #e53935;
 }
 </style>

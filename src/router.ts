@@ -74,7 +74,12 @@ const routes = [
             name: 'UploadText',
             component: () => import('./components/knowledgeBase/UploadText.vue'),
             meta: { authReq: authRequired },
-          }
+          },
+          {
+            path: "workflow/:id",
+            name: "WorkflowCanvas",
+            component: () => import("./components/workflow/WorkflowCanvas.vue"),
+          },
         ],
       },
       {
@@ -83,7 +88,17 @@ const routes = [
         component: () => import("./components/community/Community.vue"),
       },
       {
-        path: "agentDetail",
+        path: "publish-anno",
+        name: "PublishAnno",
+        component: () => import("./components/admin/PublishAnno.vue")
+      },
+      {
+        path: "review-agent",
+        name: "ReviewAgent",
+        component: () => import("./components/admin/ReviewAgent.vue")
+      },
+      {
+        path: "agentDetail/:id",
         name: "AgentDetail",
         component: () => import("./components/agent/AgentDetail.vue"),
       },
@@ -103,12 +118,7 @@ const routes = [
         component: () => import("./components/agent/AgentEdit.vue"),
       },
     ],
-  },
-  {
-    path: "/workflow/:id",
-    name: "WorkflowCanvas",
-    component: () => import("./components/workflow/WorkflowCanvas.vue"),
-  },
+  }
 ];
 
 const router = createRouter({

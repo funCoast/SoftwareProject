@@ -7,6 +7,8 @@ import { ElMessage } from 'element-plus'
 const route = useRoute()
 const router = useRouter()
 const agentId = route.params.id
+const uid = Number(sessionStorage.getItem('uid'))
+const baseImageUrl = "http://122.9.33.84:8000"
 
 // 智能体基本信息
 const agentInfo = ref({
@@ -48,18 +50,37 @@ interface Comment {
   time: string
 }
 
+interface AgentInfo {
+  id: number
+  name: string
+  description: string
+  icon: string
+  author: {
+    id: number
+    account: string
+    name: string
+    avatar: string
+  }
+  stats: {
+    usage: number
+    likes: number
+    favorites: number
+  }
+}
+
 // 获取智能体基本信息
 async function fetchAgentInfo() {
   try {
     const response = await axios({
       method: 'get',
-      url: `community/agent/fetchBasicInfo`,
+      url: `community/agentFetchBasicInfo`,
       params: {
         agent_id: agentId,
       }
     })
     if (response.data.code === 0) {
       agentInfo.value = response.data.basicInfo
+      console.log(agentInfo.value)
     } else {
       ElMessage.error('获取智能体信息失败：' + response.data.message)
     }
@@ -74,7 +95,7 @@ async function fetchUserActions() {
   try {
     const response = await axios({
       method: 'get',
-      url: `community/agent/fetchUserActions`,
+      url: `community/agentFetchUserActions`,
       params: {
         agent_id: agentId,
         uid: sessionStorage.getItem('uid')
@@ -95,7 +116,7 @@ async function fetchComments() {
   try {
     const response = await axios({
       method: 'get',
-      url: `community/agent/fetchComments`,
+      url: `community/agentFetchComments`,
       params: {
         agent_id: agentId
       }
@@ -116,7 +137,7 @@ async function handleLike() {
   try {
     const response = await axios({
       method: 'post',
-      url: `community/agent/handleLike`,
+      url: `community/agentHandleLike`,
       data: {
         uid: sessionStorage.getItem('uid'),
         agent_id: agentId
@@ -140,7 +161,7 @@ async function handleFavorite() {
   try {
     const response = await axios({
       method: 'post',
-      url: `community/agent/handleFavorite`,
+      url: `community/agentHandleFavorite`,
       data: {
         uid: sessionStorage.getItem('uid'),
         agent_id: agentId
@@ -164,7 +185,7 @@ async function handleFollow() {
   try {
     const response = await axios({
       method: 'post',
-      url: `community/agent/handleFollow`,
+      url: `community/agentHandleFollow`,
       data: {
         uid: sessionStorage.getItem('uid'),
         author_id: agentInfo.value.author.id
@@ -187,7 +208,7 @@ async function handleCopy() {
   try {
     const response = await axios({
       method: 'post',
-      url: `community/agent/handleCopy`,
+      url: `community/agentHandleCopy`,
       data: {
         uid: sessionStorage.getItem('uid'),
         agent_id: agentId
@@ -209,7 +230,7 @@ async function handleReport() {
   try {
     const response = await axios({
       method: 'post',
-      url: `community/agent/handleReport`,
+      url: `community/agentHandleReport`,
       data: {
         uid: sessionStorage.getItem('uid'),
         agent_id: agentId
@@ -235,7 +256,7 @@ async function publishComment() {
   try {
     const response = await axios({
       method: 'post',
-      url: `community/agent/sendComment`,
+      url: `community/agentSendComment`,
       data: {
         uid: sessionStorage.getItem('uid'),
         agent_id: agentId,
@@ -255,8 +276,17 @@ async function publishComment() {
   }
 }
 
-function navigateToProfile(userId: string) {
+function navigateToProfile(userId: number) {
   router.push(`/profile/${userId}`)
+}
+
+function goToChat() {
+  router.push({
+    path: '/chat',
+    query: {
+      receiver_id: agentInfo.value.author.id
+    }
+  })
 }
 
 onMounted(() => {
@@ -274,7 +304,7 @@ onMounted(() => {
         <!-- 聊天头部 -->
         <div class="chat-header">
           <div class="chat-header-left">
-            <img :src="agentInfo.icon" alt="智能体" class="agent-icon">
+            <img :src="baseImageUrl + agentInfo.icon" alt="智能体" class="agent-icon">
             <div class="agent-status">
               <span class="agent-name">{{ agentInfo.name }}</span>
               <span class="status-badge online">在线</span>
@@ -405,31 +435,41 @@ onMounted(() => {
     <div class="agent-info">
       <!-- 基本信息板块 -->
       <div class="info-panel basic-info">
-        <div class="agent-header">
-          <img :src="agentInfo.icon" alt="智能体图片" class="agent-photo">
-          <div class="agent-meta">
-            <h2>{{ agentInfo.name }}</h2>
-            <p class="description">{{ agentInfo.description }}</p>
-            <div class="stats">
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:bar-chart.svg" alt="使用量" class="stat-icon">
-                <span>使用量 {{ agentInfo.stats.usage }}</span>
-              </div>
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="stat-icon">
-                <span>点赞 {{ agentInfo.stats.likes }}</span>
-              </div>
-              <div class="stat-item">
-                <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="stat-icon">
-                <span>收藏 {{ agentInfo.stats.favorites }}</span>
-              </div>
+        <!-- 智能体基本信息区域 -->
+        <div class="agent-basic">
+          <div class="agent-header">
+            <img :src="baseImageUrl + agentInfo.icon" alt="智能体图片" class="agent-photo">
+            <div class="agent-meta">
+              <h2>{{ agentInfo.name }}</h2>
+              <p class="description">{{ agentInfo.description }}</p>
             </div>
           </div>
         </div>
 
+        <!-- 分隔线 -->
+        <div class="divider"></div>
+
+        <!-- 统计信息区域 -->
+        <div class="stats-section">
+          <div class="stats">
+            <div class="stat-item">
+              <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="stat-icon">
+              <span>点赞 {{ agentInfo.stats.likes }}</span>
+            </div>
+            <div class="stat-item">
+              <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="stat-icon">
+              <span>收藏 {{ agentInfo.stats.favorites }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分隔线 -->
+        <div class="divider"></div>
+
+        <!-- 作者信息区域 -->
         <div class="author-info">
           <img 
-            :src="agentInfo.author.avatar" 
+            :src="baseImageUrl + agentInfo.author.avatar"
             alt="作者头像" 
             class="author-avatar"
             @click="navigateToProfile(agentInfo.author.id)"
@@ -441,8 +481,9 @@ onMounted(() => {
             >{{ agentInfo.author.name }}</span>
             <span class="author-id">{{ agentInfo.author.account }}</span>
           </div>
-          <button 
-            class="follow-btn" 
+          <button
+            class="follow-btn"
+            v-if="uid !== agentInfo.author.id"
             :class="{ 'followed': userActions.isFollowed }"
             @click="handleFollow"
           >
@@ -457,6 +498,10 @@ onMounted(() => {
           </button>
         </div>
 
+        <!-- 分隔线 -->
+        <div class="divider"></div>
+
+        <!-- 操作按钮区域 -->
         <div class="action-buttons">
           <button 
             class="action-btn primary" 
@@ -490,10 +535,6 @@ onMounted(() => {
             <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
             <span>复制</span>
           </button>
-          <button class="action-btn secondary" @click="handleReport">
-            <img src="https://api.iconify.design/material-symbols:flag.svg" alt="举报" class="action-icon">
-            <span>举报</span>
-          </button>
         </div>
       </div>
 
@@ -505,7 +546,7 @@ onMounted(() => {
             <div class="comment-header">
               <div class="comment-user">
                 <img 
-                  :src="comment.avatar" 
+                  :src="baseImageUrl + comment.avatar"
                   :alt="comment.name" 
                   class="comment-avatar"
                   @click="navigateToProfile(comment.userId)"
@@ -918,14 +959,16 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
+.stats-section {
+  padding: 16px 0;
+}
+
 .stats {
   display: flex;
   gap: 20px;
-  margin-top: 16px;
   padding: 12px 16px;
   background: #f8f9fa;
   border-radius: 8px;
-  margin-left: -120px;
 }
 
 .stat-item {
@@ -1020,7 +1063,7 @@ onMounted(() => {
 .action-buttons {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-top: 16px;
 }
 
 .action-btn {
@@ -1263,5 +1306,15 @@ onMounted(() => {
 
 .action-btn.active .action-icon {
   filter: brightness(0) invert(1);
+}
+
+.agent-basic {
+  margin-bottom: 16px;
+}
+
+.divider {
+  height: 1px;
+  background: #eee;
+  margin: 0;
 }
 </style>

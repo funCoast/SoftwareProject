@@ -63,7 +63,7 @@ function uploadAvatar() {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      refreshAvatar('http://127.0.0.1:8000' + response.data.avatar)
+      refreshAvatar('http://122.9.33.84:8000' + response.data.avatar)
       alert(response.data.message)
     } else {
       alert(response.data.message)
@@ -93,6 +93,7 @@ function handleAvatarChange(event: Event) {
 }
 
 function updateBasicInfo() {
+  console.log(sessionStorage.getItem('uid'))
   axios({
     method: 'post',
     url: 'user/updateProfile',
@@ -135,7 +136,7 @@ function updatePwd() {
 
 // 返回个人资料页面
 function goBack() {
-  router.push('/profile');
+  router.push(`/profile/${sessionStorage.getItem('uid')}`);
 }
   
 </script>

@@ -21,18 +21,23 @@ interface agent {
   name: string
   category: string
   description: string
-  icon: string
   image: string
-  usage: string
-  likes: string
-  favorites: string
+  likes: number
+  favorites: number
   author: {
+    id?: number
     name: string
     avatar: string
   }
 }
 
 onBeforeMount (() => {
+  fetchAnnouncement()
+  // fetchHot()
+  // fetchFollowing()
+})
+
+async function fetchAnnouncement() {
   axios({
     method: 'get',
     url: 'anno/get',
@@ -44,7 +49,35 @@ onBeforeMount (() => {
       announcements.value=response.data.announcements
     }
   })
-})
+}
+
+async function fetchHot() {
+  axios({
+    method: 'get',
+    url: 'user/fetchHot',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+    if(response.data.code === 0) {
+      hotAgents.value=response.data.agents
+    }
+  })
+}
+
+async function fetchFollowing() {
+  axios({
+    method: 'get',
+    url: 'user/fetchFollowWorks',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+    if(response.data.code === 0) {
+      followingAgents.value=response.data.agents
+    }
+  })
+}
 
 const hotAgents = ref<agent[]> ([
   {
@@ -52,11 +85,9 @@ const hotAgents = ref<agent[]> ([
     name: 'AI助手',
     category: '对话助手',
     description: '智能对话助手，支持多轮对话和上下文理解，可进行自然语言交互',
-    icon: 'fas fa-robot',
     image: 'https://picsum.photos/300/300?random=1',
-    usage: '2.3k',
-    likes: '1.2k',
-    favorites: '856',
+    likes: 1200,
+    favorites: 856,
     author: {
       name: 'AI开发者',
       avatar: 'https://picsum.photos/50/50?random=1'
@@ -67,164 +98,12 @@ const hotAgents = ref<agent[]> ([
     name: '数据分析师',
     category: '数据分析',
     description: '专业的数据分析工具，支持多种数据可视化和预测分析',
-    icon: 'fas fa-chart-line',
     image: 'https://picsum.photos/300/300?random=2',
-    usage: '1.8k',
-    likes: '980',
-    favorites: '654',
+    likes: 980,
+    favorites: 654,
     author: {
       name: '数据专家',
       avatar: 'https://picsum.photos/50/50?random=2'
-    }
-  },
-  {
-    id: 3,
-    name: '创意写作',
-    category: '写作助手',
-    description: 'AI写作助手，支持多种文体和风格，可生成高质量文章',
-    icon: 'fas fa-pen-fancy',
-    image: 'https://picsum.photos/300/300?random=3',
-    usage: '1.5k',
-    likes: '890',
-    favorites: '543',
-    author: {
-      name: '写作达人',
-      avatar: 'https://picsum.photos/50/50?random=3'
-    }
-  },
-  {
-    id: 4,
-    name: '代码助手',
-    category: '开发工具',
-    description: '编程辅助工具，支持多种编程语言，提供代码建议和调试',
-    icon: 'fas fa-code',
-    image: 'https://picsum.photos/300/300?random=4',
-    usage: '1.2k',
-    likes: '756',
-    favorites: '432',
-    author: {
-      name: '程序猿',
-      avatar: 'https://picsum.photos/50/50?random=4'
-    }
-  },
-  {
-    id: 5,
-    name: '图像处理',
-    category: '图像工具',
-    description: '专业的图像处理工具，支持多种图像编辑和优化功能',
-    icon: 'fas fa-image',
-    image: 'https://picsum.photos/300/300?random=5',
-    usage: '980',
-    likes: '678',
-    favorites: '321',
-    author: {
-      name: '图像专家',
-      avatar: 'https://picsum.photos/50/50?random=5'
-    }
-  },
-  {
-    id: 6,
-    name: '语音助手',
-    category: '语音工具',
-    description: '智能语音助手，支持语音识别和合成，提供语音交互',
-    icon: 'fas fa-microphone',
-    image: 'https://picsum.photos/300/300?random=6',
-    usage: '850',
-    likes: '567',
-    favorites: '234',
-    author: {
-      name: '语音专家',
-      avatar: 'https://picsum.photos/50/50?random=6'
-    }
-  },
-  {
-    id: 7,
-    name: '数学助手',
-    category: '教育工具',
-    description: '智能数学解题助手，支持多种数学问题的解答和讲解',
-    icon: 'fas fa-square-root-alt',
-    image: 'https://picsum.photos/300/300?random=19',
-    usage: '1.1k',
-    likes: '789',
-    favorites: '456',
-    author: {
-      name: '数学老师',
-      avatar: 'https://picsum.photos/50/50?random=19'
-    }
-  },
-  {
-    id: 8,
-    name: '化学助手',
-    category: '教育工具',
-    description: '化学实验模拟和知识讲解，支持化学反应预测',
-    icon: 'fas fa-flask',
-    image: 'https://picsum.photos/300/300?random=20',
-    usage: '920',
-    likes: '678',
-    favorites: '345',
-    author: {
-      name: '化学专家',
-      avatar: 'https://picsum.photos/50/50?random=20'
-    }
-  },
-  {
-    id: 9,
-    name: '物理助手',
-    category: '教育工具',
-    description: '物理实验模拟和知识讲解，支持物理计算和预测',
-    icon: 'fas fa-atom',
-    image: 'https://picsum.photos/300/300?random=21',
-    usage: '880',
-    likes: '645',
-    favorites: '321',
-    author: {
-      name: '物理专家',
-      avatar: 'https://picsum.photos/50/50?random=21'
-    }
-  },
-  {
-    id: 10,
-    name: '生物助手',
-    category: '教育工具',
-    description: '生物知识讲解和实验模拟，支持生物过程分析',
-    icon: 'fas fa-dna',
-    image: 'https://picsum.photos/300/300?random=22',
-    usage: '850',
-    likes: '623',
-    favorites: '312',
-    author: {
-      name: '生物专家',
-      avatar: 'https://picsum.photos/50/50?random=22'
-    }
-  },
-  {
-    id: 11,
-    name: '历史助手',
-    category: '教育工具',
-    description: '历史知识讲解和事件分析，支持历史事件模拟',
-    icon: 'fas fa-landmark',
-    image: 'https://picsum.photos/300/300?random=23',
-    usage: '780',
-    likes: '567',
-    favorites: '289',
-    author: {
-      name: '历史专家',
-      avatar: 'https://picsum.photos/50/50?random=23'
-    }
-  },
-  {
-    id: 12,
-    name: '地理助手',
-    category: '教育工具',
-    description: '地理知识讲解和地图分析，支持地理信息查询',
-    icon: 'fas fa-globe-americas',
-    image: 'https://picsum.photos/300/300?random=24',
-    usage: '760',
-    likes: '543',
-    favorites: '278',
-    author: {
-      name: '地理专家',
-      avatar: 'https://picsum.photos/50/50?random=24'
     }
   }
 ])
@@ -235,11 +114,9 @@ const followingAgents = ref<agent[]> ([
     name: '个人助手',
     category: '生活助手',
     description: '个性化AI助手，提供生活服务和日程管理',
-    icon: 'fas fa-user-astronaut',
     image: 'https://picsum.photos/300/300?random=7',
-    usage: '800',
-    likes: '456',
-    favorites: '234',
+    likes: 456,
+    favorites: 234,
     author: {
       name: '生活达人',
       avatar: 'https://picsum.photos/50/50?random=7'
@@ -250,74 +127,12 @@ const followingAgents = ref<agent[]> ([
     name: '健康顾问',
     category: '健康管理',
     description: '智能健康管理助手，提供饮食建议和运动计划',
-    icon: 'fas fa-heartbeat',
     image: 'https://picsum.photos/300/300?random=8',
-    usage: '750',
-    likes: '420',
-    favorites: '210',
+    likes: 420,
+    favorites: 210,
     author: {
       name: '健康专家',
       avatar: 'https://picsum.photos/50/50?random=8'
-    }
-  },
-  {
-    id: 3,
-    name: '理财顾问',
-    category: '财务管理',
-    description: '智能理财助手，提供投资建议和理财规划',
-    icon: 'fas fa-chart-pie',
-    image: 'https://picsum.photos/300/300?random=9',
-    usage: '680',
-    likes: '380',
-    favorites: '190',
-    author: {
-      name: '理财专家',
-      avatar: 'https://picsum.photos/50/50?random=9'
-    }
-  },
-  {
-    id: 4,
-    name: '学习助手',
-    category: '教育工具',
-    description: '智能学习助手，提供知识讲解和习题辅导',
-    icon: 'fas fa-graduation-cap',
-    image: 'https://picsum.photos/300/300?random=10',
-    usage: '920',
-    likes: '580',
-    favorites: '320',
-    author: {
-      name: '教育专家',
-      avatar: 'https://picsum.photos/50/50?random=10'
-    }
-  },
-  {
-    id: 5,
-    name: '旅行规划',
-    category: '旅游助手',
-    description: '智能旅行规划助手，提供行程建议和攻略',
-    icon: 'fas fa-plane',
-    image: 'https://picsum.photos/300/300?random=11',
-    usage: '650',
-    likes: '350',
-    favorites: '180',
-    author: {
-      name: '旅行达人',
-      avatar: 'https://picsum.photos/50/50?random=11'
-    }
-  },
-  {
-    id: 6,
-    name: '美食推荐',
-    category: '美食助手',
-    description: '智能美食推荐助手，提供菜谱和餐厅推荐',
-    icon: 'fas fa-utensils',
-    image: 'https://picsum.photos/300/300?random=12',
-    usage: '780',
-    likes: '450',
-    favorites: '240',
-    author: {
-      name: '美食专家',
-      avatar: 'https://picsum.photos/50/50?random=12'
     }
   }
 ])
@@ -328,11 +143,9 @@ const favoriteAgents = ref<agent[]> ([
     name: '翻译助手',
     category: '语言工具',
     description: '多语言翻译，支持多种语言互译和实时翻译',
-    icon: 'fas fa-language',
     image: 'https://picsum.photos/300/300?random=13',
-    usage: '900',
-    likes: '567',
-    favorites: '345',
+    likes: 567,
+    favorites: 345,
     author: {
       name: '语言专家',
       avatar: 'https://picsum.photos/50/50?random=13'
@@ -343,74 +156,12 @@ const favoriteAgents = ref<agent[]> ([
     name: '音乐创作',
     category: '音乐工具',
     description: 'AI音乐创作助手，支持作曲和编曲',
-    icon: 'fas fa-music',
     image: 'https://picsum.photos/300/300?random=14',
-    usage: '720',
-    likes: '480',
-    favorites: '280',
+    likes: 480,
+    favorites: 280,
     author: {
       name: '音乐人',
       avatar: 'https://picsum.photos/50/50?random=14'
-    }
-  },
-  {
-    id: 3,
-    name: '视频剪辑',
-    category: '视频工具',
-    description: '智能视频剪辑助手，提供视频编辑建议',
-    icon: 'fas fa-video',
-    image: 'https://picsum.photos/300/300?random=15',
-    usage: '850',
-    likes: '520',
-    favorites: '310',
-    author: {
-      name: '视频专家',
-      avatar: 'https://picsum.photos/50/50?random=15'
-    }
-  },
-  {
-    id: 4,
-    name: '3D建模',
-    category: '设计工具',
-    description: 'AI辅助3D建模，提供建模建议和优化',
-    icon: 'fas fa-cube',
-    image: 'https://picsum.photos/300/300?random=16',
-    usage: '680',
-    likes: '420',
-    favorites: '250',
-    author: {
-      name: '设计专家',
-      avatar: 'https://picsum.photos/50/50?random=16'
-    }
-  },
-  {
-    id: 5,
-    name: '法律顾问',
-    category: '法律服务',
-    description: '智能法律咨询助手，提供法律建议和解释',
-    icon: 'fas fa-gavel',
-    image: 'https://picsum.photos/300/300?random=17',
-    usage: '750',
-    likes: '450',
-    favorites: '270',
-    author: {
-      name: '法律专家',
-      avatar: 'https://picsum.photos/50/50?random=17'
-    }
-  },
-  {
-    id: 6,
-    name: '心理咨询',
-    category: '心理服务',
-    description: 'AI心理咨询助手，提供心理建议和疏导',
-    icon: 'fas fa-brain',
-    image: 'https://picsum.photos/300/300?random=18',
-    usage: '820',
-    likes: '490',
-    favorites: '290',
-    author: {
-      name: '心理专家',
-      avatar: 'https://picsum.photos/50/50?random=18'
     }
   }
 ])
@@ -456,7 +207,7 @@ watch (
         <div class="notice-content">
           <div class="notice-list">
             <div v-for="announcement in announcements" :key="announcement.id" class="notice-item">
-              <i class="fas fa-check-circle"></i>
+<!--              <i class="fas fa-check-circle"></i>-->
               <div class="notice-text">
                 <h4>{{ announcement.title }}</h4>
                 <p>{{ announcement.content }}</p>
@@ -503,12 +254,12 @@ watch (
                 </div>
                 <p class="agent-description">{{ agent.description }}</p>
                 <div class="agent-stats">
-                  <span class="stat-item" title="使用量">
-                    <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>
-                    </svg>
-                    {{ agent.usage }}
-                  </span>
+<!--                  <span class="stat-item" title="使用量">-->
+<!--                    <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">-->
+<!--                      <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>-->
+<!--                    </svg>-->
+<!--                    {{ agent.usage }}-->
+<!--                  </span>-->
                   <span class="stat-item" title="点赞量">
                     <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>

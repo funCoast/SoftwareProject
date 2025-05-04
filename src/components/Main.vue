@@ -19,7 +19,7 @@ function getAvatar() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      avatar.value = 'http://127.0.0.1:8000' + response.data.avatar
+      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar
       console.log(avatar.value)
     } else {
       alert(response.data.message)
@@ -54,6 +54,16 @@ const navItems = ref<NavItem[]>([
     path: '/community',
     label: '社区',
     icon: 'https://api.iconify.design/material-symbols:groups.svg'
+  },
+  {
+    path: '/publish-anno',
+    label: '公告管理',
+    icon: 'https://api.iconify.design/material-symbols:announcement.svg'
+  },
+  {
+    path: '/review-agent',
+    label: '智能体审核',
+    icon: 'https://api.iconify.design/material-symbols:check-circle.svg'
   }
 ])
 
@@ -87,7 +97,6 @@ function toMessage() {
           <i class="fas fa-envelope"></i>
           <i @click="toMessage">
             <img src="https://api.iconify.design/material-symbols:chat.svg" alt="私信" class="nav-icon">
-            <span class="message-badge">114514</span>
           </i>
         </div>
       </div>

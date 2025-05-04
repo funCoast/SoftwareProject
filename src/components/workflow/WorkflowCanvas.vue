@@ -246,7 +246,7 @@ onMounted(async () => {
       connections.value = response.data.edges
       name.value = response.data.name
       description.value = response.data.description
-      icon.value = "http://127.0.0.1:8000" + response.data.icon
+      icon.value = "http://122.9.33.84:8000" + response.data.icon
       console.log("iconUrl: ", icon.value)
       if (workflowNodes.value.length === 0) {
         workflowNodes.value.push(

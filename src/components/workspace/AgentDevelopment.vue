@@ -11,10 +11,14 @@ interface agent {
   icon: string
   status: number
   publishedTime: string
+  hover?: boolean
 }
 const agents = ref<agent[]> ([])
 const isCreateAgentVisible = ref(false)
 const router = useRouter();
+const baseImageUrl = "http://122.9.33.84:8000"
+const deleteDialog = ref(false);
+const deleteTarget = ref<{ id: number, name: string } | null>(null);
 
 // 表单数据
 const agentForm = ref({
@@ -68,6 +72,7 @@ async function fetchAgents() {
     })
     if (response.data.code === 0) {
       agents.value = response.data.agents
+      console.log(agents.value)
     } else {
       console.log('获取智能体失败：', response.data.message)
     }
@@ -97,7 +102,7 @@ async function createAgent() {
     if (response.data.code === 0) {
       ElMessage.success('创建成功！')
       offCreateAgent()
-      await fetchAgents()
+      await goToAgentEdit(response.data.agent_id)
     } else {
       ElMessage.error(response.data.message)
     }
@@ -107,9 +112,44 @@ async function createAgent() {
   }
 }
 
+// 打开删除确认弹窗
+function tryDelete(id: number) {
+  deleteTarget.value = { id, name: agents.value.find(agent => agent.id === id)?.name || '' };
+  deleteDialog.value = true;
+}
+
+// 确认删除智能体
+function handleDelete() {
+  if (!deleteTarget.value) return;
+
+  axios({
+    method: "post",
+    url: "/agent/delete",
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      agent_id: deleteTarget.value.id,
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      ElMessage.success("删除成功！")
+      agents.value = agents.value.filter(agent => agent.id !== deleteTarget.value?.id)
+      deleteDialog.value = false
+      deleteTarget.value = null
+    } else {
+      ElMessage.error(response.data.message)
+      deleteDialog.value = false
+      deleteTarget.value = null
+    }
+  })
+}
+
 onMounted(() => {
   fetchAgents()
 })
+
+function goToAgentEdit(id: number) {
+  router.push(`/agentEdit/${id}`)
+}
 </script>
 
 <template>
@@ -147,17 +187,40 @@ onMounted(() => {
 
     <!-- 智能体列表 -->
     <div class="agent-list">
-      <div v-for="agent in agents" :key="agent.id" class="agent-card">
+      <div
+        v-for="agent in agents"
+        :key="agent.id"
+        class="agent-card"
+        @mouseover="agent.hover = true"
+        @mouseleave="agent.hover = false"
+        @click="goToAgentEdit(agent.id)"
+      >
         <div class="agent-image">
-          <img :src="agent.icon" :alt="agent.name" />
-          <div class="agent-status">{{ agent.status }}</div>
+          <img :src="baseImageUrl + agent.icon" :alt="agent.name" />
+          <div class="agent-status" :class="agent.status">
+            {{ 
+              agent.status === 0 ? '未发布' :
+              agent.status === 1 ? '审核中' :
+              '已发布' 
+            }}
+          </div>
         </div>
         <div class="agent-info">
           <h3>{{ agent.name }}</h3>
           <p>{{ agent.description }}</p>
-          <div class="agent-meta">
-            <span>发布时间：{{ agent.publishedTime }}</span>
-          </div>
+<!--          <div class="agent-meta">-->
+<!--            <span v-if="agent.status === 2">发布时间：{{ agent.publishedTime }}</span>-->
+<!--          </div>-->
+        </div>
+        <!-- 删除图标 -->
+        <div
+          v-if="agent.hover"
+          class="delete-icon"
+          @click.stop="tryDelete(agent.id)"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1M18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
+          </svg>
         </div>
       </div>
     </div>
@@ -207,6 +270,17 @@ onMounted(() => {
       <template #footer>
         <el-button @click="offCreateAgent">取消</el-button>
         <el-button type="primary" @click="createAgent">创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 删除确认弹窗 -->
+    <el-dialog v-model="deleteDialog" title="确认删除" width="400px" class="custom-dialog">
+      <div class="dialog-body">
+        <p>确定要删除"{{ deleteTarget?.name }}"吗？此操作不可撤销。</p>
+      </div>
+      <template #footer>
+        <el-button @click="deleteDialog = false">取消</el-button>
+        <el-button type="danger" @click="handleDelete">删除</el-button>
       </template>
     </el-dialog>
   </div>
@@ -292,10 +366,14 @@ onMounted(() => {
 
 .agent-card {
   background: white;
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: 12px;
+  padding: 16px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
+  display: flex;
+  gap: 16px;
+  cursor: pointer;
+  position: relative;
 }
 
 .agent-card:hover {
@@ -305,69 +383,85 @@ onMounted(() => {
 
 .agent-image {
   position: relative;
-  width: 100%;
-  padding-top: 75%;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
 }
 
 .agent-image img {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
 }
 
-.agent-status {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: white;
-}
-
-.agent-status.published {
-  background: #2ecc71;
-}
-
-.agent-status.draft {
-  background: #95a5a6;
-}
-
-.agent-status.review {
-  background: #f1c40f;
-}
-
 .agent-info {
-  padding: 16px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .agent-info h3 {
   margin: 0 0 8px 0;
   color: #2c3e50;
+  font-size: 16px;
 }
 
 .agent-info p {
-  margin: 0 0 12px 0;
+  margin: 0;
   color: #666;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
 }
 
 .agent-meta {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: #95a5a6;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 
-.category {
-  background: #f8f9fa;
-  padding: 2px 8px;
-  border-radius: 12px;
+.delete-icon {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: white;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.delete-icon:hover {
+  background: #f5f5f5;
+}
+
+.agent-status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #2c3e50;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.agent-status.private {
+  background: #95a5a6;
+}
+
+.agent-status.check {
+  background: #f1c40f;
+}
+
+.agent-status.published {
+  background: #2ecc71;
 }
 
 /* 自定义弹窗样式 */

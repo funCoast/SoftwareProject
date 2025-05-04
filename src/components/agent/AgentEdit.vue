@@ -1,40 +1,73 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeMount } from 'vue'
+import { ref, computed, onMounted, onBeforeMount, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
-import router from "../../router";
+import {useRoute} from "vue-router";
 
-const agentIdentifier = router.currentRoute.value.params.id
+const route = useRoute()
+const agent_id = route.params.id
+const baseImageUrl = "http://122.9.33.84:8000"
+
+interface KnowledgeBase {
+  id: number
+  name: string
+  description: string
+  icon: string
+  type: string
+}
+
+interface Plugin {
+  id: number
+  name: string
+  description: string
+  icon: string
+}
 
 interface Workflow {
-  workflow_id: number
+  id: number
   name: string
   description: string
   icon: string
   hover?: boolean
 }
 
+interface AgentInfo {
+  name: string
+  description: string
+  icon: string
+  status: number
+  config: {
+    system_prompt: string
+    selectedKbs: number[]
+    selectedPlugins: number[]
+    selectedWorkflows: number[]
+  }
+}
+
 onMounted(() => {
+  getAgentInfo()
   getKnowledgeBases()
   getWorkflows()
-  getPlugins()
-  getAgentInfo()
-})
-
-// 智能体信息
-const agentInfo = ref({
-  name: 'AI讲师' + agentIdentifier,
-  description: 'AI讲师',
-  system_prompt: '',
-  avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png',
-  selectedKbs: ref<number[]>([]),
-  selectedPlugins: ref<number[]>([]),
-  selectedWorkflows: ref<number[]>([])
+  // getPlugins()
 })
 
 onBeforeMount(() => {
   getAvatar()
   fetchUserInfo()
+})
+
+// 智能体信息
+const agentInfo = ref<AgentInfo>({
+  name: '',
+  description: '',
+  icon: '',
+  status: 0,
+  config: {
+    system_prompt: '',
+    selectedKbs: [],
+    selectedPlugins: [],
+    selectedWorkflows: []
+  }
 })
 
 const useravatar = ref('')
@@ -47,8 +80,7 @@ function getAvatar() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      useravatar.value = 'http://127.0.0.1:8000' + response.data.avatar
-      console.log(useravatar.value)
+      useravatar.value = 'http://122.9.33.84:8000' + response.data.avatar
     } else {
       alert(response.data.message)
     }
@@ -57,10 +89,6 @@ function getAvatar() {
 
 const userInfo = ref({
   name: '',
-  account: '',
-  description: '',
-  following: 0,
-  followers: 0,
 })
 function fetchUserInfo() {
   axios({
@@ -80,7 +108,7 @@ function fetchUserInfo() {
 }
 
 // 知识库列表
-const knowledgeBases = ref([])
+const knowledgeBases = ref<KnowledgeBase[]>([])
 
 // 获取知识库列表
 async function getKnowledgeBases() {
@@ -94,7 +122,10 @@ async function getKnowledgeBases() {
     })
 
     if (response.data.code === 0) {
-      knowledgeBases.value = response.data.knowledgeBases
+      knowledgeBases.value = response.data.knowledgeBases.map((kb: KnowledgeBase) => ({
+        ...kb,
+        icon: 'http://122.9.33.84:8000' + kb.icon
+      }))
       console.log('获取知识库列表成功')
     } else {
       console.log(response.data.message)
@@ -105,7 +136,7 @@ async function getKnowledgeBases() {
 }
 
 // 插件相关
-const plugins = ref([])
+const plugins = ref<Plugin[]>([])
 
 async function getPlugins() {
   try {
@@ -129,7 +160,7 @@ async function getPlugins() {
 }
 
 // 工作流相关
-const workflows = ref([])
+const workflows = ref<Workflow[]>([])
 
 // 获取所有工作流
 async function getWorkflows() {
@@ -147,11 +178,10 @@ async function getWorkflows() {
         uid
       }
     })
-
     if (response.data.code === 0) {
       workflows.value = response.data.workflows.map((workflow: Workflow) => ({
         ...workflow,
-        icon: 'http://127.0.0.1:8000' + workflow.icon,
+        icon: 'http://122.9.33.84:8000' + workflow.icon,
         hover: false
       }))
       console.log('获取工作流列表成功')
@@ -163,38 +193,167 @@ async function getWorkflows() {
   }
 }
 
+// 状态按钮相关
+const statusButton = computed<{
+  text: string
+  disabled: boolean
+  type: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'text'
+  handler?: () => void
+}>(() => {
+  switch (agentInfo.value.status) {
+    case 0:
+      return {
+        text: '发布智能体',
+        disabled: false,
+        type: 'primary',
+        handler: handleRelease
+      }
+    case 1:
+      return {
+        text: '正在审核中',
+        disabled: true,
+        type: 'info'
+      }
+    case 2:
+      return {
+        text: '下架智能体',
+        disabled: false,
+        type: 'warning',
+        handler: handleRemove
+      }
+    default:
+      return {
+        text: '未知状态',
+        disabled: true,
+        type: 'info'
+      }
+  }
+})
+
+// 获取智能体信息
 async function getAgentInfo() {
   try {
     const response = await axios({
       method: 'get',
-      url: 'agent/getAgentInfo',
+      url: 'agent/getInfo',
       params: {
-        ag_id: agentIdentifier
-      },
+        agent_id: agent_id
+      }
     })
     if (response.data.code === 0) {
-      agentInfo.value = response.data.agentInfo
+      agentInfo.value = response.data
+      console.log("智能体：", response.data.status)
       console.log('获取配置成功')
     } else {
-      console.log(response.data.message)
+      ElMessage.error('获取配置失败：' + response.data.message)
     }
   } catch (error) {
     console.error('获取配置失败:', error)
+    ElMessage.error('获取配置失败')
   }
 }
 
-// 计算选中的列表
-const selectedKbsList = computed(() =>
-    knowledgeBases.value.filter(kb => agentInfo.value.selectedKbs.includes(kb.id))
-)
+// 发布智能体
+async function handleRelease() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/release',
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agent_id
+      }
+    })
+    if (response.data.code === 0) {
+      ElMessage.success('发布成功')
+      agentInfo.value.status = 1 // 更新状态为审核中
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('发布失败:', error)
+    ElMessage.error('发布失败')
+  }
+}
 
-const selectedPluginsList = computed(() =>
-    plugins.value.filter(plugin => agentInfo.value.selectedPlugins.includes(plugin.id))
-)
+// 下架智能体
+async function handleRemove() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/remove',
+      data: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agent_id
+      }
+    })
+    if (response.data.code === 0) {
+      ElMessage.success('下架成功')
+      agentInfo.value.status = 0 // 更新状态为未发布
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('下架失败:', error)
+    ElMessage.error('下架失败')
+  }
+}
 
-const selectedWorkflowsList = computed(() =>
-    workflows.value.filter(workflow => agentInfo.value.selectedWorkflows.includes(workflow.id))
-)
+// 更新智能体信息
+async function updateAgentInfo() {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'agent/updateInfo',
+      data: {
+        agent_id: agent_id,
+        system_prompt: agentInfo.value.config.system_prompt,
+        selectedKbs: agentInfo.value.config.selectedKbs,
+        selectedPlugins: [],
+        selectedWorkflows: agentInfo.value.config.selectedWorkflows
+      }
+    })
+    if (response.data.code === 0) {
+      console.log("配置: ", agentInfo.value.config)
+      ElMessage.success('配置已保存')
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  } catch (error) {
+    console.error('配置更新失败:', error)
+    ElMessage.error('配置更新失败')
+  }
+}
+
+// 修改计算属性为响应式引用
+const selectedKbs = ref<number[]>([])
+const selectedWorkflows = ref<number[]>([])
+
+// 监听agentInfo的变化，更新选中的知识库和工作流
+watch(() => agentInfo.value.config.selectedKbs, (newVal) => {
+  if (JSON.stringify(newVal) !== JSON.stringify(selectedKbs.value)) {
+    selectedKbs.value = [...newVal]
+  }
+}, { immediate: true })
+
+watch(() => agentInfo.value.config.selectedWorkflows, (newVal) => {
+  if (JSON.stringify(newVal) !== JSON.stringify(selectedWorkflows.value)) {
+    selectedWorkflows.value = [...newVal]
+  }
+}, { immediate: true })
+
+// 监听选中的知识库和工作流变化，更新agentInfo
+watch(selectedKbs, (newVal) => {
+  if (JSON.stringify(newVal) !== JSON.stringify(agentInfo.value.config.selectedKbs)) {
+    agentInfo.value.config.selectedKbs = [...newVal]
+  }
+})
+
+watch(selectedWorkflows, (newVal) => {
+  if (JSON.stringify(newVal) !== JSON.stringify(agentInfo.value.config.selectedWorkflows)) {
+    agentInfo.value.config.selectedWorkflows = [...newVal]
+  }
+})
 
 // 聊天相关
 const messageInput = ref('')
@@ -204,7 +363,7 @@ const chatHistory = ref([
     sender: 'Herry',
     content: '北京限行规则是什么？',
     time: '2025-04-28 11:08',
-    avatar: 'http://127.0.0.1:8000/media/avatars/2.jpg'
+    avatar: 'http://122.9.33.84:8000/media/avatars/2.jpg'
   },
   {
     type: 'assistant',
@@ -218,7 +377,7 @@ const chatHistory = ref([
         '（节假日不限行）\n' +
         '请注意规则会每年调整一次，建议出行前查询官方通知。',
     time: '2025-04-28 11:09',
-    avatar: 'http://127.0.0.1:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
+    avatar: 'http://122.9.33.84:8000/media/workflow_icons/00011e25afd2401bba7df0de1db41f6a.png'
   }
 ])
 
@@ -267,34 +426,6 @@ const sendMessage = () => {
   messageInput.value = ''
 }
 
-async function updateAgentInfo() {
-  try {
-    const response = await axios({
-      method: 'post',
-      url: 'agent/updateAgentInfo',
-      params: {
-        ag_id: agentIdentifier,
-        name: agentInfo.value.name,
-        description: agentInfo.value.description,
-        system_prompt: agentInfo.value.system_prompt,
-        avatar: agentInfo.value.avatar,
-        selectedKbs: agentInfo.value.selectedKbs,
-        selectedPlugins: agentInfo.value.selectedPlugins,
-        selectedWorkflows: agentInfo.value.selectedWorkflows
-      },
-    })
-    if (response.data.code === 0) {
-      console.log('配置更新成功')
-      alert("配置已保存")
-      ElMessage.success('配置已保存')
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('配置更新失败:', error)
-  }
-}
-
 // 确认按钮处理函数
 const handleConfirm = () => {
   updateAgentInfo()
@@ -306,11 +437,20 @@ const handleConfirm = () => {
     <!-- 头部信息 -->
     <div class="agent-header">
       <div class="agent-info">
-        <el-avatar :size="50" :src="agentInfo.avatar" />
+        <el-avatar :size="50" :src="baseImageUrl + agentInfo.icon" />
         <div class="agent-meta">
           <h2>{{ agentInfo.name }}</h2>
           <p>{{ agentInfo.description }}</p>
         </div>
+      </div>
+      <div class="status-actions">
+        <el-button
+          :type="statusButton.type"
+          :disabled="statusButton.disabled"
+          @click="statusButton.handler"
+        >
+          {{ statusButton.text }}
+        </el-button>
       </div>
     </div>
 
@@ -345,53 +485,53 @@ const handleConfirm = () => {
           </el-select>
 
           <div class="selected-items">
-            <div v-for="kb in selectedKbsList" :key="kb.id" class="selected-item">
-              <el-avatar :size="32" :src="kb.icon" />
+            <div v-for="kb in selectedKbs" :key="kb" class="selected-item">
+              <el-avatar :size="32" :src="knowledgeBases.find(k => k.id === kb)?.icon" />
               <div class="item-info">
-                <div class="item-name">{{ kb.name }}</div>
-                <div class="item-desc">{{ kb.description }}</div>
-                <div class="item-type">{{ kb.type }}</div>
+                <div class="item-name">{{ knowledgeBases.find(k => k.id === kb)?.name }}</div>
+                <div class="item-desc">{{ knowledgeBases.find(k => k.id === kb)?.description }}</div>
+                <div class="item-type">{{ knowledgeBases.find(k => k.id === kb)?.type }}</div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="config-section">
-          <h3>插件配置</h3>
-          <el-select
-            v-model="selectedPlugins"
-            multiple
-            filterable
-            placeholder="选择插件"
-            class="full-width"
-            popper-class="custom-select-dropdown"
-          >
-            <el-option
-              v-for="plugin in plugins"
-              :key="plugin.id"
-              :label="plugin.name"
-              :value="plugin.id"
-            >
-              <div class="option-item">
-                <el-avatar :size="24" :src="plugin.icon" />
-                <div class="option-info">
-                  <div class="option-name">{{ plugin.name }}</div>
-                  <div class="option-desc">{{ plugin.description }}</div>
-                </div>
-              </div>
-            </el-option>
-          </el-select>
+<!--        <div class="config-section">-->
+<!--          <h3>插件配置</h3>-->
+<!--          <el-select-->
+<!--            v-model="selectedPlugins"-->
+<!--            multiple-->
+<!--            filterable-->
+<!--            placeholder="选择插件"-->
+<!--            class="full-width"-->
+<!--            popper-class="custom-select-dropdown"-->
+<!--          >-->
+<!--            <el-option-->
+<!--              v-for="plugin in plugins"-->
+<!--              :key="plugin.id"-->
+<!--              :label="plugin.name"-->
+<!--              :value="plugin.id"-->
+<!--            >-->
+<!--              <div class="option-item">-->
+<!--                <el-avatar :size="24" :src="plugin.icon" />-->
+<!--                <div class="option-info">-->
+<!--                  <div class="option-name">{{ plugin.name }}</div>-->
+<!--                  <div class="option-desc">{{ plugin.description }}</div>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--            </el-option>-->
+<!--          </el-select>-->
 
-          <div class="selected-items">
-            <div v-for="plugin in selectedPluginsList" :key="plugin.id" class="selected-item">
-              <el-avatar :size="32" :src="plugin.icon" />
-              <div class="item-info">
-                <div class="item-name">{{ plugin.name }}</div>
-                <div class="item-desc">{{ plugin.description }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
+<!--          <div class="selected-items">-->
+<!--            <div v-for="plugin in selectedPlugins" :key="plugin.id" class="selected-item">-->
+<!--              <el-avatar :size="32" :src="plugin.icon" />-->
+<!--              <div class="item-info">-->
+<!--                <div class="item-name">{{ plugin.name }}</div>-->
+<!--                <div class="item-desc">{{ plugin.description }}</div>-->
+<!--              </div>-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </div>-->
 
         <div class="config-section">
           <h3>工作流配置</h3>
@@ -420,11 +560,11 @@ const handleConfirm = () => {
           </el-select>
 
           <div class="selected-items">
-            <div v-for="workflow in selectedWorkflowsList" :key="workflow.id" class="selected-item">
-              <el-avatar :size="32" :src="workflow.icon" />
+            <div v-for="workflow in selectedWorkflows" :key="workflow" class="selected-item">
+              <el-avatar :size="32" :src="workflows.find(w => w.id === workflow)?.icon" />
               <div class="item-info">
-                <div class="item-name">{{ workflow.name }}</div>
-                <div class="item-desc">{{ workflow.description }}</div>
+                <div class="item-name">{{ workflows.find(w => w.id === workflow)?.name }}</div>
+                <div class="item-desc">{{ workflows.find(w => w.id === workflow)?.description }}</div>
               </div>
             </div>
           </div>
@@ -433,7 +573,7 @@ const handleConfirm = () => {
         <div class="config-section">
           <h3>人物设定</h3>
           <el-input
-            v-model="agentInfo.system_prompt"
+            v-model="agentInfo.config.system_prompt"
             type="textarea"
             :rows="6"
             placeholder="请输入智能体的人物设定..."
@@ -497,6 +637,9 @@ const handleConfirm = () => {
 }
 
 .agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
   padding: 20px;
   background: #fff;
@@ -522,6 +665,10 @@ const handleConfirm = () => {
 .agent-meta p {
   margin: 0;
   color: #666;
+}
+
+.status-actions {
+  margin-left: 20px;
 }
 
 .main-content {
@@ -745,5 +892,14 @@ const handleConfirm = () => {
   padding: 0 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+.agent-icon {
+  width: 24px;
+  height: 24px;
+  padding: 2px;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 </style>

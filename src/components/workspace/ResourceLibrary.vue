@@ -9,21 +9,13 @@ interface resource {
   name: string
   description: string
   icon: string
+  createTime: string
   updateTime: string
   hover?: boolean
 }
 
-interface Workflow {
-  workflow_id: number
-  name: string
-  description: string
-  icon: string
-  hover?: boolean
-}
-
 const resources = ref<resource[]> ([])
-const workflows = ref<Workflow[]>([])
-const dialogVisible = ref(false); // 控制知识库弹窗显示
+const KBDialog = ref(false) // 控制弹窗显示
 const workflowDialogVisible = ref(false); // 控制工作流弹窗显示
 
 const baseInfo = ref({
@@ -46,7 +38,6 @@ const iconPreview = computed(() => {
   return iconUpload.value || defaultIcons[baseInfo.value.type as keyof typeof defaultIcons]
 })
 
-
 const workflowForm = ref({
   name: '',
   description: '',
@@ -62,7 +53,7 @@ onMounted(() => {
 
 // 打开弹窗
 function createKB() {
-  dialogVisible.value = true
+  KBDialog.value = true
 }
 
 function getKnowledgeBases() {
@@ -132,34 +123,15 @@ function submitKB() {
       alert(response.data.message)
     }
   })
-  dialogVisible.value = false // 关闭弹窗
+  KBDialog.value = false // 关闭弹窗
 }
 
 function goToResource(resource: resource) {
   router.push(`/workspace/${resource.type}/${resource.id}`)
 }
 
-function deleteResource(id: number, resourceType: string) {
-  axios({
-    method: "post",
-    url: "/rl/delete",
-    data: {
-      uid: sessionStorage.getItem("uid"),
-      resource_id: id,
-      resource_type: resourceType,
-    },
-  }).then(function (response) {
-    if (response.data.code === 0) {
-      alert("删除成功！")
-      router.go(0)
-    } else {
-      alert(response.data.message)
-    }
-  })
-}
-
 // 打开工作流弹窗
-function openWorkflowDialog() {
+function createWorkflow() {
   workflowDialogVisible.value = true;
 }
 
@@ -218,7 +190,6 @@ async function getWorkflows() {
       console.error('用户ID不存在')
       return
     }
-
     const response = await axios({
       method: 'get',
       url: '/workflow/fetchAll',
@@ -226,13 +197,18 @@ async function getWorkflows() {
         uid
       }
     })
-    
     if (response.data.code === 0) {
-      workflows.value = response.data.workflows.map((workflow: Workflow) => ({
-        ...workflow,
-        icon: 'http://127.0.0.1:8000' + workflow.icon,
-        hover: false
-      }))
+      resources.value = resources.value.concat(
+          response.data.workflows.map((item: any) => ({
+            id: item.id,
+            type: 'workflow',
+            name: item.name,
+            description: item.description,
+            icon: item.icon,
+            updateTime: item.updateTime,
+            hover: false
+          }))
+      )
     } else {
       console.log(response.data.message)
     }
@@ -241,35 +217,86 @@ async function getWorkflows() {
   }
 }
 
-// 删除工作流
-async function deleteWorkflow(workflowId: number) {
-  try {
-    const uid = sessionStorage.getItem('uid')
-    if (!uid) {
-      console.error('用户ID不存在')
-      return
-    }
+const deleteDialog = ref(false); // 控制删除确认弹窗显示
+const deleteTarget = ref<{ id: number; type: string , name: string} | null>(null); // 待删除的资源信息
 
-    const response = await axios({
-      method: 'post',
-      url: '/workflow/delete',
-      data: {
-        uid,
-        workflow_id: workflowId
-      }
-    })
-    
+// 打开删除确认弹窗
+function tryDelete(id: number, resourceType: string) {
+  deleteTarget.value = { id, type: resourceType, name: resources.value.find(resource => resource.id === id)?.name || '' };
+  deleteDialog.value = true;
+}
+
+// 确认删除资源
+function handleDelete() {
+  if (!deleteTarget.value) return;
+
+  axios({
+    method: "post",
+    url: "/rl/delete",
+    data: {
+      uid: sessionStorage.getItem("uid"),
+      resource_id: deleteTarget.value.id,
+      resource_type: deleteTarget.value.type,
+    },
+  }).then(function (response) {
     if (response.data.code === 0) {
-      alert('删除成功！')
-      await getWorkflows() // 重新获取工作流列表
+      alert("删除成功！")
+      resources.value = []
+      getKnowledgeBases()
+      deleteDialog.value = false
+      deleteTarget.value = null
     } else {
       alert(response.data.message)
+      deleteDialog.value = false
+      deleteTarget.value = null
     }
-  } catch (error) {
-    console.error('删除工作流失败:', error)
-    alert('删除失败')
-  }
+  })
 }
+
+const filterCriteria = ref({
+  sortBy: "name", // 排序方式
+  type: "all", // 资源类型
+  search: "", // 搜索关键字
+});
+
+// 筛选资源
+const filteredResources = computed(() => {
+  let filtered = [...resources.value];
+
+  // 按类型筛选
+  if (filterCriteria.value.type !== "all") {
+    if (filterCriteria.value.type === "knowledgeBase") {
+      filtered = filtered.filter(
+          (resource) =>
+              resource.type === "textBase" ||
+              resource.type === "tableBase" ||
+              resource.type === "pictureBase"
+      );
+    } else {
+      filtered = filtered.filter(
+          (resource) => resource.type === filterCriteria.value.type
+      );
+    }
+  }
+
+  // 按搜索关键字筛选
+  if (filterCriteria.value.search.trim() !== "") {
+    filtered = filtered.filter((resource) =>
+        resource.name.toLowerCase().includes(filterCriteria.value.search.trim().toLowerCase())
+    );
+  }
+
+  // 按排序方式排序
+  if (filterCriteria.value.sortBy === "updateTime") {
+    filtered.sort((a, b) => new Date(b.updateTime).getTime() - new Date(a.updateTime).getTime());
+  } else if (filterCriteria.value.sortBy === "createTime") {
+    filtered.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+  } else if (filterCriteria.value.sortBy === "name") {
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return filtered;
+});
 </script>
 
 <template>
@@ -287,7 +314,7 @@ async function deleteWorkflow(workflowId: number) {
         <template #dropdown>
           <el-dropdown-menu>
             <div>
-              <el-dropdown-item class="dropdown-item" @click="openWorkflowDialog">
+              <el-dropdown-item class="dropdown-item" @click="createWorkflow">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
                 </svg>
@@ -307,59 +334,28 @@ async function deleteWorkflow(workflowId: number) {
 
     <!-- 筛选栏 -->
     <div class="filter-bar">
-      <select class="filter-select">
-        <option value="create-time">按创建时间排序</option>
+      <select class="filter-select" v-model="filterCriteria.sortBy">
+        <option value="updateTime">按编辑时间排序</option>
+        <option value="createTime">按创建时间排序</option>
         <option value="name">按名称排序</option>
-        <option value="modify-time">按修改时间排序</option>
       </select>
-      <select class="filter-select">
+      <select class="filter-select" v-model="filterCriteria.type">
         <option value="all">全部</option>
         <option value="workflow">工作流</option>
-        <option value="plugin">插件</option>
-        <option value="knowledge">知识库</option>
+        <option value="knowledgeBase">知识库</option>
       </select>
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="搜索资源...">
+        <input type="text" placeholder="搜索资源..." v-model="filterCriteria.search">
       </div>
     </div>
 
     <!-- 资源列表 -->
     <div class="resource-list">
-      <!-- 工作流列表 -->
       <div
-          v-for="workflow in workflows"
-          :key="workflow.workflow_id"
-          class="resource-card"
-          @click="router.push(`/workflow/${workflow.workflow_id}`)"
-          @mouseover="workflow.hover = true"
-          @mouseleave="workflow.hover = false"
-      >
-        <div class="resource-icon">
-          <img :src="workflow.icon" alt="工作流图标">
-          <div class="resource-type">工作流</div>
-        </div>
-        <div class="resource-info">
-          <h3>{{ workflow.name }}</h3>
-          <p>{{ workflow.description }}</p>
-        </div>
-        <!-- 删除图标 -->
-        <div
-            v-if="workflow.hover"
-            class="delete-icon"
-            @click.stop="deleteWorkflow(workflow.workflow_id)"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1M18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
-          </svg>
-        </div>
-      </div>
-
-      <!-- 知识库列表 -->
-      <div
-          v-for="resource in resources"
+          v-for="resource in filteredResources"
           :key="resource.id"
           class="resource-card"
           @click="goToResource(resource)"
@@ -374,14 +370,17 @@ async function deleteWorkflow(workflowId: number) {
           <h3>{{ resource.name }}</h3>
           <p>{{ resource.description }}</p>
           <div class="resource-meta">
-            <span class="update-time">最后更新：{{ resource.updateTime }}</span>
+            <span class="update-time">
+              {{ filterCriteria.sortBy === 'createTime' ? '创建时间：' : '编辑时间：' }}
+              {{ filterCriteria.sortBy === 'createTime' ? resource.createTime : resource.updateTime }}
+            </span>
           </div>
         </div>
         <!-- 删除图标 -->
         <div
             v-if="resource.hover"
             class="delete-icon"
-            @click.stop="deleteResource(resource.id, resource.type)"
+            @click.stop="tryDelete(resource.id, resource.type)"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
             <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1M18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
@@ -391,7 +390,7 @@ async function deleteWorkflow(workflowId: number) {
     </div>
 
     <!-- 知识库创建弹窗 -->
-    <el-dialog v-model="dialogVisible" title="创建知识库" width="500px" class="custom-dialog">
+    <el-dialog v-model="KBDialog" title="创建知识库" width="500px" class="custom-dialog">
       <div class="dialog-body">
         <!-- 类型 -->
         <div class="form-row">
@@ -416,7 +415,7 @@ async function deleteWorkflow(workflowId: number) {
               v-model="baseInfo.description"
               type="textarea"
               placeholder="请输入知识库描述"
-              :rows="4"
+              rows="4"
               class="form-input"
           />
         </div>
@@ -432,7 +431,7 @@ async function deleteWorkflow(workflowId: number) {
       </div>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="KBDialog = false">取消</el-button>
         <el-button type="primary" @click="submitKB">创建</el-button>
       </template>
     </el-dialog>
@@ -450,11 +449,11 @@ async function deleteWorkflow(workflowId: number) {
         <div class="form-row">
           <label class="form-label">描述</label>
           <el-input
-            v-model="workflowForm.description"
-            type="textarea"
-            placeholder="请输入工作流描述"
-            :rows="4"
-            class="form-input"
+              v-model="workflowForm.description"
+              type="textarea"
+              placeholder="请输入工作流描述"
+              :rows="4"
+              class="form-input"
           />
         </div>
 
@@ -479,6 +478,17 @@ async function deleteWorkflow(workflowId: number) {
       <template #footer>
         <el-button @click="workflowDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="submitWorkflow">创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 删除确认弹窗 -->
+    <el-dialog v-model="deleteDialog" title="确认删除" width="400px" class="custom-dialog">
+      <div class="dialog-body">
+        <p>确定要删除“{{ deleteTarget?.name }}”吗？此操作不可撤销。</p>
+      </div>
+      <template #footer>
+        <el-button @click="deleteDialog = false">取消</el-button>
+        <el-button type="danger" @click="handleDelete">删除</el-button>
       </template>
     </el-dialog>
   </div>
@@ -574,6 +584,8 @@ async function deleteWorkflow(workflowId: number) {
   transition: all 0.3s ease;
   display: flex;
   gap: 16px;
+  cursor: pointer;
+  position: relative;
 }
 
 .resource-card:hover {
@@ -641,6 +653,22 @@ async function deleteWorkflow(workflowId: number) {
   font-size: 11px;
 }
 
+.delete-icon {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: white;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.delete-icon:hover {
+  background: #f5f5f5;
+}
+
 /* 自定义弹窗样式 */
 .custom-dialog {
   border-radius: 12px;
@@ -678,74 +706,18 @@ async function deleteWorkflow(workflowId: number) {
   border-radius: 6px;
 }
 
-.image-upload {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.upload-preview {
-  width: 100px;
-  height: 100px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e9ecef;
-}
-
-.upload-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.upload-button {
-  position: relative;
-  width: 120px;
-  height: 100px;
-  border: 2px dashed #e9ecef;
-  border-radius: 8px;
+.icon-upload {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  gap: 10px;
 }
 
-.upload-button:hover {
-  border-color: #3498db;
-  color: #3498db;
-}
-
-.upload-button.has-image {
+.icon-preview {
   width: 100px;
-}
-
-.file-input {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.upload-button svg {
-  color: #95a5a6;
-}
-
-.upload-button:hover svg {
-  color: #3498db;
-}
-
-.upload-button span {
-  font-size: 12px;
-  color: #95a5a6;
-}
-
-.upload-button:hover span {
-  color: #3498db;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style>
