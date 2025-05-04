@@ -383,7 +383,6 @@ def user_get_contacts(request):
             user = User.objects.get(user_id=uid)
         except User.DoesNotExist:
             return JsonResponse({"code": -1, "message": "用户不存在"})
-
         # 查询与该用户有通信记录的用户（联系人）
         messages = PrivateMessage.objects.filter(Q(sender=user) | Q(receiver=user)) \
             .select_related('sender', 'receiver') \
@@ -406,7 +405,6 @@ def user_get_contacts(request):
             contact_dict[cid] = {
                 "id": idx,
                 "name": contact_user.username,
-                "avatar": contact_user.avatar.url if contact_user.avatar else "",
                 "unread": PrivateMessage.objects.filter(sender=contact_user, receiver=user, is_read=False).count(),
                 "lastMessage": {
                     "text": msg.content
@@ -451,7 +449,6 @@ def user_get_messages(request):
         for msg in messages:
             data.append({
                 "sender": msg.sender.username,
-                "avatar": msg.sender.avatar.url if msg.sender.avatar else "",
                 "time": msg.send_time,
                 "text": msg.content
             })
@@ -1903,7 +1900,7 @@ def workflow_fetchAll(request):
             "name": workflow.name,
             "description": workflow.description,
             "icon": workflow.icon_url if workflow.icon_url else "",
-            "updateTime":workflow.update_time
+            "updateTime":workflow.update_time.strftime('%Y-%m-%d %H:%M:%S')
         })
 
     return JsonResponse({
