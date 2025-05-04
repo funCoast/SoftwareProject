@@ -1,6 +1,7 @@
 import uuid
 import random
 
+from django.forms import IntegerField
 from django.views import View
 from openai import OpenAI
 import dashscope
@@ -18,7 +19,7 @@ from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
 from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord
-from django.db.models import Q
+from django.db.models import Q, ExpressionWrapper, F
 import base64
 import json
 # backend/views.py
@@ -2805,3 +2806,52 @@ class FetchFavoritesView(View):
             {"code": 0, "message": "获取成功", "data": data},
             json_dumps_params={'ensure_ascii': False}
         )
+
+
+class FetchHotView(View):
+    """
+    GET /user/fetchHot
+    返回按热度（likes_count + favorites_count）排序的智能体列表
+    """
+
+    def get(self, request):
+        try:
+            # 为每个 Agent 动态计算 hot_score = likes_count + favorites_count
+            hot_agents = (
+                Agent.objects
+                .annotate(hot_score=ExpressionWrapper(
+                    F('likes_count') + F('favorites_count') * 10,
+                    output_field=IntegerField()
+                ))
+                .order_by('-hot_score')
+                .select_related('user')
+            )
+
+            data = []
+            for a in hot_agents:
+                author = a.user
+                data.append({
+                    "id": a.agent_id,
+                    "name": a.agent_name,
+                    "category": a.category,
+                    "description": a.description or "",
+                    "image": a.icon_url or "",
+                    "likes": a.likes_count,
+                    "favorites": a.favorites_count,
+                    "author": {
+                        "id": author.user_id,
+                        "name": author.username,
+                        "avatar": author.avatar_url or ""
+                    }
+                })
+
+            return JsonResponse(
+                {"code": 0, "message": "获取成功", "data": data},
+                json_dumps_params={'ensure_ascii': False}
+            )
+        except Exception as e:
+            return JsonResponse(
+                {"code": -1, "message": f"获取失败：{str(e)}"},
+                status=500,
+                json_dumps_params={'ensure_ascii': False}
+            )
