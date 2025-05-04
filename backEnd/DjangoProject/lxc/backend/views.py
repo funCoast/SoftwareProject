@@ -1547,7 +1547,21 @@ def delete_resource(request):
 
     if not uid or not resource_id or not resource_type:
         return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、resource_id 或 resource_type)"})
+    if resource_type == "workflow":
+        try:
+            if not uid or not resource_id:
+                return JsonResponse({"code": -1, "message": "缺少参数 uid 或 workflow_id"})
 
+            # 查找该用户下的 workflow
+            try:
+                workflow = Workflow.objects.get(workflow_id=resource_id, user__user_id=uid)
+                workflow.delete()
+                return JsonResponse({"code": 0, "message": "删除成功"})
+            except Workflow.DoesNotExist:
+                return JsonResponse({"code": -1, "message": "未找到对应的工作流"})
+
+        except Exception as e:
+            return JsonResponse({"code": -1, "message": str(e)})
     try:
         user = User.objects.get(user_id=uid)
     except User.DoesNotExist:
