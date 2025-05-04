@@ -15,7 +15,8 @@ def get_workflow_tool(workflow_id):
             "type":"workflow",
             "function":{
                 "name": workflow.name,
-                "description": description,
+                "workflow_description": description,
+                "start_description": start.get("description"),
                 "parameters":parameters
             }
             }
