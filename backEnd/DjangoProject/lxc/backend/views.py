@@ -1916,8 +1916,15 @@ from .models import User, Agent
 
 @require_POST
 def agent_release(request):
-    uid = request.POST.get('uid')
-    agent_id = request.POST.get('agent_id')
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        agent_id = data.get('agent_id')
+    except json.decoder.JSONDecodeError:
+        return JsonResponse({
+            "code": -1,
+            "message": "传入参数格式错误"
+        })
 
     if not uid or not agent_id:
         return JsonResponse({
@@ -1949,8 +1956,15 @@ def agent_release(request):
             "message": "智能体不存在或不属于该用户"
         })
 def agent_remove(request):
-    uid = request.POST.get('uid')
-    agent_id = request.POST.get('agent_id')
+    try:
+        data = json.loads(request.body)
+        uid = data.get('uid')
+        agent_id = data.get('agent_id')
+    except json.decoder.JSONDecodeError:
+        return JsonResponse({
+            "code": -1,
+            "message": "传入参数格式错误"
+        })
 
     if not uid or not agent_id:
         return JsonResponse({
