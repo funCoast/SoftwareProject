@@ -55,6 +55,7 @@ urlpatterns = [
     path('workflow/save',views.workflow_save, name='workflow_save'),
     path('workflow/fetchAll',views.workflow_fetchAll, name='workflow_fetchAll'),
     path('workflow/delete',views.workflow_delete, name='workflow_delete'),
+    path('workflow/runSingle',views.workflow_run_single, name='workflow_run_single'),
 
     # 审核
     path('sensitive/check', views.check_sensitive_words, name='check_sensitive_words'),
