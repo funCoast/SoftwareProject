@@ -159,14 +159,7 @@ class AgentInfoView(View):
             status = 0
 
         # 找 icon
-        icon_url = ""
-        icon_dir = os.path.join(settings.MEDIA_ROOT, 'agent_icons')
-        if os.path.isdir(icon_dir):
-            for fn in os.listdir(icon_dir):
-                # 只要第一个匹配就行
-                if fn.startswith(f"{agent.agent_id}_"):
-                    icon_url = settings.MEDIA_URL + "agent_icons/" + fn
-                    break
+        icon_url = agent.icon_url
 
         # 组装最终返回结构
         data = {
