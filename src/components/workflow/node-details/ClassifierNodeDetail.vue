@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import {getAllUpstreamNodes} from '../../../utils/getAllUpstreamNodes'
+import axios from 'axios'
 
 interface Input {
   id: number
@@ -47,6 +48,7 @@ const props = defineProps<{
     }
   }
   allNodes: WorkflowNode[]
+  workflow_id: string
 }>()
 
 const allUpstreamNodes = computed(() => {
@@ -102,9 +104,8 @@ const runInput = ref('')
 
 // 获取节点名称
 function getNodeName(nodeId: number): string {
-  // const node = props.allNodes.find(n => n.id === nodeId)
-  // return node?.name || '未知节点'
-  return '大模型1'
+  const node = props.allNodes.find(n => n.id === nodeId)
+  return node?.name || '未知节点'
 }
 
 // 获取分支配置
@@ -152,41 +153,44 @@ function updateInput() {
 
 // 运行
 async function run() {
-  // isRunning.value = true
-  // runStatus.value = 'running'
-  // runResult.value = null
-  // runError.value = null
-  //
-  // try {
-  //   const response = await fetch('/api/classifier/run', {
-  //     method: 'POST',
-  //     headers: {
-  //       'Content-Type': 'application/json'
-  //     },
-  //     body: JSON.stringify({
-  //       input: runInput.value,
-  //       classes: classConfigs.value
-  //     })
-  //   })
-  //
-  //   const data = await response.json()
-  //   if (data.success) {
-  //     runResult.value = data.result
-  //     runStatus.value = 'success'
-  //   } else {
-  //     runStatus.value = 'error'
-  //     runError.value = data.error || '执行失败'
-  //   }
-  // } catch (e: any) {
-  //   runStatus.value = 'error'
-  //   runError.value = e.message || String(e)
-  // } finally {
-  //   isRunning.value = false
-  // }
-  isRunning.value = false
-  runStatus.value = 'success'
-  runResult.value = 1745820978675
+  isRunning.value = true
+  runStatus.value = 'running'
+  runResult.value = null
   runError.value = null
+
+  try {
+    const formattedInputs = [
+      {
+        name: input.value.name,
+        type: input.value.type,
+        value: runInput.value
+      }
+    ]
+
+    const response = await axios({
+      method: 'post',
+      url: '/workflow/runSingle',
+      data: {
+        workflow_id: Number(props.workflow_id),
+        node_id: props.node.id,
+        inputs: JSON.stringify(formattedInputs)
+      }
+    })
+
+    const data = response.data
+    if (data.code === 0) {
+      runResult.value = data.result
+      runStatus.value = 'success'
+    } else {
+      runStatus.value = 'error'
+      runError.value = data.message || '执行失败'
+    }
+  } catch (e: any) {
+    runStatus.value = 'error'
+    runError.value = e.message || String(e)
+  } finally {
+    isRunning.value = false
+  }
 }
 
 // 初始化配置

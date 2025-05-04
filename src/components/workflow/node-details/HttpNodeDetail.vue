@@ -1,141 +1,3 @@
-<template>
-  <div class="http-node-detail">
-    <!-- 输入变量 -->
-    <div class="section">
-      <div class="section-header">
-        <h4>输入变量</h4>
-      </div>
-      
-      <div class="input-config">
-        <!-- API 输入 -->
-        <div class="form-group">
-          <label>API 地址</label>
-          <el-input
-            v-model="inputs[0].value.text"
-            placeholder="请输入 API 地址"
-            size="small"
-            @input="updateNode"
-          />
-        </div>
-        
-        <!-- 请求类型选择 -->
-        <div class="form-group">
-          <label>请求类型</label>
-          <el-select
-            v-model="inputs[1].value.text"
-            placeholder="请选择请求类型"
-            size="small"
-            class="type-select"
-            @change="updateNode"
-          >
-            <el-option label="GET" value="get" />
-            <el-option label="POST" value="post" />
-          </el-select>
-        </div>
-      </div>
-    </div>
-
-    <!-- 输出变量 -->
-    <div class="section">
-      <div class="section-header">
-        <h4>输出变量</h4>
-      </div>
-      
-      <div class="output-info">
-        <div class="info-item" v-for="output in outputs" :key="output.id">
-          <label>{{ output.name }}:</label>
-          <span>{{ output.type }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 运行面板 -->
-    <el-dialog
-      v-model="showRunPanel"
-      title="运行 HTTP 请求"
-      width="500px"
-      :close-on-click-modal="false"
-    >
-      <div class="run-panel">
-        <div class="run-input">
-          <div class="form-group">
-            <label>API 地址</label>
-            <el-input
-              v-model="runInputs.api"
-              type="text"
-              :placeholder="inputs[0].value.text || '请输入 API 地址'"
-            />
-          </div>
-          <div class="form-group">
-            <label>请求类型</label>
-            <el-select
-              v-model="runInputs.apiType"
-              placeholder="请选择请求类型"
-              style="width: 100%"
-            >
-              <el-option label="GET" value="get" />
-              <el-option label="POST" value="post" />
-            </el-select>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="runStatus" class="run-result-section">
-        <div class="run-result-header">
-          <h4>运行结果</h4>
-          <span :class="['status-badge', runStatus]">
-            {{ runStatus === 'running' ? '运行中' : 
-               runStatus === 'success' ? '成功' : '失败' }}
-          </span>
-        </div>
-        
-        <div v-if="runStatus === 'success' && runResult" 
-             class="result-content success">
-          <div class="result-item">
-            <label>Status Code:</label>
-            <span>{{ runResult.status_code }}</span>
-          </div>
-          <div class="result-item">
-            <label>Body:</label>
-            <pre>{{ runResult.body }}</pre>
-          </div>
-          <div class="result-item">
-            <label>Headers:</label>
-            <pre>{{ JSON.stringify(runResult.headers, null, 2) }}</pre>
-          </div>
-          <div class="result-item" v-if="runResult.files?.length">
-            <label>Files:</label>
-            <div v-for="(file, index) in runResult.files" :key="index">
-              {{ file.name }} ({{ file.size }} bytes)
-            </div>
-          </div>
-        </div>
-        
-        <div v-if="runStatus === 'error' && runError" 
-             class="result-content error">
-          <pre>{{ runError }}</pre>
-        </div>
-        
-        <div v-if="runStatus === 'running'" class="result-content loading">
-          <div class="loading-spinner"></div>
-          <span>正在运行中...</span>
-        </div>
-      </div>
-
-      <template #footer>
-        <el-button @click="showRunPanel = false">取消</el-button>
-        <el-button
-          type="primary"
-          :loading="isRunning"
-          @click="run"
-        >
-          运行
-        </el-button>
-      </template>
-    </el-dialog>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
@@ -291,6 +153,144 @@ defineExpose({
   }
 })
 </script>
+
+<template>
+  <div class="http-node-detail">
+    <!-- 输入变量 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>输入变量</h4>
+      </div>
+
+      <div class="input-config">
+        <!-- API 输入 -->
+        <div class="form-group">
+          <label>API 地址</label>
+          <el-input
+              v-model="inputs[0].value.text"
+              placeholder="请输入 API 地址"
+              size="small"
+              @input="updateNode"
+          />
+        </div>
+
+        <!-- 请求类型选择 -->
+        <div class="form-group">
+          <label>请求类型</label>
+          <el-select
+              v-model="inputs[1].value.text"
+              placeholder="请选择请求类型"
+              size="small"
+              class="type-select"
+              @change="updateNode"
+          >
+            <el-option label="GET" value="get" />
+            <el-option label="POST" value="post" />
+          </el-select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 输出变量 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>输出变量</h4>
+      </div>
+
+      <div class="output-info">
+        <div class="info-item" v-for="output in outputs" :key="output.id">
+          <label>{{ output.name }}:</label>
+          <span>{{ output.type }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 运行面板 -->
+    <el-dialog
+        v-model="showRunPanel"
+        title="运行 HTTP 请求"
+        width="500px"
+        :close-on-click-modal="false"
+    >
+      <div class="run-panel">
+        <div class="run-input">
+          <div class="form-group">
+            <label>API 地址</label>
+            <el-input
+                v-model="runInputs.api"
+                type="text"
+                :placeholder="inputs[0].value.text || '请输入 API 地址'"
+            />
+          </div>
+          <div class="form-group">
+            <label>请求类型</label>
+            <el-select
+                v-model="runInputs.apiType"
+                placeholder="请选择请求类型"
+                style="width: 100%"
+            >
+              <el-option label="GET" value="get" />
+              <el-option label="POST" value="post" />
+            </el-select>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="runStatus" class="run-result-section">
+        <div class="run-result-header">
+          <h4>运行结果</h4>
+          <span :class="['status-badge', runStatus]">
+            {{ runStatus === 'running' ? '运行中' :
+              runStatus === 'success' ? '成功' : '失败' }}
+          </span>
+        </div>
+
+        <div v-if="runStatus === 'success' && runResult"
+             class="result-content success">
+          <div class="result-item">
+            <label>Status Code:</label>
+            <span>{{ runResult.status_code }}</span>
+          </div>
+          <div class="result-item">
+            <label>Body:</label>
+            <pre>{{ runResult.body }}</pre>
+          </div>
+          <div class="result-item">
+            <label>Headers:</label>
+            <pre>{{ JSON.stringify(runResult.headers, null, 2) }}</pre>
+          </div>
+          <div class="result-item" v-if="runResult.files?.length">
+            <label>Files:</label>
+            <div v-for="(file, index) in runResult.files" :key="index">
+              {{ file.name }} ({{ file.size }} bytes)
+            </div>
+          </div>
+        </div>
+
+        <div v-if="runStatus === 'error' && runError"
+             class="result-content error">
+          <pre>{{ runError }}</pre>
+        </div>
+
+        <div v-if="runStatus === 'running'" class="result-content loading">
+          <div class="loading-spinner"></div>
+          <span>正在运行中...</span>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showRunPanel = false">取消</el-button>
+        <el-button
+            type="primary"
+            :loading="isRunning"
+            @click="run"
+        >
+          运行
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
 
 <style scoped>
 .http-node-detail {

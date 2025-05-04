@@ -127,7 +127,12 @@ function submitKB() {
 }
 
 function goToResource(resource: resource) {
-  router.push(`/workspace/${resource.type}/${resource.id}`)
+  router.push({
+    path: `/workspace/${resource.type}/${resource.id}`,
+    query: {
+      uid: sessionStorage.getItem('uid'),
+    }
+  })
 }
 
 // 打开工作流弹窗
@@ -156,6 +161,7 @@ function handleImageUpload(event: Event) {
 
 // 提交工作流表单并跳转
 async function submitWorkflow() {
+  const formData = new FormData()
   if (!workflowForm.value.name) {
     alert('请输入工作流名称')
     return
@@ -177,7 +183,12 @@ async function submitWorkflow() {
       const workflow_id = response.data.workflow_id
       localStorage.removeItem('workflowNodes')
       localStorage.removeItem('connections')
-      await router.push(`/workspace/workflow/${workflow_id}`);
+      await router.push({
+        path: `/workspace/workflow/${workflow_id}`,
+        query: {
+          uid: sessionStorage.getItem('uid'),
+        }
+      })
     } else {
       console.log(response.data.message)
     }

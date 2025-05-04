@@ -1,3 +1,209 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+import axios from 'axios'
+
+interface Input {
+  id: number
+  name: string
+  type: string
+  value: {
+    type: number // 1: 上游节点的输出
+    nodeId: number
+    outputId: number,
+    text: string
+  }
+}
+
+interface Output {
+  id: number
+  name: 'content'
+  type: 'string'
+}
+
+interface KnowledgeBase {
+  id: number
+  name: string
+}
+
+const props = defineProps<{
+  node: {
+    id: number
+    type: string
+    name: string
+    inputs: Input[]
+    outputs: Output[]
+    data: {
+      uid: number
+      kbs: Array<{
+        id: number
+      }>
+    }
+  }
+  allNodes: any[]
+  workflow_id: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: any): void
+}>()
+
+// 获取所有上游节点
+const allUpstreamNodes = computed(() => {
+  return getAllUpstreamNodes(props.node, props.allNodes)
+})
+
+// 初始化输入
+const input = ref<Input>(props.node.inputs?.[0] || {
+  id: 0,
+  name: '',
+  type: 'string',
+  value: {
+    type: 1,
+    nodeId: -1,
+    outputId: -1,
+    text: ''
+  }
+})
+
+// 知识库列表
+const knowledgeBases = ref<KnowledgeBase[]>([])
+const selectedKbs = ref<number[]>(props.node.data?.kbs?.map(kb => kb.id) || [])
+
+// 运行相关状态
+const showRunPanel = ref(false)
+const isRunning = ref(false)
+const runStatus = ref<'running' | 'success' | 'error' | null>(null)
+const runResult = ref<string | null>(null)
+const runError = ref<string | null>(null)
+const runInput = ref('')
+
+// 获取知识库列表
+async function getKnowledgeBases() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: '/rl/getKnowledgeBases',
+      params: {
+        uid: sessionStorage.getItem('uid')
+      },
+    })
+
+    if (response.data.code === 0) {
+      knowledgeBases.value = response.data.knowledgeBases
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取知识库列表失败:', error)
+  }
+}
+
+// 生成选择器的值
+function generateSelectValue(val?: Input['value']): string {
+  if (!val?.type || val.type !== 1) return ''
+  return `${val.nodeId}|${val.outputId}`
+}
+
+// 处理选择变化
+function onSelectChange(val: string) {
+  if (!val) return
+  const [nodeId, outputId] = val.split('|').map(Number)
+  const node = allUpstreamNodes.value.find(n => n.id === nodeId)
+  const output = node?.outputs?.find(o => o.id === outputId)
+
+  input.value = {
+    id: 0,
+    name: output?.name || '',
+    type: output?.type || 'string',
+    value: {
+      type: 1,
+      nodeId,
+      outputId,
+      text: ''
+    }
+  }
+  updateNode()
+}
+
+// 处理知识库选择变化
+function onKbsChange() {
+  updateNode()
+}
+
+// 更新节点
+function updateNode() {
+  emit('update:node', {
+    ...props.node,
+    inputs: [input.value],
+    outputs: [{
+      id: 0,
+      name: 'content',
+      type: 'string'
+    }],
+    data: {
+      uid: Number(sessionStorage.getItem('uid')),
+      kbs: selectedKbs.value.map(id => ({ id }))
+    }
+  })
+}
+
+// 运行模型
+async function run() {
+  isRunning.value = true
+  runStatus.value = 'running'
+  runResult.value = null
+  runError.value = null
+
+  try {
+    const formattedInputs = [
+      {
+        name: input.value.name,
+        type: input.value.type,
+        value: runInput.value
+      }
+    ]
+
+    const response = await axios({
+      method: 'post',
+      url: '/workflow/runSingle',
+      data: {
+        workflow_id: Number(props.workflow_id),
+        node_id: props.node.id,
+        inputs: JSON.stringify(formattedInputs)
+      }
+    })
+
+    const data = response.data
+    if (data.code === 0) {
+      runResult.value = data.result
+      runStatus.value = 'success'
+    } else {
+      runStatus.value = 'error'
+      runError.value = data.message || '执行失败'
+    }
+  } catch (e: any) {
+    runStatus.value = 'error'
+    runError.value = e.message || String(e)
+  } finally {
+    isRunning.value = false
+  }
+}
+
+// 暴露方法给父组件
+defineExpose({
+  openRunPanel: () => {
+    runInput.value = input.value.value.text || ''
+    showRunPanel.value = true
+  }
+})
+
+// 组件挂载时获取知识库列表
+onMounted(() => {
+  getKnowledgeBases()
+})
+</script>
+
 <template>
   <div class="knowledge-node-detail">
     <!-- 输入配置 -->
@@ -141,206 +347,6 @@
     </template>
   </el-dialog>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
-import axios from 'axios'
-
-interface Input {
-  id: number
-  name: string
-  type: string
-  value: {
-    type: number // 1: 上游节点的输出
-    nodeId: number
-    outputId: number,
-    text: string
-  }
-}
-
-interface Output {
-  id: number
-  name: 'content'
-  type: 'string'
-}
-
-interface KnowledgeBase {
-  id: number
-  name: string
-}
-
-const props = defineProps<{
-  node: {
-    id: number
-    type: string
-    name: string
-    inputs: Input[]
-    outputs: Output[]
-    data: {
-      uid: number
-      kbs: Array<{
-        id: number
-      }>
-    }
-  }
-  allNodes: any[]
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: any): void
-}>()
-
-// 获取所有上游节点
-const allUpstreamNodes = computed(() => {
-  return getAllUpstreamNodes(props.node, props.allNodes)
-})
-
-// 初始化输入
-const input = ref<Input>(props.node.inputs?.[0] || {
-  id: 0,
-  name: '',
-  type: 'string',
-  value: {
-    type: 1,
-    nodeId: -1,
-    outputId: -1,
-    text: ''
-  }
-})
-
-// 知识库列表
-const knowledgeBases = ref<KnowledgeBase[]>([])
-const selectedKbs = ref<number[]>(props.node.data?.kbs?.map(kb => kb.id) || [])
-
-// 运行相关状态
-const showRunPanel = ref(false)
-const isRunning = ref(false)
-const runStatus = ref<'running' | 'success' | 'error' | null>(null)
-const runResult = ref<string | null>(null)
-const runError = ref<string | null>(null)
-const runInput = ref('')
-
-// 获取知识库列表
-async function getKnowledgeBases() {
-  try {
-    const response = await axios({
-      method: 'get',
-      url: '/rl/getKnowledgeBases',
-      params: {
-        uid: sessionStorage.getItem('uid')
-      },
-    })
-    
-    if (response.data.code === 0) {
-      knowledgeBases.value = response.data.knowledgeBases
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('获取知识库列表失败:', error)
-  }
-}
-
-// 生成选择器的值
-function generateSelectValue(val?: Input['value']): string {
-  if (!val?.type || val.type !== 1) return ''
-  return `${val.nodeId}|${val.outputId}`
-}
-
-// 处理选择变化
-function onSelectChange(val: string) {
-  if (!val) return
-  const [nodeId, outputId] = val.split('|').map(Number)
-  const node = allUpstreamNodes.value.find(n => n.id === nodeId)
-  const output = node?.outputs?.find(o => o.id === outputId)
-  
-  input.value = {
-    id: 0,
-    name: output?.name || '',
-    type: output?.type || 'string',
-    value: {
-      type: 1,
-      nodeId,
-      outputId,
-      text: ''
-    }
-  }
-  updateNode()
-}
-
-// 处理知识库选择变化
-function onKbsChange() {
-  updateNode()
-}
-
-// 更新节点
-function updateNode() {
-  emit('update:node', {
-    ...props.node,
-    inputs: [input.value],
-    outputs: [{
-      id: 0,
-      name: 'content',
-      type: 'string'
-    }],
-    data: {
-      uid: Number(sessionStorage.getItem('uid')),
-      kbs: selectedKbs.value.map(id => ({ id }))
-    }
-  })
-}
-
-// 运行模型
-async function run() {
-  // isRunning.value = true
-  // runStatus.value = 'running'
-  // runResult.value = null
-  // runError.value = null
-  //
-  // try {
-  //   const response = await axios({
-  //     method: 'post',
-  //     url: '/kb/query',
-  //     data: {
-  //       uid: sessionStorage.getItem('uid'),
-  //       kb_ids: selectedKbs.value,
-  //       query: runInput.value
-  //     }
-  //   })
-  //
-  //   if (response.data.code === 0) {
-  //     runResult.value = response.data.result
-  //     runStatus.value = 'success'
-  //   } else {
-  //     runStatus.value = 'error'
-  //     runError.value = response.data.message || '执行失败'
-  //   }
-  // } catch (e: any) {
-  //   runStatus.value = 'error'
-  //   runError.value = e.message || String(e)
-  // } finally {
-  //   isRunning.value = false
-  // }
-  isRunning.value = false
-  runStatus.value = 'success'
-  runResult.value = '晴天。温度范围：15℃～20℃。穿搭建议：长袖卫衣+牛仔裤，带一件薄外套'
-  runError.value = null
-}
-
-// 暴露方法给父组件
-defineExpose({
-  openRunPanel: () => {
-    runInput.value = input.value.value.text || ''
-    showRunPanel.value = true
-  }
-})
-
-// 组件挂载时获取知识库列表
-onMounted(() => {
-  getKnowledgeBases()
-})
-</script>
 
 <style scoped>
 .knowledge-node-detail {

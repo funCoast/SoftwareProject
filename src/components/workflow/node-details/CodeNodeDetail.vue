@@ -1,3 +1,236 @@
+<script setup lang="ts">
+import { ref, watch, computed } from 'vue'
+import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+
+interface Input {
+  id: number
+  name: string
+  value?: {
+    type: number // 1: 上游节点的输出变量
+    text: string
+    nodeId: number
+    outputId: number
+  }
+}
+
+interface Output {
+  id: number
+  name: string
+  type: string
+  value?: any
+}
+
+const props = defineProps<{
+  node: {
+    id: number
+    type: string
+    label: string
+    x: number
+    y: number
+    inputs: Input[]
+    outputs: Output[]
+    data: {
+      code: string
+      language: string
+    }
+  }
+  allNodes: any[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:node', node: any): void
+}>()
+
+// 获取所有上游节点
+const allUpstreamNodes = computed(() => {
+  return getAllUpstreamNodes(props.node, props.allNodes)
+})
+
+// 初始化输入输出列表
+const inputs = ref<Input[]>(props.node.inputs || [])
+const outputs = ref<Output[]>(props.node.outputs?.map(output => ({
+  ...output,
+})) || [])
+const code = ref(props.node.data?.code || '')
+const language = ref(props.node.data?.language || 'python')
+
+// 可选的输出类型
+const outputTypes = [
+  { label: '字符串', value: 'string' },
+  { label: '数字', value: 'number' },
+]
+
+// 可选的编程语言
+const languages = [
+  { label: 'Python', value: 'python' },
+  { label: 'JavaScript', value: 'javascript' }
+]
+
+// 运行面板相关
+const showRunPanel = ref(false)
+const isRunning = ref(false)
+const runStatus = ref<'running' | 'success' | 'error' | null>(null)
+const runResult = ref<any>(null)
+const runError = ref<string | null>(null)
+const runInputs = ref<Record<string, string>>({})
+
+// 监听变化并更新节点
+watch([inputs, outputs, code, language], () => {
+  const returnConfig: Record<string, string> = {}
+  outputs.value.forEach(output => {
+    returnConfig[output.name] = output.returnValue
+  })
+
+  emit('update:node', {
+    ...props.node,
+    inputs: inputs.value,
+    outputs: outputs.value, // 从输出中移除 returnValue
+    data: {
+      code: code.value,
+      language: language.value,
+    }
+  })
+}, { deep: true })
+
+// 添加新输入
+function addInput() {
+  const newId = inputs.value.length
+      ? Math.max(...inputs.value.map((i: Input) => i.id)) + 1
+      : 0
+
+  inputs.value.push({
+    id: newId,
+    name: '',
+    value: {
+      type: 1,
+      nodeId: -1,
+      text: '',
+      outputId: -1
+    }
+  })
+}
+
+// 删除输入
+function removeInput(id: number) {
+  const index = inputs.value.findIndex(i => i.id === id)
+  if (index !== -1) {
+    inputs.value.splice(index, 1)
+  }
+}
+
+// 添加新输出
+function addOutput() {
+  const newId = outputs.value.length
+      ? Math.max(...outputs.value.map((o: Output) => o.id)) + 1
+      : 0
+
+  outputs.value.push({
+    id: newId,
+    name: '',
+    type: 'string'
+  })
+}
+
+// 删除输出
+function removeOutput(id: number) {
+  const index = outputs.value.findIndex(o => o.id === id)
+  if (index !== -1) {
+    outputs.value.splice(index, 1)
+  }
+}
+
+// 用于保持 select 的 value 绑定正确
+function generateSelectValue(val: Input['value']): string {
+  if (val?.type === 1 && val?.nodeId !== -1 && val?.outputId !== -1) {
+    return `${val.nodeId}|${val.outputId}`
+  }
+  return ''
+}
+
+// 处理上游输出选择变化
+function onSelectChange(val: string, input: Input) {
+  const [nodeId, outputId] = val.split('|').map(Number)
+  if (input.value) {
+    input.value.nodeId = nodeId
+    input.value.outputId = outputId
+  }
+}
+
+// 获取上游节点输出的类型
+function getUpstreamOutputType(nodeId: number, outputId: number): string {
+  const node = allUpstreamNodes.value.find((n: { id: number }) => n.id === nodeId)
+  const output = node?.outputs?.find((o: { id: number }) => o.id === outputId)
+  return output?.type || '未知类型'
+}
+
+// 打开运行面板
+function openRunPanel() {
+  // 初始化运行输入值
+  runInputs.value = {}
+  inputs.value.forEach(input => {
+    runInputs.value[input.name] = ''
+  })
+  showRunPanel.value = true
+}
+
+// 运行代码
+async function run() {
+  isRunning.value = true
+  runStatus.value = 'running'
+  runResult.value = null
+  runError.value = null
+
+  try {
+    const response = await fetch('/api/code/execute', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        code: code.value,
+        language: language.value,
+        inputs: runInputs.value
+      })
+    })
+
+    const data = await response.json()
+    if (data.success) {
+      runResult.value = data.result
+      runStatus.value = 'success'
+      // 更新输出值
+      Object.entries(data.result).forEach(([key, value]) => {
+        const output = outputs.value.find(o => o.name === key)
+        if (output) {
+          output.value = value
+        }
+      })
+    } else {
+      runStatus.value = 'error'
+      runError.value = data.error || '执行失败'
+    }
+  } catch (e: any) {
+    runStatus.value = 'error'
+    runError.value = e.message || String(e)
+  } finally {
+    isRunning.value = false
+  }
+}
+
+// 获取默认返回值
+function getDefaultValue(type: string): string {
+  switch (type) {
+    case 'string': return '""'
+    case 'number': return '0'
+    case 'Array[File]': return '[]'
+    default: return 'null'
+  }
+}
+
+defineExpose({
+  openRunPanel
+})
+</script>
+
 <template>
   <div class="code-node-detail">
     <!-- 代码编辑区域 -->
@@ -189,240 +422,6 @@
     </el-dialog>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
-
-interface Input {
-  id: number
-  name: string
-  value?: {
-    type: number // 1: 上游节点的输出变量
-    text: string
-    nodeId: number
-    outputId: number
-  }
-}
-
-interface Output {
-  id: number
-  name: string
-  type: string
-  value?: any
-}
-
-const props = defineProps<{
-  node: {
-    id: number
-    type: string
-    label: string
-    x: number
-    y: number
-    inputs: Input[]
-    outputs: Output[]
-    data: {
-      code: string
-      language: string
-    }
-  }
-  allNodes: any[]
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:node', node: any): void
-}>()
-
-// 获取所有上游节点
-const allUpstreamNodes = computed(() => {
-  return getAllUpstreamNodes(props.node, props.allNodes)
-})
-
-// 初始化输入输出列表
-const inputs = ref<Input[]>(props.node.inputs || [])
-const outputs = ref<Output[]>(props.node.outputs?.map(output => ({
-  ...output,
-})) || [])
-const code = ref(props.node.data?.code || '')
-const language = ref(props.node.data?.language || 'javascript')
-
-// 可选的输出类型
-const outputTypes = [
-  { label: '字符串', value: 'string' },
-  { label: '数字', value: 'number' },
-  { label: '文件数组', value: 'Array[File]' }
-]
-
-// 可选的编程语言
-const languages = [
-  { label: 'JavaScript', value: 'javascript' },
-  { label: 'Python', value: 'python' }
-]
-
-// 运行面板相关
-const showRunPanel = ref(false)
-const isRunning = ref(false)
-const runStatus = ref<'running' | 'success' | 'error' | null>(null)
-const runResult = ref<any>(null)
-const runError = ref<string | null>(null)
-const runInputs = ref<Record<string, string>>({})
-
-// 监听变化并更新节点
-watch([inputs, outputs, code, language], () => {
-  const returnConfig: Record<string, string> = {}
-  outputs.value.forEach(output => {
-    returnConfig[output.name] = output.returnValue
-  })
-
-  emit('update:node', {
-    ...props.node,
-    inputs: inputs.value,
-    outputs: outputs.value.map(({ returnValue, ...rest }) => rest), // 从输出中移除 returnValue
-    data: {
-      code: code.value,
-      language: language.value,
-    }
-  })
-}, { deep: true })
-
-// 添加新输入
-function addInput() {
-  const newId = inputs.value.length 
-    ? Math.max(...inputs.value.map((i: Input) => i.id)) + 1 
-    : 0
-  
-  inputs.value.push({
-    id: newId,
-    name: '',
-    value: {
-      type: 1,
-      nodeId: -1,
-      text: '',
-      outputId: -1
-    }
-  })
-}
-
-// 删除输入
-function removeInput(id: number) {
-  const index = inputs.value.findIndex(i => i.id === id)
-  if (index !== -1) {
-    inputs.value.splice(index, 1)
-  }
-}
-
-// 添加新输出
-function addOutput() {
-  const newId = outputs.value.length 
-    ? Math.max(...outputs.value.map((o: Output) => o.id)) + 1 
-    : 0
-  
-  outputs.value.push({
-    id: newId,
-    name: '',
-    type: 'string'
-  })
-}
-
-// 删除输出
-function removeOutput(id: number) {
-  const index = outputs.value.findIndex(o => o.id === id)
-  if (index !== -1) {
-    outputs.value.splice(index, 1)
-  }
-}
-
-// 用于保持 select 的 value 绑定正确
-function generateSelectValue(val: Input['value']): string {
-  if (val?.type === 1 && val?.nodeId !== -1 && val?.outputId !== -1) {
-    return `${val.nodeId}|${val.outputId}`
-  }
-  return ''
-}
-
-// 处理上游输出选择变化
-function onSelectChange(val: string, input: Input) {
-  const [nodeId, outputId] = val.split('|').map(Number)
-  if (input.value) {
-    input.value.nodeId = nodeId
-    input.value.outputId = outputId
-  }
-}
-
-// 获取上游节点输出的类型
-function getUpstreamOutputType(nodeId: number, outputId: number): string {
-  const node = allUpstreamNodes.value.find((n: { id: number }) => n.id === nodeId)
-  const output = node?.outputs?.find((o: { id: number }) => o.id === outputId)
-  return output?.type || '未知类型'
-}
-
-// 打开运行面板
-function openRunPanel() {
-  // 初始化运行输入值
-  runInputs.value = {}
-  inputs.value.forEach(input => {
-    runInputs.value[input.name] = ''
-  })
-  showRunPanel.value = true
-}
-
-// 运行代码
-async function run() {
-  isRunning.value = true
-  runStatus.value = 'running'
-  runResult.value = null
-  runError.value = null
-
-  try {
-    const response = await fetch('/api/code/execute', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        code: code.value,
-        language: language.value,
-        inputs: runInputs.value
-      })
-    })
-
-    const data = await response.json()
-    if (data.success) {
-      runResult.value = data.result
-      runStatus.value = 'success'
-      // 更新输出值
-      Object.entries(data.result).forEach(([key, value]) => {
-        const output = outputs.value.find(o => o.name === key)
-        if (output) {
-          output.value = value
-        }
-      })
-    } else {
-      runStatus.value = 'error'
-      runError.value = data.error || '执行失败'
-    }
-  } catch (e: any) {
-    runStatus.value = 'error'
-    runError.value = e.message || String(e)
-  } finally {
-    isRunning.value = false
-  }
-}
-
-// 获取默认返回值
-function getDefaultValue(type: string): string {
-  switch (type) {
-    case 'string': return '""'
-    case 'number': return '0'
-    case 'Array[File]': return '[]'
-    default: return 'null'
-  }
-}
-
-defineExpose({
-  openRunPanel
-})
-</script>
 
 <style scoped>
 .code-node-detail {

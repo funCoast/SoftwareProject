@@ -83,6 +83,7 @@ async function fetchAgents() {
 
 // 创建智能体
 async function createAgent() {
+  const formData = new FormData()
   if (!agentForm.value.name) {
     ElMessage.error('请输入智能体名称')
     return
@@ -148,7 +149,12 @@ onMounted(() => {
 })
 
 function goToAgentEdit(id: number) {
-  router.push(`/agentEdit/${id}`)
+  router.push({
+    path: `/agentEdit/${id}`,
+    query: {
+      uid: Number(sessionStorage.getItem('uid')),
+    }
+  })
 }
 </script>
 

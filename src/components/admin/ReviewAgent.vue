@@ -2,6 +2,7 @@
 import axios from 'axios'
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import router from '../../router'
 
 const baseImageUrl = "http://122.9.33.84:8000"
 
@@ -75,6 +76,16 @@ async function reviewAgent(agentId: number, action: 'approve' | 'reject', catego
   }
 }
 
+// 进入智能体编辑页面
+function goToAgentEdit(agentId: number, authorId: number) {
+  router.push({
+    path: `/agentEdit/${agentId}`,
+    query: {
+      uid: authorId,
+    }
+  })
+}
+
 onMounted(() => {
   fetchPendingAgents()
 })
@@ -87,7 +98,7 @@ onMounted(() => {
     </div>
     <div class="agents-content">
       <div class="agents-grid">
-        <div v-for="agent in pendingAgents" :key="agent.id" class="agent-card">
+        <div v-for="agent in pendingAgents" :key="agent.id" class="agent-card" @click="goToAgentEdit(agent.id, agent.author.id)">
           <div class="agent-image">
             <el-avatar :size="80" :src="baseImageUrl + agent.icon" />
           </div>
@@ -105,6 +116,7 @@ onMounted(() => {
                 v-model="agent.category"
                 placeholder="选择分类"
                 class="category-select"
+                @click.stop
               >
                 <el-option
                   v-for="cat in categories"
@@ -113,7 +125,7 @@ onMounted(() => {
                   :value="cat.label"
                 />
               </el-select>
-              <div class="review-buttons">
+              <div class="review-buttons" @click.stop>
                 <el-button
                   type="success"
                   :disabled="!agent.category"
@@ -173,6 +185,13 @@ onMounted(() => {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.agent-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .agent-image {

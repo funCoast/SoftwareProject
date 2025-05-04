@@ -35,6 +35,7 @@ onBeforeMount (() => {
   fetchAnnouncement()
   // fetchHot()
   // fetchFollowing()
+  // fetchFavorites()
 })
 
 async function fetchAnnouncement() {
@@ -61,6 +62,20 @@ async function fetchHot() {
   }).then(function (response) {
     if(response.data.code === 0) {
       hotAgents.value=response.data.agents
+    }
+  })
+}
+
+async function fetchFavorites() {
+  axios({
+    method: 'get',
+    url: 'user/fetchFavorites',
+    params: {
+      uid: sessionStorage.getItem('uid')
+    }
+  }).then(function (response) {
+    if(response.data.code === 0) {
+      favoriteAgents.value=response.data.agents
     }
   })
 }

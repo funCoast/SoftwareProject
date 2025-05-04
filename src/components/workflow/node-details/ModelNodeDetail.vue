@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
 import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+import axios from "axios";
 
 interface Input {
   id: number
@@ -29,7 +30,8 @@ const props = defineProps<{
     inputs: Input[]
     outputs: Output[]
   }
-  allNodes: any[]
+  allNodes: any[],
+  workflow_id: string
 }>()
 
 const emit = defineEmits<{
@@ -94,6 +96,9 @@ function onSelectChange(inputId: number, val: string) {
 
   if (val === 'manual') {
     input.value = {
+      type: 0,
+      nodeId: -1,
+      outputId: -1,
       text: ''
     }
   } else {
@@ -129,24 +134,35 @@ async function run() {
   runError.value = null
 
   try {
-    const response = await fetch('/api/model/run', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
+    const formattedInputs = [
+      {
+        "name": "system_prompt",
+        "type": "string",
+        "value": runSystemPrompt.value
       },
-      body: JSON.stringify({
-        system_prompt: runSystemPrompt.value,
-        user_prompt: runUserPrompt.value
-      })
+      {
+        "name": "user_prompt",
+        "type": "string",
+        "value": runUserPrompt.value
+      }
+    ]
+    console.log(props.workflow_id)
+    const response = await axios({
+      method: 'post',
+      url: '/workflow/runSingle',
+      data: {
+        workflow_id: Number(props.workflow_id),
+        node_id: props.node.id,
+        inputs: JSON.stringify(formattedInputs)
+      }
     })
-
-    const data = await response.json()
-    if (data.success) {
+    const data = await response.data
+    if (data.code === 0) {
       runResult.value = data.result
       runStatus.value = 'success'
     } else {
       runStatus.value = 'error'
-      runError.value = data.error || '执行失败'
+      runError.value = data.message || '执行失败'
     }
   } catch (e: any) {
     runStatus.value = 'error'

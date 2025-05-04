@@ -27,7 +27,7 @@ const emit = defineEmits<{
 const outputTypes = [
   { label: '字符串', value: 'string' },
   { label: '数字', value: 'number' },
-  { label: '文件数组', value: 'Array[File]' }
+  // { label: '文件数组', value: 'Array[File]' }
 ]
 
 // 初始化输出列表

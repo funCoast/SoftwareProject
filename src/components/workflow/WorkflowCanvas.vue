@@ -26,6 +26,8 @@ import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute();
+const workflow_id = route.params.id
+const uid = ref<string>('')
 
 const name = ref('')
 const description = ref('')
@@ -47,20 +49,20 @@ const nodeTypes = ref<nodeType[]>([
     image: 'https://api.iconify.design/carbon:machine-learning-model.svg',
     isPlugin: false
   },
-  { 
-    type: 'workflow',
-    label: '工作流',
-    description: '嵌套调用其他工作流',
-    image: 'https://api.iconify.design/material-symbols:account-tree.svg',
-    isPlugin: false
-  },
-  { 
-    type: 'http',
-    label: 'HTTP请求',
-    description: '发送HTTP请求获取数据',
-    image: 'https://api.iconify.design/material-symbols:api.svg',
-    isPlugin: false
-  },
+  // {
+  //   type: 'workflow',
+  //   label: '工作流',
+  //   description: '嵌套调用其他工作流',
+  //   image: 'https://api.iconify.design/material-symbols:account-tree.svg',
+  //   isPlugin: false
+  // },
+  // {
+  //   type: 'http',
+  //   label: 'HTTP请求',
+  //   description: '发送HTTP请求获取数据',
+  //   image: 'https://api.iconify.design/material-symbols:api.svg',
+  //   isPlugin: false
+  // },
   { 
     type: 'code',
     label: '代码',
@@ -75,13 +77,13 @@ const nodeTypes = ref<nodeType[]>([
     image: 'https://api.iconify.design/material-symbols:fork-right.svg',
     isPlugin: false
   },
-  { 
-    type: 'loop',
-    label: '循环',
-    description: '重复执行特定任务',
-    image: 'https://api.iconify.design/material-symbols:repeat.svg',
-    isPlugin: false
-  },
+  // {
+  //   type: 'loop',
+  //   label: '循环',
+  //   description: '重复执行特定任务',
+  //   image: 'https://api.iconify.design/material-symbols:repeat.svg',
+  //   isPlugin: false
+  // },
   { 
     type: 'classifier',
     label: '问题分类器',
@@ -96,11 +98,25 @@ const nodeTypes = ref<nodeType[]>([
     image: 'https://api.iconify.design/material-symbols:database.svg',
     isPlugin: false
   },
-  { 
-    type: 'extract',
-    label: '提取文档',
-    description: '从文档中提取关键信息',
-    image: 'https://api.iconify.design/material-symbols:description.svg',
+  // {
+  //   type: 'extract',
+  //   label: '提取文档',
+  //   description: '从文档中提取关键信息',
+  //   image: 'https://api.iconify.design/material-symbols:description.svg',
+  //   isPlugin: false
+  // },
+  {
+    type: 'weather',
+    label: '天气查询',
+    description: '查询指定城市未来7天的天气',
+    image: 'https://api.iconify.design/material-symbols:extension.svg',
+    isPlugin: false
+  },
+  {
+    type: 'end',
+    label: '结束节点',
+    description: '整个工作流的结束',
+    image: 'https://api.iconify.design/material-symbols:stop-circle.svg',
     isPlugin: false
   },
   {
@@ -145,13 +161,13 @@ const nodeTypes = ref<nodeType[]>([
     image: 'https://api.iconify.design/material-symbols:extension.svg',
     isPlugin: true
   },
-  {
-    type: 'weather',
-    label: '天气查询',
-    description: '查询指定城市未来7天的天气',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    isPlugin: true
-  }
+  // {
+  //   type: 'weather',
+  //   label: '天气查询',
+  //   description: '查询指定城市未来7天的天气',
+  //   image: 'https://api.iconify.design/material-symbols:extension.svg',
+  //   isPlugin: false
+  // }
 ])
 
 const filteredNodeTypes = computed(() => nodeTypes.value.filter(n => !n.isPlugin))
@@ -230,12 +246,13 @@ const startNode = computed(() => {
 })
 
 onMounted(async () => {
+  uid.value = route.query.uid as string
   try {
     const response = await axios({
       method: 'get',
       url: '/workflow/fetch',
       params: {
-        uid: sessionStorage.getItem('uid'),
+        uid: uid.value,
         workflow_id: route.params.id
       }
     })
@@ -467,47 +484,20 @@ async function executeRun() {
   console.log("nodes:", workflowNodes.value)
   console.log("connections: ", connections.value)
   runStatus.value = 'running'
-  // try {
-  //   const response = await axios({
-  //     method: 'post',
-  //     url: 'workflow/run',
-  //     data: {
-  //       nodes: workflowNodes.value,
-  //       edges: connections.value,
-  //     }
-  //   })
-  //   console.log("response: ", response.data)
-  //   const results = response.data['result']
-  //   console.log(results)
   try {
-    // 这里不发请求，直接手动造 results
-    const results = {}
-    for (const node of workflowNodes.value) {
-      let mockResult = null
-      if (node.name === '开始节点') {
-        mockResult = '请给我推荐一本有关计算机科学与技术的书。'
-      } else if (node.name === '问题分类器') {
-        mockResult = '大模型3'
-      } else if (node.name === '大模型3') {
-        mockResult = '当然可以！如果你想了解计算机科学与技术整体体系，我推荐你阅读这本经典教材：\n' +
-            '《计算机科学导论》（原书第12版）—— J. Glenn Brookshear、Dennis Brylow 著\n' +
-            '📚 内容概览：\n' +
-            '系统介绍了计算机科学的各大基础领域，包括算法、编程语言、操作系统、计算机网络、人工智能等。\n' +
-            '既适合零基础入门者了解全貌，也适合有一定基础的人作为系统复习参考。\n' +
-            '语言浅显易懂，配有大量真实案例，特别适合本科生或者自学者。\n'
-      } else if (node.name === '结束节点5') {
-        mockResult = '当然可以！如果你想了解计算机科学与技术整体体系，我推荐你阅读这本经典教材：\n' +
-            '《计算机科学导论》（原书第12版）—— J. Glenn Brookshear、Dennis Brylow 著\n' +
-            '📚 内容概览：\n' +
-            '系统介绍了计算机科学的各大基础领域，包括算法、编程语言、操作系统、计算机网络、人工智能等。\n' +
-            '既适合零基础入门者了解全貌，也适合有一定基础的人作为系统复习参考。\n' +
-            '语言浅显易懂，配有大量真实案例，特别适合本科生或者自学者。\n'
+    const response = await axios({
+      method: 'post',
+      url: 'workflow/run',
+      data: {
+        user_id: uid.value,
+        workflowId: workflow_id,
+        nodes: workflowNodes.value,
+        edges: connections.value,
       }
-
-      results[node.id] = { "0": mockResult }
-    }
-
-    console.log("模拟的results:", results)
+    })
+    console.log("response: ", response.data)
+    const results = response.data['result']
+    console.log(results)
     workflowNodes.value = workflowNodes.value.map(node => {
       if (results[node.id]) {
         return {
@@ -542,7 +532,7 @@ async function saveWorkflow() {
       method: 'post',
       url: 'workflow/save',
       data: {
-        'uid': sessionStorage.getItem('uid'),
+        'uid': uid.value,
         'workflow_id': route.params.id,
         'nodes': workflowNodes.value,
         'edges': connections.value
@@ -634,8 +624,8 @@ const clearWorkflowCacheAndGoBack = () => {
           <p class="workflow-description">{{description}}</p>
         </div>
       </div>
-      <button class="publish-btn">
-        发布
+      <button class="publish-btn" @click="saveWorkflow">
+        保存
       </button>
     </div>
 
@@ -714,12 +704,12 @@ const clearWorkflowCacheAndGoBack = () => {
             >
               节点类型
             </button>
-            <button 
-              :class="['tab-btn', { active: selectorPage === 'plugins' }]"
-              @click="selectorPage = 'plugins'"
-            >
-              插件
-            </button>
+<!--            <button -->
+<!--              :class="['tab-btn', { active: selectorPage === 'plugins' }]"-->
+<!--              @click="selectorPage = 'plugins'"-->
+<!--            >-->
+<!--              插件-->
+<!--            </button>-->
           </div>
         </div>
         
@@ -763,7 +753,7 @@ const clearWorkflowCacheAndGoBack = () => {
           <button 
             class="action-btn run-btn" 
             @click="runSelectedNode"
-            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end' && selectedNode.type !== 'extract'"
+            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end' && selectedNode.type !== 'if_else' && selectedNode.type !== 'code'"
             title="运行节点">
             <img 
               src="https://api.iconify.design/material-symbols:play-circle.svg"
@@ -803,6 +793,7 @@ const clearWorkflowCacheAndGoBack = () => {
           :is="getNodeDetailComponent(selectedNode.type)"
           :node="selectedNode"
           :allNodes="workflowNodes"
+          :workflow_id="workflow_id"
           :key="selectedNode?.id"
           :ref="setNodeComponentRef(selectedNode.id)"
           @update:node="updateNode"

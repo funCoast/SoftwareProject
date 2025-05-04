@@ -59,9 +59,9 @@ const error = ref({
 
 onBeforeMount(() => {
   fetchUserInfo()
-  //fetchWorks()
-  //fetchLikes()
-  //fetchFavorites()
+  // fetchWorks()
+  // fetchLikes()
+  // fetchFavorites()
 })
 
 async function fetchUserInfo() {

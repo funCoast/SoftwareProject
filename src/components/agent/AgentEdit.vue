@@ -3,9 +3,12 @@ import { ref, computed, onMounted, onBeforeMount, watch, inject } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import {useRoute} from "vue-router";
+import router from "../../router.ts";
 
 const route = useRoute()
 const agent_id = route.params.id
+const uid = ref<string>('')
+const currentUid = ref<string>('')
 const userAvatar = inject('avatar') as string
 
 interface KnowledgeBase {
@@ -52,6 +55,8 @@ onMounted(() => {
 })
 
 onBeforeMount(() => {
+  uid.value = route.query.uid as string
+  currentUid.value = sessionStorage.getItem('uid') || ''
   fetchUserInfo()
 })
 
@@ -76,7 +81,7 @@ function fetchUserInfo() {
     method: 'get',
     url: '/user/fetchProfile',
     params: {
-      uid: sessionStorage.getItem('uid')
+      uid: uid.value
     }
   }).then(function (response) {
     if (response.data.code === 0) {
@@ -98,7 +103,7 @@ async function getKnowledgeBases() {
       method: 'get',
       url: '/rl/getKnowledgeBases',
       params: {
-        uid: sessionStorage.getItem('uid')
+        uid: uid.value
       },
     })
 
@@ -125,7 +130,7 @@ async function getPlugins() {
       method: 'get',
       url: '/plugins/getPlugins',
       params: {
-        uid: sessionStorage.getItem('uid')
+        uid: uid.value
       },
     })
 
@@ -146,8 +151,8 @@ const workflows = ref<Workflow[]>([])
 // 获取所有工作流
 async function getWorkflows() {
   try {
-    const uid = sessionStorage.getItem('uid')
-    if (!uid) {
+    const currentUid = uid.value
+    if (!currentUid) {
       console.error('用户ID不存在')
       return
     }
@@ -156,7 +161,7 @@ async function getWorkflows() {
       method: 'get',
       url: '/workflow/fetchAll',
       params: {
-        uid
+        uid: currentUid
       }
     })
     if (response.data.code === 0) {
@@ -242,7 +247,7 @@ async function handleRelease() {
       method: 'post',
       url: 'agent/release',
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: uid.value,
         agent_id: agent_id
       }
     })
@@ -265,7 +270,7 @@ async function handleRemove() {
       method: 'post',
       url: 'agent/remove',
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: uid.value,
         agent_id: agent_id
       }
     })
@@ -297,7 +302,8 @@ async function updateAgentInfo() {
     })
     if (response.data.code === 0) {
       console.log("配置: ", agentInfo.value.config)
-      ElMessage.success('配置已保存')
+      // ElMessage.success('配置已保存')
+      alert("保存成功！")
     } else {
       ElMessage.error(response.data.message)
     }
@@ -337,6 +343,13 @@ watch(selectedWorkflows, (newVal) => {
   }
 })
 
+function goToWorkflowEdit(id: number) {
+  router.push({
+    path: `/workspace/workflow/${id}`,
+    query: { uid: uid.value }
+  })
+}
+
 interface Message {
   sender: 'user' | 'assistant'
   content: string
@@ -353,7 +366,7 @@ async function sendsendMessage() {
       method: 'post',
       url: 'agent/sendMessage',
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: uid.value,
         agent_id: agent_id,
         content: messageInput.value
       },
@@ -403,7 +416,7 @@ const handleConfirm = () => {
           <p>{{ agentInfo.description }}</p>
         </div>
       </div>
-      <div class="status-actions">
+      <div class="status-actions" v-if="uid === currentUid">
         <el-button
           :type="statusButton.type"
           :disabled="statusButton.disabled"
@@ -520,7 +533,11 @@ const handleConfirm = () => {
           </el-select>
 
           <div class="selected-items">
-            <div v-for="workflow in selectedWorkflows" :key="workflow" class="selected-item">
+            <div v-for="workflow in selectedWorkflows"
+                 :key="workflow"
+                 class="selected-item"
+                 @click="goToWorkflowEdit(workflow)"
+                 style="cursor: pointer;">
               <el-avatar :size="32" :src="workflows.find(w => w.id === workflow)?.icon" />
               <div class="item-info">
                 <div class="item-name">{{ workflows.find(w => w.id === workflow)?.name }}</div>
