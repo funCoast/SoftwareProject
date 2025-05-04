@@ -312,6 +312,7 @@ class AgentCreateView(View):
                 user=user,
                 status='private',
                 is_modifiable=True,
+                publish_time=time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
             )
         except Exception as e:
             return JsonResponse(
