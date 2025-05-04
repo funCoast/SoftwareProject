@@ -1,5 +1,7 @@
 import uuid
 import random
+
+from django.views import View
 from openai import OpenAI
 import dashscope
 from http import HTTPStatus
@@ -2661,3 +2663,145 @@ def fetch_all_published_agents(request):
         })
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"获取失败: {str(e)}"})
+
+class FetchWorksView(View):
+
+    def get(self, request):
+        uid = request.GET.get('uid')
+        if not uid:
+            return JsonResponse(
+                {"code": -1, "message": "缺少 uid 参数"},
+                status=400,
+                json_dumps_params={'ensure_ascii': False}
+            )
+        try:
+            user = User.objects.get(pk=uid)
+        except User.DoesNotExist:
+            return JsonResponse(
+                {"code": -1, "message": "uid 对应的用户不存在"},
+                status=404,
+                json_dumps_params={'ensure_ascii': False}
+            )
+
+        agents = Agent.objects.filter(user=user)
+
+        data = []
+        for a in agents:
+            data.append({
+                "id": a.agent_id,
+                "name": a.agent_name,
+                "category": a.category,
+                "description": a.description or "",
+                "image": a.icon_url or "",
+                "likes": a.likes_count,
+                "favorites": a.favorites_count,
+            })
+
+        return JsonResponse(
+            {"code": 0, "message": "获取成功", "data": data},
+            json_dumps_params={'ensure_ascii': False}
+        )
+
+class FetchLikesView(View):
+    """
+    GET /user/fetchLikes?uid=<user_id>
+    返回该用户点赞的所有智能体
+    """
+    def get(self, request):
+        uid = request.GET.get('uid')
+        if not uid:
+            return JsonResponse(
+                {"code": -1, "message": "缺少 uid 参数"},
+                status=400,
+                json_dumps_params={'ensure_ascii': False}
+            )
+        try:
+            user = User.objects.get(pk=uid)
+        except User.DoesNotExist:
+            return JsonResponse(
+                {"code": -1, "message": "uid 对应的用户不存在"},
+                status=404,
+                json_dumps_params={'ensure_ascii': False}
+            )
+
+        interactions = (
+            UserInteraction.objects
+            .filter(user=user, is_liked=True)
+            .select_related('agent', 'agent__user')
+        )
+
+        data = []
+        for ui in interactions:
+            a = ui.agent
+            author = a.user
+            data.append({
+                "id": a.agent_id,
+                "name": a.agent_name,
+                "category": a.category,
+                "description": a.description or "",
+                "image": a.icon_url or "",
+                "likes": a.likes_count,
+                "favorites": a.favorites_count,
+                "author": {
+                    "id": author.user_id,
+                    "name": author.username,
+                    "avatar": author.avatar_url or ""
+                }
+            })
+
+        return JsonResponse(
+            {"code": 0, "message": "获取成功", "data": data},
+            json_dumps_params={'ensure_ascii': False}
+        )
+
+class FetchFavoritesView(View):
+    """
+    GET /user/fetchFavorites?uid=<user_id>
+    返回该用户点赞的所有智能体
+    """
+    def get(self, request):
+        uid = request.GET.get('uid')
+        if not uid:
+            return JsonResponse(
+                {"code": -1, "message": "缺少 uid 参数"},
+                status=400,
+                json_dumps_params={'ensure_ascii': False}
+            )
+        try:
+            user = User.objects.get(pk=uid)
+        except User.DoesNotExist:
+            return JsonResponse(
+                {"code": -1, "message": "uid 对应的用户不存在"},
+                status=404,
+                json_dumps_params={'ensure_ascii': False}
+            )
+
+        interactions = (
+            UserInteraction.objects
+            .filter(user=user, is_favorite=True)
+            .select_related('agent', 'agent__user')
+        )
+
+        data = []
+        for ui in interactions:
+            a = ui.agent
+            author = a.user
+            data.append({
+                "id": a.agent_id,
+                "name": a.agent_name,
+                "category": a.category,
+                "description": a.description or "",
+                "image": a.icon_url or "",
+                "likes": a.likes_count,
+                "favorites": a.favorites_count,
+                "author": {
+                    "id": author.user_id,
+                    "name": author.username,
+                    "avatar": author.avatar_url or ""
+                }
+            })
+
+        return JsonResponse(
+            {"code": 0, "message": "获取成功", "data": data},
+            json_dumps_params={'ensure_ascii': False}
+        )
