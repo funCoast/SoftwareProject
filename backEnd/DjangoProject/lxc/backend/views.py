@@ -1321,7 +1321,10 @@ def update_table(request):
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
     try:
-        body = json.loads(request.body.decode('utf-8'))
+        if request.content_type == 'application/json':
+            body = json.loads(request.body.decode('utf-8'))
+        else:
+            body = request.POST
         uid = body.get('uid')
         kb_id = body.get('kb_id')
         row_index = body.get('rowIndex')
@@ -1382,6 +1385,144 @@ def update_table(request):
 
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"更新失败: {str(e)}"})
+
+@csrf_exempt
+def add_table_row(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        if request.content_type == 'application/json':
+            body = json.loads(request.body.decode('utf-8'))
+        else:
+            body = request.POST
+
+        uid = body.get('uid')
+        kb_id = body.get('kb_id')
+        row_data = body.get('rowData')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+
+    if not uid or not kb_id or not row_data:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 rowData 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    table_file = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx')).first()
+    if not table_file:
+        return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
+
+    try:
+        file_path = table_file.file.path
+        ext = os.path.splitext(file_path)[-1].lower()
+        df = pd.read_csv(file_path) if ext == '.csv' else pd.read_excel(file_path)
+
+        # 将 row_data 转为 DataFrame 并追加到现有 DataFrame
+        new_row_df = pd.DataFrame([row_data])
+        df = pd.concat([df, new_row_df], ignore_index=True)
+
+        # 保存文件
+        if ext == '.csv':
+            df.to_csv(file_path, index=False)
+        else:
+            df.to_excel(file_path, index=False)
+
+        # 构造新行文本
+        new_index = len(df) - 1
+        row_text = ', '.join([f"{col}: {df.at[new_index, col]}" for col in df.columns])
+        embedding = get_tongyi_embedding(row_text)
+
+        # 保存新的 chunk
+        if embedding:
+            KnowledgeChunk.objects.create(
+                kb=kb,
+                file=table_file,
+                content=row_text,
+                embedding=json.dumps(embedding),
+                order=new_index
+            )
+
+        # 更新知识库更新时间
+        kb.updated_at = timezone.now()
+        kb.save()
+
+        return JsonResponse({"code": 0, "message": "新增成功"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"新增失败: {str(e)}"})
+
+@csrf_exempt
+def delete_table_rows(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        if request.content_type == 'application/json':
+            body = json.loads(request.body.decode('utf-8'))
+        else:
+            body = request.POST
+
+        uid = body.get('uid')
+        kb_id = body.get('kb_id')
+        rows = body.get('rows')  # 应为数组
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+
+    if not uid or not kb_id or rows is None:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 rows 参数"})
+
+    if not isinstance(rows, list):
+        return JsonResponse({"code": -1, "message": "rows 参数应为数组"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在或无权限"})
+
+    table_file = kb.files.filter(Q(name__iendswith='.csv') | Q(name__iendswith='.xlsx')).first()
+    if not table_file:
+        return JsonResponse({"code": -1, "message": "未找到任何表格文件"})
+
+    try:
+        file_path = table_file.file.path
+        ext = os.path.splitext(file_path)[-1].lower()
+        df = pd.read_csv(file_path) if ext == '.csv' else pd.read_excel(file_path)
+
+        # 检查索引合法性
+        if any(idx >= len(df) or idx < 0 for idx in rows):
+            return JsonResponse({"code": -1, "message": "行索引超出范围"})
+
+        # 删除指定行
+        df = df.drop(rows).reset_index(drop=True)
+
+        # 保存回文件
+        if ext == '.csv':
+            df.to_csv(file_path, index=False)
+        else:
+            df.to_excel(file_path, index=False)
+
+        # 删除对应的 chunks
+        KnowledgeChunk.objects.filter(kb=kb, file=table_file, order__in=rows).delete()
+
+        # 重新调整剩余 chunks 的 order
+        remaining_chunks = KnowledgeChunk.objects.filter(kb=kb, file=table_file).order_by('order')
+        for new_order, chunk in enumerate(remaining_chunks):
+            chunk.order = new_order
+            chunk.save()
+
+        # 更新知识库更新时间
+        kb.updated_at = timezone.now()
+        kb.save()
+
+        return JsonResponse({"code": 0, "message": "删除成功"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"删除失败: {str(e)}"})
 
 @csrf_exempt
 def delete_resource(request):
