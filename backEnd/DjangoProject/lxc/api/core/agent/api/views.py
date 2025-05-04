@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+from datetime import timezone
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -301,6 +302,7 @@ class AgentCreateView(View):
                 user=user,
                 status='private',
                 is_modifiable=True,
+                publish_time=timezone.now(),
             )
         except Exception as e:
             return JsonResponse(
