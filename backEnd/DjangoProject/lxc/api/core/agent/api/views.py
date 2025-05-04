@@ -23,13 +23,18 @@ def temp_send_message(request):
     try:
         llm_client = LLMClient()
         data = json.loads(request.body)
-        message = data.get('message')
+        user_id = data.get('sender')
+        message = data.get('content')
+        agent_id = data.get('agent_id')
 
         # 插件调用
         plugin_response = plugin_call(message)
 
         # 知识库调用
+
+
         # 工作流调用
+
 
         prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
         input_str = f"\t- 输入: {message}\n"
