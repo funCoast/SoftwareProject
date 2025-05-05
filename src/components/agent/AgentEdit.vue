@@ -350,6 +350,14 @@ function goToWorkflowEdit(id: number) {
   })
 }
 
+function goToKBEdit(id: number, type: string) {
+  router.push({
+    path: `/workspace/${type}/${id}`,
+    query: { uid: uid.value }
+  })
+}
+
+
 interface Message {
   sender: 'user' | 'assistant'
   content: string
@@ -458,7 +466,12 @@ const handleConfirm = () => {
           </el-select>
 
           <div class="selected-items">
-            <div v-for="kb in selectedKbs" :key="kb" class="selected-item">
+            <div v-for="kb in selectedKbs"
+                 :key="kb"
+                 class="selected-item"
+                 @click="goToKBEdit(kb, knowledgeBases.find(k => k.id === kb)?.type)"
+                 style="cursor: pointer;"
+            >
               <el-avatar :size="32" :src="knowledgeBases.find(k => k.id === kb)?.icon" />
               <div class="item-info">
                 <div class="item-name">{{ knowledgeBases.find(k => k.id === kb)?.name }}</div>

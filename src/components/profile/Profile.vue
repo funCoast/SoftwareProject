@@ -120,12 +120,10 @@ async function fetchWorks() {
     } else {
       console.error('获取作品列表失败:', response.data.message)
       error.value.works = response.data.message || '获取作品列表失败'
-      myWorks.value = getDefaultWorks()
     }
   } catch (err) {
     console.error('获取作品列表错误:', err)
     error.value.works = '网络错误，请稍后重试'
-    myWorks.value = getDefaultWorks()
   }
 }
 
@@ -143,12 +141,12 @@ async function fetchLikes() {
     } else {
       console.error('获取喜欢列表失败:', response.data.message)
       error.value.likes = response.data.message || '获取喜欢列表失败'
-      likes.value = getDefaultLikes()
+      likes.value = []
     }
   } catch (err) {
     console.error('获取喜欢列表错误:', err)
     error.value.likes = '网络错误，请稍后重试'
-    likes.value = getDefaultLikes()
+    likes.value = []
   }
 }
 
@@ -166,12 +164,12 @@ async function fetchFavorites() {
     } else {
       console.error('获取收藏列表失败:', response.data.message)
       error.value.favorites = response.data.message || '获取收藏列表失败'
-      favorites.value = getDefaultFavorites()
+      favorites.value = []
     }
   } catch (err) {
     console.error('获取收藏列表错误:', err)
     error.value.favorites = '网络错误，请稍后重试'
-    favorites.value = getDefaultFavorites()
+    favorites.value = []
   }
 }
 
@@ -215,101 +213,6 @@ function goToAgentDetail(agentId: number) {
   router.push({
     path: `/agentDetail/${agentId}`
   })
-}
-
-// 默认数据
-function getDefaultWorks(): myWork[] {
-  return [
-    {
-      id: 1,
-      name: '智能对话助手',
-      category: '对话助手',
-      description: '基于大语言模型的智能对话系统，支持多轮对话和上下文理解',
-      image: 'https://picsum.photos/300/300?random=1',
-      likes: 1200,
-      favorites: 856
-    },
-    {
-      id: 2,
-      name: '数据分析工具',
-      category: '数据分析',
-      description: '专业的数据分析工具，支持多种数据可视化和预测分析',
-      image: 'https://picsum.photos/300/300?random=2',
-      likes: 890,
-      favorites: 654
-    },
-    {
-      id: 3,
-      name: '图像处理助手',
-      category: '图像处理',
-      description: '智能图像处理工具，支持多种图像编辑和优化功能',
-      image: 'https://picsum.photos/300/300?random=3',
-      likes: 678,
-      favorites: 432
-    }
-  ]
-}
-
-function getDefaultLikes(): work[] {
-  return [
-    {
-      id: 4,
-      name: '多语言翻译助手',
-      category: '对话助手',
-      description: '支持多种语言互译的智能助手，提供实时翻译和语言学习建议',
-      image: 'https://picsum.photos/300/300?random=4',
-      likes: 980,
-      favorites: 765,
-      author: {
-        name: '语言专家',
-        avatar: 'https://picsum.photos/50/50?random=4'
-      }
-    },
-    {
-      id: 5,
-      name: '代码审查助手',
-      category: '开发工具',
-      description: '智能代码审查工具，提供代码质量分析和优化建议',
-      image: 'https://picsum.photos/300/300?random=5',
-      likes: 580,
-      favorites: 345,
-      author: {
-        name: '代码专家',
-        avatar: 'https://picsum.photos/50/50?random=5'
-      }
-    }
-  ]
-}
-
-function getDefaultFavorites(): favorite[] {
-  return [
-    {
-      id: 6,
-      name: '语音合成助手',
-      category: '语音工具',
-      description: '高质量语音合成工具，支持多种音色和情感表达',
-      image: 'https://picsum.photos/300/300?random=6',
-      likes: 520,
-      favorites: 234,
-      author: {
-        name: '语音专家',
-        avatar: 'https://picsum.photos/50/50?random=6'
-      }
-    },
-    {
-      id: 7,
-      name: '用户行为分析',
-      category: '数据分析',
-      description: '用户行为分析工具，提供用户画像和行为路径分析',
-      image: 'https://picsum.photos/300/300?random=7',
-      likes: 690,
-      favorites: 456,
-      author: {
-        name: '用户研究专家',
-        avatar: 'https://picsum.photos/50/50?random=7'
-      }
-    }
-  ]
 }
 
 // 退出登录
@@ -395,7 +298,7 @@ function logout() {
             <div class="agent-header">
               <h3>{{ agent.name }}</h3>
               <div class="agent-author">
-                <img :src="baseImageUrl + avatar" :alt="userInfo.name">
+                <img :src="avatar" :alt="userInfo.name">
                 <span>{{ userInfo.name }}</span>
               </div>
             </div>

@@ -427,9 +427,9 @@ onMounted(() => {
               </button>
             </div>
           </div>
-          <div class="input-tips">
-            Shift + Enter 换行 &nbsp;|&nbsp; Enter 发送
-          </div>
+<!--          <div class="input-tips">-->
+<!--            Shift + Enter 换行 &nbsp;|&nbsp; Enter 发送-->
+<!--          </div>-->
         </div>
       </div>
     </div>

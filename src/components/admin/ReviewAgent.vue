@@ -65,7 +65,11 @@ async function reviewAgent(agentId: number, action: 'approve' | 'reject', catego
       }
     })
     if (response.data.code === 0) {
-      ElMessage.success(action === 'approve' ? '审核通过' : '审核拒绝')
+      if (action === 'approve') {
+        alert("审核通过")
+      } else {
+        alert("审核拒绝")
+      }
       await fetchPendingAgents()
     } else {
       ElMessage.error('审核操作失败：' + response.data.message)
@@ -135,7 +139,7 @@ onMounted(() => {
                 </el-button>
                 <el-button
                   type="danger"
-                  @click="reviewAgent(agent.id, 'reject')"
+                  @click="reviewAgent(agent.id, 'reject', agent.category)"
                 >
                   拒绝
                 </el-button>
