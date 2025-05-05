@@ -2842,21 +2842,22 @@ class FetchHotView(View):
 
             data = []
             for a in hot_agents:
-                author = a.user
-                data.append({
-                    "id": a.agent_id,
-                    "name": a.agent_name,
-                    "category": a.category,
-                    "description": a.description or "",
-                    "image": a.icon_url or "",
-                    "likes": a.likes_count,
-                    "favorites": a.favorites_count,
-                    "author": {
-                        "id": author.user_id,
-                        "name": author.username,
-                        "avatar": author.avatar_url or ""
-                    }
-                })
+                if a.status == 'published':
+                    author = a.user
+                    data.append({
+                        "id": a.agent_id,
+                        "name": a.agent_name,
+                        "category": a.category,
+                        "description": a.description or "",
+                        "image": a.icon_url or "",
+                        "likes": a.likes_count,
+                        "favorites": a.favorites_count,
+                        "author": {
+                            "id": author.user_id,
+                            "name": author.username,
+                            "avatar": author.avatar_url or ""
+                        }
+                    })
 
             return JsonResponse(
                 {"code": 0, "message": "获取成功", "data": data},
