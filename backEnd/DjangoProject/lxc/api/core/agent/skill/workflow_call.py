@@ -92,6 +92,6 @@ def workflows_call(message, workflow_ids):
             params_list = []
             for param in params:
                 params_list.append(param["value"])
-            sub_result = run_workflow_tool(workflow_id, params)
+            sub_result = run_workflow_tool(workflow_id, params_list)
             result.append(sub_result)
     return result
