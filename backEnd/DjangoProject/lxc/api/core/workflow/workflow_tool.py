@@ -7,7 +7,7 @@ import json
 from api.core.workflow.executor import Executor
 def get_workflow_tool(workflow_id):
     workflow = Workflow.objects.get(workflow_id=workflow_id)
-    nodes = ast.literal_eval(workflow.nodes)
+    nodes = json.loads(workflow.nodes)
     description = workflow.description
     start = nodes[0]
     parameters = []
