@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeMount, provide } from 'vue'
+import { ref, onBeforeMount, provide, computed } from 'vue'
 import router from '../router'
 import axios from 'axios'
 
@@ -66,6 +66,21 @@ const navItems = ref<NavItem[]>([
   }
 ])
 
+// 根据用户角色过滤导航项
+const filteredNavItems = computed(() => {
+  const uid = sessionStorage.getItem('uid')
+  if (uid === '3' || uid === '4') {
+    return navItems.value.filter(item =>
+        item.path !== '/workspace'
+    )
+  } else {
+    return navItems.value.filter(item => 
+      item.path !== '/publish-anno' &&
+      item.path !== '/review-agent'
+    )
+  }
+})
+
 // 计算属性
 const cur = ref('/home')
 
@@ -103,7 +118,7 @@ function toMessage() {
       <!-- 导航菜单 -->
       <nav>
         <ul>
-          <li v-for="item in navItems" :key="item.path" :class="{ active: cur === item.path }" @click="handleNavigation(item.path)">
+          <li v-for="item in filteredNavItems" :key="item.path" :class="{ active: cur === item.path }" @click="handleNavigation(item.path)">
             <img :src="item.icon" :alt="item.label" class="nav-icon">
             <span>{{ item.label }}</span>
           </li>
