@@ -42,7 +42,7 @@ def workflow_extract_parameters_by_model(text, description, parameters):
         3. 确保最终输出为Python合法列表，可被ast.literal_eval解析  
         
         输出格式要求：  
-        [{"name": 参数名, "value": 解析值或默认值}, ...]  
+        [{{"name": 参数名, "value": 解析值或默认值}}, ...]  
         
         注意：  
         - 值必须符合参数类型（字符串加引号，数字不加）  
@@ -50,13 +50,13 @@ def workflow_extract_parameters_by_model(text, description, parameters):
         - 禁止任何解释，仅返回列表  
         
         示例：  
-        参数要求：[{"name": "city", "type": "string", "description": "城市名称（英文）"}]  
+        参数要求：[{{"name": "city", "type": "string", "description": "城市名称（英文）"}}]  
         用户输入："今天天气怎么样"  
-        输出：[{"name": "city", "value": "Beijing"}]  
+        输出：[{{"name": "city", "value": "Beijing"}}]  
         
-        参数要求：[{"name": "start_date", "type": "string"}, {"name": "end_date", "type": "string"}]  
+        参数要求：[{{"name": "start_date", "type": "string"}}, {{"name": "end_date", "type": "string"}}]  
         用户输入："生成图表"  
-        输出：[{"name": "start_date", "value": "2023-01-01"}, {"name": "end_date", "value": "2023-12-31"}]  
+        输出：[{{"name": "start_date", "value": "2023-01-01"}}, {{"name": "end_date", "value": "2023-12-31"}}]  
         
         当前任务：  
         用户输入："{text}"  
@@ -80,9 +80,18 @@ def workflows_call(message, workflow_ids):
         description = workflow_tool["function"]["workflow_description"]
         start_description = workflow_tool["function"]["start_description"]
         parameters = workflow_tool["function"]["parameters"]
+        if not description:
+            description = " "
+        if not start_description:
+            start_description = " "
+        if not parameters:
+            parameters = []
         if description and start_description and parameters and workflow_intent_recognition(message, description):
             params_str = workflow_extract_parameters_by_model(message, description + start_description, parameters)
             params = ast.literal_eval(params_str)
-            sub_result = run_workflow_tool(workflow_id, params)
+            params_list = []
+            for param in params:
+                params_list.append(param["value"])
+            sub_result = run_workflow_tool(workflow_id, params_list)
             result.append(sub_result)
     return result
