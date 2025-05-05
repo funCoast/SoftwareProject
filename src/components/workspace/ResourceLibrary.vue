@@ -43,6 +43,7 @@ const workflowForm = ref({
   description: '',
   icon: ''
 });
+let uploadedFile: File | null = null
 
 const formData = new FormData()
 
@@ -154,17 +155,20 @@ function handleImageUpload(event: Event) {
     reader.onload = (e) => {
       workflowForm.value.icon = e.target?.result as string
     }
-    formData.append('icon', input.files[0])
+    uploadedFile = file
     reader.readAsDataURL(file)
   }
 }
 
 // 提交工作流表单并跳转
 async function submitWorkflow() {
-  const formData = new FormData()
   if (!workflowForm.value.name) {
     alert('请输入工作流名称')
     return
+  }
+  const formData = new FormData()
+  if (uploadedFile) {
+    formData.append('icon', uploadedFile)
   }
   formData.append('description', workflowForm.value.description)
   formData.append('name', workflowForm.value.name)
@@ -183,6 +187,7 @@ async function submitWorkflow() {
       const workflow_id = response.data.workflow_id
       localStorage.removeItem('workflowNodes')
       localStorage.removeItem('connections')
+      uploadedFile = null
       await router.push({
         path: `/workspace/workflow/${workflow_id}`,
         query: {

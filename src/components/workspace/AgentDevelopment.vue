@@ -28,6 +28,7 @@ const agentForm = ref({
 })
 
 const formData = new FormData()
+let uploadedFile: File | null = null
 
 function onCreateAgent() {
   isCreateAgentVisible.value = true
@@ -56,7 +57,7 @@ function handleImageUpload(event: Event) {
     reader.onload = (e) => {
       agentForm.value.icon = e.target?.result as string
     }
-    formData.append('icon', input.files[0])
+    uploadedFile = file
     reader.readAsDataURL(file)
   }
 }
@@ -83,10 +84,13 @@ async function fetchAgents() {
 
 // 创建智能体
 async function createAgent() {
-  const formData = new FormData()
   if (!agentForm.value.name) {
     ElMessage.error('请输入智能体名称')
     return
+  }
+  const formData = new FormData()
+  if (uploadedFile) {
+    formData.append('icon', uploadedFile)
   }
   formData.append('name', agentForm.value.name)
   formData.append('description', agentForm.value.description)
@@ -103,6 +107,7 @@ async function createAgent() {
     if (response.data.code === 0) {
       ElMessage.success('创建成功！')
       offCreateAgent()
+      uploadedFile = null
       await goToAgentEdit(response.data.agent_id)
     } else {
       ElMessage.error(response.data.message)
