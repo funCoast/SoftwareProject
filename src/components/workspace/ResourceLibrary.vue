@@ -45,8 +45,6 @@ const workflowForm = ref({
 });
 let uploadedFile: File | null = null
 
-const formData = new FormData()
-
 onMounted(() => {
   getKnowledgeBases()
   getWorkflows()
