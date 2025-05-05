@@ -37,31 +37,33 @@ def workflow_intent_recognition(text, description):
 def workflow_extract_parameters_by_model(text, description, parameters):
     prompt = f"""
         根据用户输入、工作流描述及参数类型要求，严格按以下规则生成参数列表：  
-        1. 按参数定义顺序解析，强制保持列表长度与参数数量一致  
-        2. 类型处理规则：  
-           - str类型：无法解析时返回空字符串""  
-           - int类型：无法解析时返回0  
-           - bool类型：无法解析时返回False  
-        3. 必须输出标准Python列表格式，确保能被ast.literal_eval()正确解析  
+        1. 逐一检查每个参数要求，从用户输入中提取对应信息  
+        2. 若无法提取则根据参数类型和描述设置合理默认值  
+        3. 确保最终输出为Python合法列表，可被ast.literal_eval解析  
+        
+        输出格式要求：  
+        [{"name": 参数名, "value": 解析值或默认值}, ...]  
+        
+        注意：  
+        - 值必须符合参数类型（字符串加引号，数字不加）  
+        - 必须包含所有参数  
+        - 禁止任何解释，仅返回列表  
         
         示例：  
-        参数格式：[str, int]  
-        输入："明天下雨吗"  
-        工作流："天气查询(city:str, days:int)"  
-        → ["明天", 0]  
+        参数要求：[{"name": "city", "type": "string", "description": "城市名称（英文）"}]  
+        用户输入："今天天气怎么样"  
+        输出：[{"name": "city", "value": "Beijing"}]  
         
-        参数格式：[int, str]  
-        输入："生成上海报告"  
-        工作流："报告生成(page_num:int, style:str)"  
-        → [0, "上海"]  
+        参数要求：[{"name": "start_date", "type": "string"}, {"name": "end_date", "type": "string"}]  
+        用户输入："生成图表"  
+        输出：[{"name": "start_date", "value": "2023-01-01"}, {"name": "end_date", "value": "2023-12-31"}]  
         
         当前任务：  
-        工作流描述："{description}"  
-        参数定义：{parameters}  
         用户输入："{text}"  
+        工作流描述："{description}"  
+        参数列表：{parameters}  
         
-        输出要求：  
-        仅返回Python列表，禁止任何解释或附加字符。确保元素顺序、数量、类型与参数定义完全匹配。  
+        请输出解析结果：  
             """
 
     completion = client.chat.completions.create(

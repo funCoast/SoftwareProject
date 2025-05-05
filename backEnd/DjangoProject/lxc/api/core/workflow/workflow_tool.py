@@ -9,14 +9,19 @@ def get_workflow_tool(workflow_id):
     description = workflow.description
     start = nodes[0]
     parameters = []
-    for input in start["inputs"]:
-        parameters.append(input["type"])
+    for output in start["outputs"]:
+        parameters.append({
+            "name": output["name"],
+            "type": output["type"],
+            "description": output["description"],
+        })
+
     return {
             "type":"workflow",
             "function":{
                 "name": workflow.name,
                 "workflow_description": description,
-                "start_description": start.get("description"),
+                "start_description": start["description"],
                 "parameters":parameters
             }
             }
