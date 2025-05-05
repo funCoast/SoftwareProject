@@ -31,7 +31,6 @@ def get_tongyi_embedding(text):
         return None
 
 
-@register_node("kbRetrieval")
 def query_kb(uid, kb_id, query_text, top_k=5):
     try:
         user = User.objects.get(user_id=uid)
@@ -77,3 +76,41 @@ def query_kb(uid, kb_id, query_text, top_k=5):
         })
 
     return results
+
+@register_node("kbRetrieval")
+def run_kbRetrieval_node(node,inputs):
+    query_text = inputs[0].get("value","")
+    if not query_text:
+        raise ValueError("query_text 不能为空")
+
+    # 提取 node.data 中的 uid 和第一个 kb id
+    data = node.get("data", {})
+    uid = data.get("uid")
+    kbs = data.get("kbs", [])
+    if not uid or not kbs or not isinstance(kbs, list) or not kbs[0].get("id"):
+        raise ValueError("缺少 uid 或知识库 ID")
+
+    all_results = []
+
+    # 遍历每个知识库，分别查询
+    for kb in kbs:
+        kb_id = kb.get("id")
+        if kb_id is None:
+            continue
+        try:
+            results = query_kb(uid=uid, kb_id=kb_id, query_text=query_text)
+            all_results.extend(results)
+        except Exception as e:
+            print(f"[知识库 {kb_id} 查询失败]: {e}")
+
+    # 按相似度排序（跨库合并后）
+    all_results.sort(key=lambda x: x["similarity"], reverse=True)
+
+    # 拼接所有 chunk 内容
+    content = "\n".join([item["content"] for item in all_results])
+
+    outputs = {}
+    for output in node.get("outputs", []):
+        id = output["id"]
+        outputs[id] = content  # 所有输出都给一样的结果（你也可以按 name 分别生成）
+    return outputs
