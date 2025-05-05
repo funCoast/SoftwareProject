@@ -13,7 +13,7 @@ from api.core.agent.chat_bot.session import get_or_create_session, save_message,
     generate_prompt_with_context
 from api.core.agent.skill.plugin_call.plugin_call import plugin_call
 from api.core.agent.skill.workflow_call import workflows_call
-from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation, KnowledgeBase, Workflow
+from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation, KnowledgeBase, Workflow, Message
 from backend.utils.queryKB import query_kb
 from lxc import settings
 
@@ -166,6 +166,62 @@ def send_agent_message(request):
             "content": str(e),
             "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
         }, status=500)
+
+class AgentFetchAgentMessageView(View):
+
+    def get(self, request):
+        try:
+            agent_id = request.GET.get('agent_id')
+            uid = request.GET.get('uid')
+            if not agent_id:
+                return JsonResponse(
+                    {"code": -1, "message": "缺少参数 agent_id"},
+                    status=400,
+                    json_dumps_params={'ensure_ascii': False}
+                )
+
+            if not uid:
+                return JsonResponse(
+                    {"code": -1, "message": "缺少参数 uid"},
+                    status=400,
+                    json_dumps_params={'ensure_ascii': False}
+                )
+
+            # 获取 Agent
+            try:
+                agent = Agent.objects.get(agent_id=agent_id)
+            except Agent.DoesNotExist:
+                return JsonResponse(
+                    {"code": -1, "message": "未找到对应的智能体"},
+                    status=404,
+                    json_dumps_params={'ensure_ascii': False}
+                )
+
+            session, error = get_or_create_session(User.objects.get(user_id=uid), agent_id)
+            if not session:
+                return JsonResponse({"status": "error", "message": error}, status=500)
+
+            chat_history = []
+            messages = Message.objects.filter(conversation=session).order_by('timestamp')
+            for msg in messages:
+                chat_history.append({
+                    "sender": "user" if msg.is_user else "assistant",
+                    "content": msg.content,
+                    "time": msg.timestamp,
+                })
+
+            return JsonResponse({
+                "code": 0,
+                "message": "获取成功",
+                "chatHistory": chat_history,
+            })
+        except Exception as e:
+            return JsonResponse({
+                "code": -1,
+                "message": str(e),
+                "chatHistory": [],
+            })
+
 
 class AgentInfoView(View):
     """
