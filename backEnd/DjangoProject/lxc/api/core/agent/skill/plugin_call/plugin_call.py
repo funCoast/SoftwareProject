@@ -1,8 +1,7 @@
 import json
 
 from api.core.agent.skill.plugin_call.plugin_tools import tools
-from api.core.agent.skill.plugin_call.process import intent_recognition, translate_to_english, \
-    extract_parameters_by_model
+from api.core.agent.skill.plugin_call.process import intent_recognition, extract_parameters_by_model
 from api.core.plugin.api.views import plugin_manager
 from api.core.plugin.plugins.base_plugin import BasePlugin
 
@@ -12,7 +11,7 @@ def execute(plugin: BasePlugin):
 
 
 def plugin_choose_and_run(input_text: str):
-    text = translate_to_english(input_text)
+    text = input_text
 
     # 意图识别
     intent = intent_recognition(text, list(plugin_manager.intent_dict.keys()))

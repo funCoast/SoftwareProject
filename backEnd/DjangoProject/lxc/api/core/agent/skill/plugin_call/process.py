@@ -7,39 +7,6 @@ client = OpenAI(
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
 
-def remove_first_last_line(s):
-    if not s or s.count('\n') < 1:
-        return ""
-    lines = s.split('\n')
-    processed_lines = lines[1:-1]
-    return '\n'.join(processed_lines)
-
-def translate_to_english(text):
-    """将输入文本翻译为英文"""
-    completion = client.chat.completions.create(
-        model="qwen-mt-turbo",
-        messages=[
-            {"role": "user", "content": text}
-        ],
-        extra_body={
-            "translation_options": {
-                "source_lang": "auto",
-                "target_lang": "English"
-            }
-        }
-    )
-    translated_text = completion.choices[0].message.content
-    return translated_text
-
-
-def remove_noise(text):
-    # 保留问号、感叹号等关键标点
-    text = re.sub(r'[^\w\s?！]', '', text)
-    # 处理缩写（如What's -> What is）
-    text = re.sub(r"'s\b", " is", text)
-    return re.sub(r'\s+', ' ', text).strip()
-
-
 def intent_recognition(text, labels):
     # 添加提示信息，明确要求模型返回多个意图标签，用空格隔开
     label_str = "; ".join(labels)
