@@ -12,7 +12,7 @@ const baseImageUrl = "http://122.9.33.84:8000"
 
 // 智能体基本信息
 interface Author {
-  uid: number;
+  id: number;
   account: string;
   name: string;
   avatar: string;
@@ -39,7 +39,7 @@ const agentInfo = ref<AgentInfo>({
   description: "",
   icon: "",
   author: {
-    uid: 0,
+    id: 0,
     account: "",
     name: "",
     avatar: "",
@@ -241,7 +241,7 @@ async function handleFollow() {
       url: `community/agentHandleFollow`,
       data: {
         uid: sessionStorage.getItem('uid'),
-        author_id: agentInfo.value.author.uid
+        author_id: agentInfo.value.author.id
       }
     })
     if (response.data.code === 0) {
@@ -475,18 +475,18 @@ onMounted(() => {
             :src="baseImageUrl + agentInfo.author.avatar"
             alt="作者头像" 
             class="author-avatar"
-            @click="navigateToProfile(Number(agentInfo.author.uid))"
+            @click="navigateToProfile(Number(agentInfo.author.id))"
           >
           <div class="author-meta">
             <span 
               class="author-name"
-              @click="navigateToProfile(agentInfo.author.uid)"
+              @click="navigateToProfile(agentInfo.author.id)"
             >{{ agentInfo.author.name }}</span>
             <span class="author-id">{{ agentInfo.author.account }}</span>
           </div>
           <button
             class="follow-btn"
-            v-if="uid !== agentInfo.author.uid"
+            v-if="uid !== agentInfo.author.id"
             :class="{ 'followed': userActions.isFollowed }"
             @click="handleFollow"
           >

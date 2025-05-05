@@ -6,6 +6,7 @@ import {useRoute} from "vue-router";
 import { ElMessage } from 'element-plus'
 
 const avatar = inject('avatar') as string
+const baseImageUrl = 'http://122.9.33.84:8000'
 
 const currentTab = ref('works')
 const tabs = ref([
@@ -59,9 +60,9 @@ const error = ref({
 
 onBeforeMount(() => {
   fetchUserInfo()
-  // fetchWorks()
-  // fetchLikes()
-  // fetchFavorites()
+  fetchWorks()
+  fetchLikes()
+  fetchFavorites()
 })
 
 async function fetchUserInfo() {
@@ -98,7 +99,7 @@ async function fetchWorks() {
       params: { uid }
     })
     if (response.data.code === 0) {
-      myWorks.value = response.data.agents || []
+      myWorks.value = response.data.data || []
     } else {
       console.error('获取作品列表失败:', response.data.message)
       error.value.works = response.data.message || '获取作品列表失败'
@@ -121,7 +122,7 @@ async function fetchLikes() {
       params: { uid }
     })
     if (response.data.code === 0) {
-      likes.value = response.data.agents || []
+      likes.value = response.data.data || []
     } else {
       console.error('获取喜欢列表失败:', response.data.message)
       error.value.likes = response.data.message || '获取喜欢列表失败'
@@ -144,7 +145,7 @@ async function fetchFavorites() {
       params: { uid }
     })
     if (response.data.code === 0) {
-      favorites.value = response.data.agents || []
+      favorites.value = response.data.data || []
     } else {
       console.error('获取收藏列表失败:', response.data.message)
       error.value.favorites = response.data.message || '获取收藏列表失败'
@@ -351,14 +352,14 @@ function getDefaultFavorites(): favorite[] {
       <div v-if="currentTab === 'works'" class="agent-list">
         <div v-for="agent in myWorks" :key="agent.id" class="agent-card">
           <div class="agent-image">
-            <img :src="agent.image" :alt="agent.name">
+            <img :src="baseImageUrl + agent.image" :alt="agent.name">
             <div class="agent-category">{{ agent.category }}</div>
           </div>
           <div class="agent-info">
             <div class="agent-header">
               <h3>{{ agent.name }}</h3>
               <div class="agent-author">
-                <img :src="avatar" :alt="userInfo.name">
+                <img :src="baseImageUrl + avatar" :alt="userInfo.name">
                 <span>{{ userInfo.name }}</span>
               </div>
             </div>
@@ -391,14 +392,14 @@ function getDefaultFavorites(): favorite[] {
       <div v-if="currentTab === 'likes'" class="agent-list">
         <div v-for="agent in likes" :key="agent.id" class="agent-card">
           <div class="agent-image">
-            <img :src="agent.image" :alt="agent.name">
+            <img :src="baseImageUrl + agent.image" :alt="agent.name">
             <div class="agent-category">{{ agent.category }}</div>
           </div>
           <div class="agent-info">
             <div class="agent-header">
               <h3>{{ agent.name }}</h3>
               <div class="agent-author">
-                <img :src="agent.author.avatar" :alt="agent.author.name">
+                <img :src="baseImageUrl + agent.author.avatar" :alt="agent.author.name">
                 <span>{{ agent.author.name }}</span>
               </div>
             </div>
@@ -431,14 +432,14 @@ function getDefaultFavorites(): favorite[] {
       <div v-if="currentTab === 'favorites'" class="agent-list">
         <div v-for="agent in favorites" :key="agent.id" class="agent-card">
           <div class="agent-image">
-            <img :src="agent.image" :alt="agent.name">
+            <img :src="baseImageUrl + agent.image" :alt="agent.name">
             <div class="agent-category">{{ agent.category }}</div>
           </div>
           <div class="agent-info">
             <div class="agent-header">
               <h3>{{ agent.name }}</h3>
               <div class="agent-author">
-                <img :src="agent.author.avatar" :alt="agent.author.name">
+                <img :src="baseImageUrl + agent.author.avatar" :alt="agent.author.name">
                 <span>{{ agent.author.name }}</span>
               </div>
             </div>

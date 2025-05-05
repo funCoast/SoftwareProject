@@ -6,6 +6,7 @@ import moment from 'moment'
 const currentAgentTab = ref<string>('hot')
 const currentPage = ref(1)
 const itemsPerPage = ref(6)
+const baseImageUrl = 'http://122.9.33.84:8000'
 
 interface announcement {
   id: number
@@ -33,9 +34,9 @@ interface agent {
 
 onBeforeMount (() => {
   fetchAnnouncement()
-  // fetchHot()
-  // fetchFollowing()
-  // fetchFavorites()
+  fetchHot()
+  fetchFollowing()
+  fetchFavorites()
 })
 
 async function fetchAnnouncement() {
@@ -61,7 +62,8 @@ async function fetchHot() {
     }
   }).then(function (response) {
     if(response.data.code === 0) {
-      hotAgents.value=response.data.agents
+      hotAgents.value=response.data.data
+      console.log(response.data.data)
     }
   })
 }
@@ -75,7 +77,7 @@ async function fetchFavorites() {
     }
   }).then(function (response) {
     if(response.data.code === 0) {
-      favoriteAgents.value=response.data.agents
+      favoriteAgents.value=response.data.data
     }
   })
 }
@@ -89,96 +91,18 @@ async function fetchFollowing() {
     }
   }).then(function (response) {
     if(response.data.code === 0) {
-      followingAgents.value=response.data.agents
+      followingAgents.value=response.data.data
     }
   })
 }
 
 const hotAgents = ref<agent[]> ([
-  {
-    id: 1,
-    name: 'AI助手',
-    category: '对话助手',
-    description: '智能对话助手，支持多轮对话和上下文理解，可进行自然语言交互',
-    image: 'https://picsum.photos/300/300?random=1',
-    likes: 1200,
-    favorites: 856,
-    author: {
-      name: 'AI开发者',
-      avatar: 'https://picsum.photos/50/50?random=1'
-    }
-  },
-  {
-    id: 2,
-    name: '数据分析师',
-    category: '数据分析',
-    description: '专业的数据分析工具，支持多种数据可视化和预测分析',
-    image: 'https://picsum.photos/300/300?random=2',
-    likes: 980,
-    favorites: 654,
-    author: {
-      name: '数据专家',
-      avatar: 'https://picsum.photos/50/50?random=2'
-    }
-  }
 ])
 
 const followingAgents = ref<agent[]> ([
-  {
-    id: 1,
-    name: '个人助手',
-    category: '生活助手',
-    description: '个性化AI助手，提供生活服务和日程管理',
-    image: 'https://picsum.photos/300/300?random=7',
-    likes: 456,
-    favorites: 234,
-    author: {
-      name: '生活达人',
-      avatar: 'https://picsum.photos/50/50?random=7'
-    }
-  },
-  {
-    id: 2,
-    name: '健康顾问',
-    category: '健康管理',
-    description: '智能健康管理助手，提供饮食建议和运动计划',
-    image: 'https://picsum.photos/300/300?random=8',
-    likes: 420,
-    favorites: 210,
-    author: {
-      name: '健康专家',
-      avatar: 'https://picsum.photos/50/50?random=8'
-    }
-  }
 ])
 
 const favoriteAgents = ref<agent[]> ([
-  {
-    id: 1,
-    name: '翻译助手',
-    category: '语言工具',
-    description: '多语言翻译，支持多种语言互译和实时翻译',
-    image: 'https://picsum.photos/300/300?random=13',
-    likes: 567,
-    favorites: 345,
-    author: {
-      name: '语言专家',
-      avatar: 'https://picsum.photos/50/50?random=13'
-    }
-  },
-  {
-    id: 2,
-    name: '音乐创作',
-    category: '音乐工具',
-    description: 'AI音乐创作助手，支持作曲和编曲',
-    image: 'https://picsum.photos/300/300?random=14',
-    likes: 480,
-    favorites: 280,
-    author: {
-      name: '音乐人',
-      avatar: 'https://picsum.photos/50/50?random=14'
-    }
-  }
 ])
 
 const currentAgents =  computed(() => {
@@ -256,14 +180,14 @@ watch (
           <div class="agent-grid">
             <div v-for="agent in paginatedAgents" :key="agent.id" class="agent-card">
               <div class="agent-image">
-                <img :src="agent.image" :alt="agent.name">
+                <img :src="baseImageUrl + agent.image" :alt="agent.name">
                 <div class="agent-category">{{ agent.category }}</div>
               </div>
               <div class="agent-info">
                 <div class="agent-header">
                   <h3>{{ agent.name }}</h3>
                   <div class="agent-author">
-                    <img :src="agent.author.avatar" :alt="agent.author.name">
+                    <img :src="baseImageUrl + agent.author.avatar" :alt="agent.author.name">
                     <span>{{ agent.author.name }}</span>
                   </div>
                 </div>
@@ -399,7 +323,7 @@ watch (
 
 .agent-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
   padding: 10px;
 }
@@ -411,8 +335,10 @@ watch (
   transition: all 0.3s ease;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  max-width: 280px;
-  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .agent-card:hover {
@@ -423,7 +349,7 @@ watch (
 .agent-image {
   position: relative;
   width: 100%;
-  padding-top: 75%;
+  padding-top: 56.25%; /* 16:9 宽高比 */
 }
 
 .agent-image img {
@@ -451,7 +377,8 @@ watch (
   padding: 15px;
   display: flex;
   flex-direction: column;
-  height: 160px;
+  flex: 1;
+  min-height: 180px;
 }
 
 .agent-header {
@@ -493,6 +420,7 @@ watch (
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3; /* 限制显示3行 */
 }
 
 .agent-stats {
