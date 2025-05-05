@@ -24,7 +24,7 @@ def temp_send_message(request):
     try:
         llm_client = LLMClient()
         data = json.loads(request.body)
-        user_id = data.get('sender')
+        user_id = data.get('uid')
         message = data.get('content')
         agent_id = data.get('agent_id')
 
