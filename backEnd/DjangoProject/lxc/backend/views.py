@@ -1772,6 +1772,7 @@ def workflow_run(request):
     result = executor.execute()
     return JsonResponse({"result": result})
 
+@csrf_exempt
 def workflow_create(request):
     try:
         uid = request.POST.get('uid')
@@ -1789,8 +1790,8 @@ def workflow_create(request):
                 "workflow_id": None
             })
 
-        # 初始化 icon_url
-        icon_url = None
+        # 初始化 icon_url（直接赋默认值）
+        icon_url = "/media/workflow_icons/defaultWorkFlow.svg"
 
         if icon:
             # 构建图标存储路径
@@ -1807,7 +1808,7 @@ def workflow_create(request):
                 for chunk in icon.chunks():
                     destination.write(chunk)
 
-            # 构建 icon 的 URL
+            # 更新 icon 的 URL
             icon_url = f"/media/workflow_icons/{filename}"
 
         # 创建 Workflow 实例
@@ -1815,9 +1816,9 @@ def workflow_create(request):
             user=user,
             name=name,
             description=description,
-            icon_url=icon_url,  # URLField 中保存图标路径
-            nodes= json.dumps([]),  # ✅ 初始化为空数组
-            edges= json.dumps([])
+            icon_url=icon_url,  # 无论是否上传，都有值
+            nodes=json.dumps([]),  # ✅ 初始化为空数组
+            edges=json.dumps([])
         )
 
         return JsonResponse({
@@ -1832,7 +1833,6 @@ def workflow_create(request):
             "message": f"服务器错误：{str(e)}",
             "workflow_id": None
         })
-
 
 def workflow_fetch(request):
     uid = request.GET.get('uid')
