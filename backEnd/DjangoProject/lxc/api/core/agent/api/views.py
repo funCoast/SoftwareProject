@@ -34,6 +34,7 @@ def temp_send_message(request):
         plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
 
         # 知识库调用
+        print("111知识库调用开始")
         agent = Agent.objects.get(agent_id=agent_id)
         entries = AgentKnowledgeEntry.objects.filter(agent=agent)
         kbs = [entry.kb for entry in entries]
@@ -41,12 +42,15 @@ def temp_send_message(request):
         for kb in kbs:
             kb_response.append(query_kb(user_id, kb.kb_id, message))
         kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
+        print(kb_str)
 
         # 工作流调用
+        print("222工作流调用开始")
         entries = AgentWorkflowRelation.objects.filter(agent=agent)
         workflow_ids = [entry.workflow_id for entry in entries]
         workflow_response = workflows_call(input_str + plugin_str + kb_str, workflow_ids)
         workflow_str = f"\t- 调用工作流得到结果：{workflow_response}\n"
+        print(workflow_str)
 
         persona_str = agent.persona
         prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
