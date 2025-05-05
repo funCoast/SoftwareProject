@@ -72,7 +72,12 @@ function login() {
       sessionStorage.setItem('token', response.data.token);
       sessionStorage.setItem('uid', response.data.id);
       console.log(sessionStorage)
-      router.push('/home');
+      if(response.data.is_new_user) {
+        router.push('/editProfile');
+        alert("初始密码为123456，请及时修改")
+      } else {
+        router.push('/home');
+      }
     } else {
       alert("验证码错误")
     }

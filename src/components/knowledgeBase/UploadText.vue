@@ -104,8 +104,8 @@ function clear() {
         <el-form-item label="分段模式">
           <el-radio-group v-model="segmentMode">
             <el-radio value="auto">自动分段</el-radio>
-            <el-radio value="custom">自定义分段</el-radio>
-            <el-radio value="hierarchical">按层级分段</el-radio>
+            <el-radio value="custom">自定义分段（待完善）</el-radio>
+            <el-radio value="hierarchical">按层级分段（待完善）</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>

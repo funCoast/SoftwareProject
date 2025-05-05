@@ -97,7 +97,7 @@ function updateBasicInfo() {
   console.log(sessionStorage.getItem('uid'))
   axios({
     method: 'post',
-    url: 'user/updateProfile',
+    url: 'user/updateBasicInfo',
     data: {
       uid: sessionStorage.getItem('uid'),
       name: name.value,
@@ -197,7 +197,7 @@ function goBack() {
 
       <el-dialog v-model="dialogVisible" title="修改密码" width="500">
         <el-row class="row"> 
-          <el-input class="input" v-model="oldPwd" type="password" placeholder="原密码（初次设置请留空）" maxlength="25"/>
+          <el-input class="input" v-model="oldPwd" type="password" placeholder="原密码（初始密码为123456）" maxlength="25"/>
         </el-row>  
         <el-row class="row">
           <el-input class="input" v-model="newPwd" type="password" placeholder="新密码" maxlength="25"/>

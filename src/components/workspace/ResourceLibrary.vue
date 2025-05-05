@@ -443,7 +443,7 @@ const filteredResources = computed(() => {
 
         <!-- 上传图标 -->
         <div class="form-row">
-          <label class="form-label">图标</label>
+          <label class="form-label">图标（点击可本地上传）</label>
           <div class="icon-upload">
             <img :src="iconPreview" alt="图标预览" class="icon-preview" @click="triggerFileInput"/>
             <input type="file" ref="iconUploader" style="display: none" accept="image/*" @change="handleIconChange"/>

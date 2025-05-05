@@ -141,7 +141,6 @@ router.beforeEach((to, from, next) => {
     if (sessionStorage.getItem("token")) {
       next();
     } else {
-      alert("请登录！");
       next({ name: "Login" });
     }
   } else {
