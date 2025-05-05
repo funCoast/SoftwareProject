@@ -48,10 +48,21 @@ def temp_send_message(request):
         workflow_response = workflows_call(input_str + plugin_str + kb_str, workflow_ids)
         workflow_str = f"\t- 调用工作流得到结果：{workflow_response}\n"
 
+        persona_str = agent.persona
         prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
 
         total_message = prompt + input_str + plugin_str + kb_str + workflow_str
-        response = llm_client.generate_response(total_message)
+        messages = [
+            {
+                "role": "system",
+                "content": persona_str
+            },
+            {
+                "role": "user",
+                "content": total_message
+            }
+        ]
+        response = llm_client.get_agent_response(messages).choices[0].message.content
 
         return JsonResponse({
             "code": 0,
