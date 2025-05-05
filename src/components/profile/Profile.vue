@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeMount, inject } from 'vue'
+import { ref, onBeforeMount, watch, computed } from 'vue'
 import axios from 'axios'
 import router from '../../router'
 import {useRoute} from "vue-router";
@@ -24,7 +24,7 @@ const userInfo = ref({
 })
 
 const route = useRoute()
-const uid = route.params.id
+const uid = computed(() => route.params.id)
 const currentUid = sessionStorage.getItem('uid')
 
 interface myWork {
@@ -58,20 +58,32 @@ const error = ref({
   favorites: ''
 })
 
-onBeforeMount(() => {
+// 加载用户数据
+function loadUserData() {
   getAvatar()
   fetchUserInfo()
   fetchWorks()
   fetchLikes()
   fetchFavorites()
+}
+
+onBeforeMount(() => {
+  loadUserData()
 })
+
+// 监听uid变化
+watch(uid, (newUid) => {
+  if (newUid) {
+    loadUserData()
+  }
+}, { immediate: true })
 
 function getAvatar() {
   axios({
     method: 'get',
     url: 'user/getAvatar',
     params: {
-      uid: uid
+      uid: uid.value
     }
   }).then(function (response) {
     if (response.data.code === 0) {
@@ -83,7 +95,7 @@ function getAvatar() {
 }
 
 async function fetchUserInfo() {
-  if (!uid) {
+  if (!uid.value) {
     console.error('用户未登录，无法获取用户信息')
     return
   }
@@ -91,7 +103,7 @@ async function fetchUserInfo() {
     const response = await axios({
       method: 'get',
       url: '/user/fetchProfile',
-      params: { uid }
+      params: { uid: uid.value }
     })
     if (response.data.code === 0) {
       userInfo.value = response.data.data
@@ -107,13 +119,13 @@ async function fetchUserInfo() {
 }
 
 async function fetchWorks() {
-  if (!uid) return
+  if (!uid.value) return
 
   try {
     const response = await axios({
       method: 'get',
       url: '/user/fetchWorks',
-      params: { uid }
+      params: { uid: uid.value }
     })
     if (response.data.code === 0) {
       myWorks.value = response.data.data || []
@@ -128,13 +140,13 @@ async function fetchWorks() {
 }
 
 async function fetchLikes() {
-  if (!uid) return
+  if (!uid.value) return
 
   try {
     const response = await axios({
       method: 'get',
       url: '/user/fetchLikes',
-      params: { uid }
+      params: { uid: uid.value }
     })
     if (response.data.code === 0) {
       likes.value = response.data.data || []
@@ -151,13 +163,13 @@ async function fetchLikes() {
 }
 
 async function fetchFavorites() {
-  if (!uid) return
+  if (!uid.value) return
 
   try {
     const response = await axios({
       method: 'get',
       url: '/user/fetchFavorites',
-      params: { uid }
+      params: { uid: uid.value }
     })
     if (response.data.code === 0) {
       favorites.value = response.data.data || []
@@ -190,7 +202,7 @@ async function sendMessage() {
       url: 'user/sendMessage',
       data: {
         sender: currentUid,
-        receiver: uid,
+        receiver: uid.value,
         message: "你好"
       }
     })

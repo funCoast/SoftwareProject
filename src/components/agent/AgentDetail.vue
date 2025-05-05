@@ -12,7 +12,7 @@ const baseImageUrl = "http://122.9.33.84:8000"
 
 // 智能体基本信息
 interface Author {
-  uid: number;
+  id: number;
   account: string;
   name: string;
   avatar: string;
@@ -199,7 +199,11 @@ async function handleLike() {
     if (response.data.code === 0) {
       userActions.value.isLiked = !userActions.value.isLiked
       agentInfo.value.stats.likes += userActions.value.isLiked ? 1 : -1
-      ElMessage.success(userActions.value.isLiked ? '点赞成功' : '取消点赞成功')
+      if (userActions.value.isLiked) {
+        alert('点赞成功')
+      } else {
+        alert('取消点赞成功')
+      }
     } else {
       ElMessage.error(response.data.message)
     }
@@ -223,7 +227,11 @@ async function handleFavorite() {
     if (response.data.code === 0) {
       userActions.value.isFavorited = !userActions.value.isFavorited
       agentInfo.value.stats.favorites += userActions.value.isFavorited ? 1 : -1
-      ElMessage.success(userActions.value.isFavorited ? '收藏成功' : '取消收藏成功')
+      if (userActions.value.isFavorited) {
+        alert('收藏成功')
+      } else {
+        alert('取消收藏成功')
+      }
     } else {
       ElMessage.error(response.data.message)
     }
@@ -241,12 +249,16 @@ async function handleFollow() {
       url: `community/agentHandleFollow`,
       data: {
         uid: sessionStorage.getItem('uid'),
-        author_id: agentInfo.value.author.uid
+        author_id: agentInfo.value.author.id
       }
     })
     if (response.data.code === 0) {
       userActions.value.isFollowed = !userActions.value.isFollowed
-      ElMessage.success(userActions.value.isFollowed ? '关注成功' : '取消关注成功')
+      if (userActions.value.isFollowed) {
+        alert('关注成功')
+      } else {
+        alert('取消关注成功')
+      }
     } else {
       ElMessage.error(response.data.message)
     }
@@ -337,7 +349,7 @@ function goToChat() {
   router.push({
     path: '/chat',
     query: {
-      receiver_id: agentInfo.value.author.uid
+      receiver_id: agentInfo.value.author.id
     }
   })
 }
@@ -475,18 +487,18 @@ onMounted(() => {
             :src="baseImageUrl + agentInfo.author.avatar"
             alt="作者头像" 
             class="author-avatar"
-            @click="navigateToProfile(Number(agentInfo.author.uid))"
+            @click="navigateToProfile(agentInfo.author.id)"
           >
           <div class="author-meta">
             <span 
               class="author-name"
-              @click="navigateToProfile(agentInfo.author.uid)"
+              @click="navigateToProfile(agentInfo.author.id)"
             >{{ agentInfo.author.name }}</span>
             <span class="author-id">{{ agentInfo.author.account }}</span>
           </div>
           <button
             class="follow-btn"
-            v-if="uid !== agentInfo.author.uid"
+            v-if="uid !== agentInfo.author.id"
             :class="{ 'followed': userActions.isFollowed }"
             @click="handleFollow"
           >
