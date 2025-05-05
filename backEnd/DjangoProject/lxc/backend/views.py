@@ -1733,10 +1733,11 @@ def delete_text(request):
     })
 
 def workflow_run(request):
-    nodes = request.data.get("nodes", [])
-    edges = request.data.get("edges", [])
-    user_id = request.user.id
-    workflow_id = request.data.get("workflowId")
+    data = json.loads(request.body)
+    nodes = data.get("nodes", [])
+    edges = data.get("edges", [])
+    user_id = data.get("user_id")
+    workflow_id = data.get("workflowId")
 
     executor = Executor(user_id, workflow_id, nodes, edges)
     result = executor.execute()
@@ -2927,10 +2928,11 @@ class FetchFollowWorksView(View):
 from api.core.workflow.registry import NODE_REGISTRY
 from api.core.workflow.nodes import loader
 def workflow_run_single(request):
+    data = json.loads(request.body)
     try:
-        workflow_id = request.GET.get('workflow_id')
-        node_id = int(request.GET.get('node_id'))
-        raw_inputs = request.GET.get('inputs', '{}')  # JSON 字符串
+        workflow_id = data.get('workflow_id')
+        node_id = int(data.get('node_id'))
+        raw_inputs = data.get('inputs', '{}')  # JSON 字符串
         inputs = json.loads(raw_inputs)
 
         # 获取工作流
@@ -2948,13 +2950,13 @@ def workflow_run_single(request):
             return JsonResponse({"code": -2, "message": f"未注册的节点类型: {node_type}"})
         result = func(node,inputs)
         return JsonResponse({
-            "code": 1,
+            "code": 0,
             "message": "节点执行成功",
-            "output": result
+            "result": result
         })
 
     except Exception as e:
         return JsonResponse({
-            "code": 0,
+            "code": 1,
             "message": f"服务器错误: {str(e)}"
         })

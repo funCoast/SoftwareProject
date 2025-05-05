@@ -1,5 +1,7 @@
 import numpy as np
 import json
+
+from api.core.workflow.registry import register_node
 from backend.models import User, KnowledgeBase, KnowledgeChunk
 from django.conf import settings
 import dashscope
@@ -29,6 +31,7 @@ def get_tongyi_embedding(text):
         return None
 
 
+@register_node("kbRetrieval")
 def query_kb(uid, kb_id, query_text, top_k=5):
     try:
         user = User.objects.get(user_id=uid)

@@ -4,7 +4,7 @@ from backend.models import Workflow
 import json
 from api.core.workflow.executor import Executor
 def get_workflow_tool(workflow_id):
-    workflow = Workflow.objects.get(id=workflow_id)
+    workflow = Workflow.objects.get(workflow_id=workflow_id)
     nodes = workflow.nodes
     description = workflow.description
     start = nodes[0]

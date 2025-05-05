@@ -27,7 +27,6 @@ def classify_question(question, categories):
     for cat in categories:
         prompt += f"{cat}\n"
     prompt += "\n请输出最合适的分类不需要解释。"
-    """
     response = client.chat.completions.create(
         model="qwen-max-latest",  # 或使用其他支持的模型
         messages=[{"role": "user", "content": prompt}],
@@ -35,8 +34,7 @@ def classify_question(question, categories):
     )
     # 从返回结果中提取文本，可根据返回格式进一步解析
     result_text = response.choices[0].message.content
-    """
-    result_text = "学习方法问题（这是test，防止token浪费）"
+    # result_text = "学习方法问题（这是test，防止token浪费）"
     return result_text
 
 @register_node("classifier")
