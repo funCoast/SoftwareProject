@@ -84,7 +84,7 @@ def send_agent_message(request):
     try:
         # 解析数据
         data = json.loads(request.body)
-        user = data.get('sender')
+        user = data.get('uid')
         agent_id = data.get('agent_id')
         message = data.get('content')
 
