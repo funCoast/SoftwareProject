@@ -110,7 +110,7 @@ async function getKnowledgeBases() {
     if (response.data.code === 0) {
       knowledgeBases.value = response.data.knowledgeBases.map((kb: KnowledgeBase) => ({
         ...kb,
-        icon: 'http://122.9.33.84:8000/' + kb.icon
+        icon: 'http://122.9.33.84:8000' + kb.icon
       }))
       console.log('获取知识库列表成功')
     } else {
