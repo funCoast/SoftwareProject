@@ -131,8 +131,6 @@ def send_code(request):
 '''
 用户验证码登录接口
 '''
-
-
 def user_login_by_code(request):
     try:
         data = json.loads(request.body)
@@ -149,6 +147,8 @@ def user_login_by_code(request):
         # 删除Redis中的验证码
         redis_client.delete(f'verification_code_{email}')
 
+        is_new_user = False  # 默认不是新用户
+
         # 尝试获取用户信息
         try:
             user = User.objects.get(email=email)
@@ -156,12 +156,15 @@ def user_login_by_code(request):
         except User.DoesNotExist:
             # 用户不存在，创建新用户
             username = email.split('@')[0]  # 使用邮箱前缀作为用户名
+            default_avatar = '/media/avatars/defaultAvatar.svg'  # 这里替换为你的默认头像 URL
             user = User.objects.create(
                 username=username,
                 email=email,
-                password='',  # 密码可以稍后设置或留空
+                password='123456',  # 密码可以稍后设置或留空
+                avatar_url=default_avatar
             )
             user_id = user.user_id
+            is_new_user = True
 
         # 生成登录token
         token = str(uuid.uuid4())
@@ -169,12 +172,13 @@ def user_login_by_code(request):
         # 将token存储到Redis中，设置过期时间为30分钟
         redis_client.setex(f'token_{user_id}', 1800, token)
 
-        # 返回成功响应json
+        # 返回成功响应json，包括 is_new_user 标记
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
             'token': token,
-            'id': user_id
+            'id': user_id,
+            'is_new_user': is_new_user
         })
 
     except Exception as e:
@@ -183,7 +187,6 @@ def user_login_by_code(request):
             'code': -1,
             'message': str(e)
         })
-
 
 """
 用户密码登录接口
