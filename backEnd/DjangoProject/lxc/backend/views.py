@@ -2792,7 +2792,7 @@ class FetchFavoritesView(View):
 
         interactions = (
             UserInteraction.objects
-            .filter(user=user, is_favorite=True)
+            .filter(user=user, is_favorited=True)
             .select_related('agent', 'agent__user')
         )
 
