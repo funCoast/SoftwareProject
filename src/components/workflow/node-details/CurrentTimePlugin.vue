@@ -13,8 +13,8 @@
         </div>
 
         <div class="region-selector" v-if="!searchQuery">
-          <div 
-            v-for="group in groupedTimezones" 
+          <div
+            v-for="group in groupedTimezones"
             :key="group.region"
             class="region-item"
             :class="{ active: selectedRegion === group.region }"
@@ -26,8 +26,8 @@
 
         <div class="timezone-list" v-if="showTimezoneList">
           <template v-if="searchQuery">
-            <div 
-              v-for="tz in filteredTimezones" 
+            <div
+              v-for="tz in filteredTimezones"
               :key="tz.value"
               class="timezone-item"
               :class="{ active: nodeData.timezone === tz.value }"
@@ -38,8 +38,8 @@
             </div>
           </template>
           <template v-else-if="selectedRegion">
-            <div 
-              v-for="tz in currentRegionTimezones" 
+            <div
+              v-for="tz in currentRegionTimezones"
               :key="tz.value"
               class="timezone-item"
               :class="{ active: nodeData.timezone === tz.value }"
@@ -194,8 +194,8 @@ const groupedTimezones = computed(() => {
 const filteredTimezones = computed(() => {
   if (!searchQuery.value) return []
   const query = searchQuery.value.toLowerCase()
-  return allTimezones.value.filter(tz => 
-    tz.label.toLowerCase().includes(query) || 
+  return allTimezones.value.filter(tz =>
+    tz.label.toLowerCase().includes(query) ||
     tz.value.toLowerCase().includes(query) ||
     tz.offset.toLowerCase().includes(query)
   ).map(tz => ({
@@ -211,20 +211,20 @@ const currentRegionTimezones = computed(() => {
 })
 
 const previewTime = computed(() => {
-  const format = nodeData.value.format === 'custom' 
-    ? nodeData.value.customFormat 
+  const format = nodeData.value.format === 'custom'
+    ? nodeData.value.customFormat
     : nodeData.value.format
 
   let formatted = dayjs().tz(nodeData.value.timezone).format(format)
-  
+
   if (nodeData.value.includeOffset) {
     formatted += ` (${dayjs().tz(nodeData.value.timezone).format('Z')})`
   }
-  
+
   if (nodeData.value.includeTimestamp) {
     formatted += ` [${Date.now()}]`
   }
-  
+
   return formatted
 })
 
@@ -449,4 +449,4 @@ input:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
-</style> 
+</style>
