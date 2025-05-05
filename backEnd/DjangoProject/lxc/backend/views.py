@@ -282,6 +282,33 @@ def user_update_profile(request):
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
 
+@csrf_exempt
+def update_basic_info(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        uid = body.get('uid')
+        name = body.get('name')
+        description = body.get('description')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+
+    if not uid or name is None or description is None:
+        return JsonResponse({"code": -1, "message": "缺少必要参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        user.username = name
+        user.description = description
+        user.save()
+
+        return JsonResponse({"code": 0, "message": "更新成功"})
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"更新失败: {str(e)}"})
 
 def user_fetch_profile(request):
     uid = request.GET.get('uid')
