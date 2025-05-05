@@ -2618,11 +2618,14 @@ def review_agent(request):
     except Exception:
         return JsonResponse({"code": -1, "message": "请求体解析失败"})
 
-    if not uid or not agent_id or not action or not category:
+    if not uid or not agent_id or not action:
         return JsonResponse({"code": -1, "message": "缺少必要参数"})
 
     if action not in ['approve', 'reject']:
         return JsonResponse({"code": -1, "message": "无效的操作类型"})
+
+    if action == 'approve' and not category:
+        return JsonResponse({"code": -1, "message": "通过操作需要提供类别"})
 
     try:
         user = User.objects.get(user_id=uid)
@@ -2637,10 +2640,10 @@ def review_agent(request):
     try:
         if action == 'approve':
             agent.status = 'published'
+            agent.category = category  # 仅通过时修改类别
         elif action == 'reject':
             agent.status = 'private'
 
-        agent.category = category
         agent.save()
 
         return JsonResponse({"code": 0, "message": "操作成功"})
