@@ -39,7 +39,7 @@ const agentInfo = ref<AgentInfo>({
   description: "",
   icon: "",
   author: {
-    uid: 0,
+    id: 0,
     account: "",
     name: "",
     avatar: "",
@@ -121,7 +121,7 @@ async function sendMessage() {
   try {
     const response = await axios({
       method: 'post',
-      url: 'agent/sendMessage',
+      url: 'agent/sendAgentMessage',
       data: {
         uid: sessionStorage.getItem('uid'),
         agent_id: agent_id,
@@ -140,6 +140,27 @@ async function sendMessage() {
     }
   } catch (error) {
     console.error('信息发送失败:', error)
+  }
+}
+
+async function fetchMessage() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'agent/fetchAgentMessage',
+      params: {
+        uid: sessionStorage.getItem('uid'),
+        agent_id: agent_id,
+      }
+    })
+    if (response.data.code === 0) {
+      chatHistory.value = response.data.chatHistory
+      console.log('历史信息发送成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取历史消息失败:', error)
   }
 }
 
@@ -345,17 +366,9 @@ function navigateToProfile(userId: number) {
   router.push(`/profile/${userId}`)
 }
 
-function goToChat() {
-  router.push({
-    path: '/chat',
-    query: {
-      receiver_id: agentInfo.value.author.id
-    }
-  })
-}
-
 onMounted(() => {
   fetchAgentInfo()
+  fetchMessage()
   fetchUserActions()
   fetchComments()
 })
@@ -387,7 +400,7 @@ onMounted(() => {
 
         <!-- 聊天内容区 -->
         <div class="chat-content">
-          <div class="chat-day-divider">今天</div>
+<!--          <div class="chat-day-divider">今天</div>-->
 
           <!-- 遍历消息 -->
           <div
