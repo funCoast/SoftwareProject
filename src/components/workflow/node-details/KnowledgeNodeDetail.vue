@@ -42,6 +42,7 @@ const props = defineProps<{
   }
   allNodes: any[]
   workflow_id: string
+  uid: string
 }>()
 
 const emit = defineEmits<{
@@ -85,7 +86,7 @@ async function getKnowledgeBases() {
       method: 'get',
       url: '/rl/getKnowledgeBases',
       params: {
-        uid: sessionStorage.getItem('uid')
+        uid: props.uid
       },
     })
 

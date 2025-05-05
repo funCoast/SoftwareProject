@@ -534,10 +534,10 @@ onMounted(() => {
             >
             <span>{{ userActions.isFavorited ? '已收藏' : '收藏' }}</span>
           </button>
-          <button class="action-btn secondary" @click="handleCopy">
-            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
-            <span>复制</span>
-          </button>
+<!--          <button class="action-btn secondary" @click="handleCopy">-->
+<!--            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">-->
+<!--            <span>复制</span>-->
+<!--          </button>-->
         </div>
       </div>
 

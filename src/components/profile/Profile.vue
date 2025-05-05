@@ -5,7 +5,7 @@ import router from '../../router'
 import {useRoute} from "vue-router";
 import { ElMessage } from 'element-plus'
 
-const avatar = inject('avatar') as string
+const avatar = ref<string>('')
 const baseImageUrl = 'http://122.9.33.84:8000'
 
 const currentTab = ref('works')
@@ -59,11 +59,28 @@ const error = ref({
 })
 
 onBeforeMount(() => {
+  getAvatar()
   fetchUserInfo()
   fetchWorks()
   fetchLikes()
   fetchFavorites()
 })
+
+function getAvatar() {
+  axios({
+    method: 'get',
+    url: 'user/getAvatar',
+    params: {
+      uid: uid
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar + '?' + Date.now()
+    } else {
+      alert(response.data.message)
+    }
+  })
+}
 
 async function fetchUserInfo() {
   if (!uid) {
@@ -193,6 +210,13 @@ async function sendMessage() {
   }
 }
 
+// 跳转到智能体详情页
+function goToAgentDetail(agentId: number) {
+  router.push({
+    path: `/agentDetail/${agentId}`
+  })
+}
+
 // 默认数据
 function getDefaultWorks(): myWork[] {
   return [
@@ -288,6 +312,12 @@ function getDefaultFavorites(): favorite[] {
   ]
 }
 
+// 退出登录
+function logout() {
+  sessionStorage.clear()
+  router.push('/login')
+}
+
 </script>
 
 <template>
@@ -322,15 +352,21 @@ function getDefaultFavorites(): favorite[] {
           </svg>
           <span>编辑资料</span>
         </button>
-      </div>
-      <div class="profile-actions" v-if="uid !== currentUid">
-        <button class="edit-profile-btn" @click="sendMessage">
-          <svg class="settings-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+        <button class="logout-btn" v-if="uid === currentUid" @click="logout">
+          <svg class="logout-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
           </svg>
-          <span>私信</span>
+          <span>退出登录</span>
         </button>
       </div>
+<!--      <div class="profile-actions" v-if="uid !== currentUid">-->
+<!--        <button class="edit-profile-btn" @click="sendMessage">-->
+<!--          <svg class="settings-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">-->
+<!--            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>-->
+<!--          </svg>-->
+<!--          <span>私信</span>-->
+<!--        </button>-->
+<!--      </div>-->
     </div>
 
     <!-- 内容切换栏 -->
@@ -350,7 +386,7 @@ function getDefaultFavorites(): favorite[] {
     <div class="content-section">
       <!-- 作品列表 -->
       <div v-if="currentTab === 'works'" class="agent-list">
-        <div v-for="agent in myWorks" :key="agent.id" class="agent-card">
+        <div v-for="agent in myWorks" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
           <div class="agent-image">
             <img :src="baseImageUrl + agent.image" :alt="agent.name">
             <div class="agent-category">{{ agent.category }}</div>
@@ -390,7 +426,7 @@ function getDefaultFavorites(): favorite[] {
 
       <!-- 喜欢列表 -->
       <div v-if="currentTab === 'likes'" class="agent-list">
-        <div v-for="agent in likes" :key="agent.id" class="agent-card">
+        <div v-for="agent in likes" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
           <div class="agent-image">
             <img :src="baseImageUrl + agent.image" :alt="agent.name">
             <div class="agent-category">{{ agent.category }}</div>
@@ -430,7 +466,7 @@ function getDefaultFavorites(): favorite[] {
 
       <!-- 收藏列表 -->
       <div v-if="currentTab === 'favorites'" class="agent-list">
-        <div v-for="agent in favorites" :key="agent.id" class="agent-card">
+        <div v-for="agent in favorites" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
           <div class="agent-image">
             <img :src="baseImageUrl + agent.image" :alt="agent.name">
             <div class="agent-category">{{ agent.category }}</div>
@@ -744,9 +780,12 @@ function getDefaultFavorites(): favorite[] {
   position: absolute;
   top: 30px;
   right: 30px;
+  display: flex;
+  gap: 12px;
 }
 
-.edit-profile-btn {
+.edit-profile-btn,
+.logout-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -760,12 +799,22 @@ function getDefaultFavorites(): favorite[] {
   transition: all 0.3s ease;
 }
 
-.edit-profile-btn:hover {
+.edit-profile-btn:hover,
+.logout-btn:hover {
   background: #1e2b38;
 }
 
-.settings-icon {
+.settings-icon,
+.logout-icon {
   width: 18px;
   height: 18px;
+}
+
+.logout-btn {
+  background: #e74c3c;
+}
+
+.logout-btn:hover {
+  background: #c0392b;
 }
 </style> 

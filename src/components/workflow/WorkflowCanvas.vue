@@ -794,6 +794,7 @@ const clearWorkflowCacheAndGoBack = () => {
           :node="selectedNode"
           :allNodes="workflowNodes"
           :workflow_id="workflow_id"
+          :uid="uid"
           :key="selectedNode?.id"
           :ref="setNodeComponentRef(selectedNode.id)"
           @update:node="updateNode"

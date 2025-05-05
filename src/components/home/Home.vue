@@ -2,6 +2,9 @@
 import axios from 'axios'
 import { ref, computed, watch, onBeforeMount } from 'vue'
 import moment from 'moment'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const currentAgentTab = ref<string>('hot')
 const currentPage = ref(1)
@@ -133,6 +136,13 @@ watch (
       currentPage.value = 1
     }
 )
+
+// 跳转到智能体详情页
+function goToAgentDetail(agentId: number) {
+  router.push({
+    path: `/agentDetail/${agentId}`
+  })
+}
 </script>
 
 <template>
@@ -178,7 +188,7 @@ watch (
         </div>
         <div class="agent-content">
           <div class="agent-grid">
-            <div v-for="agent in paginatedAgents" :key="agent.id" class="agent-card">
+            <div v-for="agent in paginatedAgents" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
               <div class="agent-image">
                 <img :src="baseImageUrl + agent.image" :alt="agent.name">
                 <div class="agent-category">{{ agent.category }}</div>
