@@ -78,9 +78,10 @@ def workflows_call(message, workflow_ids):
     for workflow_id in workflow_ids:
         workflow_tool = get_workflow_tool(workflow_id)
         description = workflow_tool["function"]["description"]
+        start_description = workflow_tool["function"]["start_description"]
         parameters = workflow_tool["function"]["parameters"]
-        if description and parameters and workflow_intent_recognition(message, description):
-            params_str = workflow_extract_parameters_by_model(message, description, parameters)
+        if description and start_description and parameters and workflow_intent_recognition(message, description):
+            params_str = workflow_extract_parameters_by_model(message, description + start_description, parameters)
             params = ast.literal_eval(params_str)
             sub_result = run_workflow_tool(workflow_id, params)
             result.append(sub_result)
