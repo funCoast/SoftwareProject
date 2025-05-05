@@ -3,8 +3,13 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from api.core.plugin.plugins.base_plugin import BasePlugin
-from api.core.plugin.plugins.weather.weather_code import get_weather_code, build_city_weathercode_map
+from api.core.plugin.plugins.weather.weather_code import build_city_weathercode_map, get_weather_code_en, \
+    get_weather_code_ch
 
+
+def is_english(code):
+    for char in code:
+        return 'A' <= char <= 'Z' or 'a' <= char <= 'z'
 
 class WeatherScraperPlugin(BasePlugin):
     def __init__(self):
@@ -87,7 +92,10 @@ class WeatherScraperPlugin(BasePlugin):
                 xml_file = os.path.join(current_dir, "weatherCode.xml")
 
                 city_map = build_city_weathercode_map(xml_file)
-                city_code = get_weather_code(city_code, city_map)
+                if is_english(city_code):
+                    city_code = get_weather_code_en(city_code, city_map)
+                else:
+                    city_code = get_weather_code_ch(city_code, city_map)
 
             html = self.fetch_weather_page(city_code)
             weather_data = self.parse_weather_html(html)
