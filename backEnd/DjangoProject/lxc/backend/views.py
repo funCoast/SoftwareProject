@@ -131,8 +131,6 @@ def send_code(request):
 '''
 用户验证码登录接口
 '''
-
-
 def user_login_by_code(request):
     try:
         data = json.loads(request.body)
@@ -149,6 +147,8 @@ def user_login_by_code(request):
         # 删除Redis中的验证码
         redis_client.delete(f'verification_code_{email}')
 
+        is_new_user = False  # 默认不是新用户
+
         # 尝试获取用户信息
         try:
             user = User.objects.get(email=email)
@@ -156,12 +156,15 @@ def user_login_by_code(request):
         except User.DoesNotExist:
             # 用户不存在，创建新用户
             username = email.split('@')[0]  # 使用邮箱前缀作为用户名
+            default_avatar = '/media/avatars/defaultAvatar.svg'  # 这里替换为你的默认头像 URL
             user = User.objects.create(
                 username=username,
                 email=email,
-                password='',  # 密码可以稍后设置或留空
+                password='123456',  # 密码可以稍后设置或留空
+                avatar_url=default_avatar
             )
             user_id = user.user_id
+            is_new_user = True
 
         # 生成登录token
         token = str(uuid.uuid4())
@@ -169,12 +172,13 @@ def user_login_by_code(request):
         # 将token存储到Redis中，设置过期时间为30分钟
         redis_client.setex(f'token_{user_id}', 1800, token)
 
-        # 返回成功响应json
+        # 返回成功响应json，包括 is_new_user 标记
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
             'token': token,
-            'id': user_id
+            'id': user_id,
+            'is_new_user': is_new_user
         })
 
     except Exception as e:
@@ -183,7 +187,6 @@ def user_login_by_code(request):
             'code': -1,
             'message': str(e)
         })
-
 
 """
 用户密码登录接口
@@ -279,6 +282,33 @@ def user_update_profile(request):
     except Exception as e:
         return JsonResponse({"code": -1, "message": str(e)})
 
+@csrf_exempt
+def update_basic_info(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        uid = body.get('uid')
+        name = body.get('name')
+        description = body.get('description')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+
+    if not uid or name is None or description is None:
+        return JsonResponse({"code": -1, "message": "缺少必要参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        user.username = name
+        user.description = description
+        user.save()
+
+        return JsonResponse({"code": 0, "message": "更新成功"})
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"更新失败: {str(e)}"})
 
 def user_fetch_profile(request):
     uid = request.GET.get('uid')
@@ -1742,6 +1772,7 @@ def workflow_run(request):
     result = executor.execute()
     return JsonResponse({"result": result})
 
+@csrf_exempt
 def workflow_create(request):
     try:
         uid = request.POST.get('uid')
@@ -1759,8 +1790,8 @@ def workflow_create(request):
                 "workflow_id": None
             })
 
-        # 初始化 icon_url
-        icon_url = None
+        # 初始化 icon_url（直接赋默认值）
+        icon_url = "/media/workflow_icons/defaultWorkFlow.svg"
 
         if icon:
             # 构建图标存储路径
@@ -1777,7 +1808,7 @@ def workflow_create(request):
                 for chunk in icon.chunks():
                     destination.write(chunk)
 
-            # 构建 icon 的 URL
+            # 更新 icon 的 URL
             icon_url = f"/media/workflow_icons/{filename}"
 
         # 创建 Workflow 实例
@@ -1785,9 +1816,9 @@ def workflow_create(request):
             user=user,
             name=name,
             description=description,
-            icon_url=icon_url,  # URLField 中保存图标路径
-            nodes= json.dumps([]),  # ✅ 初始化为空数组
-            edges= json.dumps([])
+            icon_url=icon_url,  # 无论是否上传，都有值
+            nodes=json.dumps([]),  # ✅ 初始化为空数组
+            edges=json.dumps([])
         )
 
         return JsonResponse({
@@ -1802,7 +1833,6 @@ def workflow_create(request):
             "message": f"服务器错误：{str(e)}",
             "workflow_id": None
         })
-
 
 def workflow_fetch(request):
     uid = request.GET.get('uid')

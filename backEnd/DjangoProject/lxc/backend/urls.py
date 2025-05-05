@@ -16,6 +16,7 @@ urlpatterns = [
     path('user/getContacts',views.user_get_contacts, name='user_get_contacts'),
     path('user/getMessages',views.user_get_messages, name='user_get_messages'),
     path('user/sendMessage',views.user_send_message, name='user_send_message'),
+    path('user/updateBasicInfo', views.update_basic_info, name='update_basic_info'),
     # Announcement
     path('anno/add', views.announcement_add, name='announcement_add'),
     path('anno/update', views.announcement_update, name='announcement_update'),
