@@ -21,7 +21,7 @@ export default defineConfig({
     open: true, //启动后是否自动打开浏览器
     proxy: {
       '/api': {
-          target: 'http://127.0.0.1:8000/',
+          target: 'http://122.9.33.84:8000/',
           changeOrigin: true,
           rewrite:(path)=>path.replace(/^\/api/, '/'),
       }
