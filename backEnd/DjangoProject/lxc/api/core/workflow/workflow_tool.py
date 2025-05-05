@@ -1,3 +1,5 @@
+import ast
+
 from django.core.exceptions import ObjectDoesNotExist
 
 from backend.models import Workflow
@@ -5,7 +7,7 @@ import json
 from api.core.workflow.executor import Executor
 def get_workflow_tool(workflow_id):
     workflow = Workflow.objects.get(workflow_id=workflow_id)
-    nodes = workflow.nodes
+    nodes = ast.literal_eval(workflow.nodes)
     description = workflow.description
     start = nodes[0]
     parameters = []
@@ -15,7 +17,6 @@ def get_workflow_tool(workflow_id):
             "type": output["type"],
             "description": output["description"],
         })
-
     return {
             "type":"workflow",
             "function":{
