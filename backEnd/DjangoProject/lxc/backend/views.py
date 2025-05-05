@@ -1,7 +1,6 @@
 import uuid
 import random
 
-from django.forms import IntegerField
 from django.views import View
 from openai import OpenAI
 import dashscope
@@ -19,7 +18,7 @@ from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
 from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord
-from django.db.models import Q, ExpressionWrapper, F
+from django.db.models import Q, ExpressionWrapper, F, IntegerField
 import base64
 import json
 # backend/views.py
