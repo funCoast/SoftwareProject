@@ -39,7 +39,7 @@ def temp_send_message(request):
         kbs = [entry.kb for entry in entries]
         kb_response = []
         for kb in kbs:
-            kb_response.append(query_kb(user_id, kb.kb_id, message))
+            kb_response.append(query_kb(agent.user_id, kb.kb_id, message))
         kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
 
         # 工作流调用
@@ -98,20 +98,17 @@ def send_agent_message(request):
         # 保存用户消息
         save_message(session, message, True)
         input_str = f"\t- 用户输入: {message}\n"
-
         # aaa 插件调用
         plugin_response = plugin_call(message)
         plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
-
         # bbb 知识库调用
         agent = Agent.objects.get(agent_id=agent_id)
         entries = AgentKnowledgeEntry.objects.filter(agent=agent)
         kbs = [entry.kb for entry in entries]
         kb_response = []
         for kb in kbs:
-            kb_response.append(query_kb(user.user_id, kb.kb_id, message))
+            kb_response.append(query_kb(agent.user_id, kb.kb_id, message))
         kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
-
         # ccc 工作流调用
         entries = AgentWorkflowRelation.objects.filter(agent=agent)
         workflow_ids = [entry.workflow_id for entry in entries]
