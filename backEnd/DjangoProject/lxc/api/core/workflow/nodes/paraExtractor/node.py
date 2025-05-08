@@ -26,16 +26,17 @@ def call_llm(user_prompt: str,system_prompt,model: str)->str:
         return f"[错误] {str(e)}"
     # return "用户提示词为：" + user_prompt + "\n" + "系统提示词为：" + system_prompt
 
-@register_node("llm")
-def run_llm_node(node, inputs):
+@register_node("paraExtractor")
+def run_paraExtractor_node(node, inputs):
     """
     工作流中 llm 类型节点的执行函数
     :param node: 节点配置（含 outputs）
     :return: {'response': json_string}
     """
-    user_prompt = inputs[1].get("value", "")
-    system_prompt = inputs[0].get("value","")
-    result = call_llm(user_prompt,system_prompt)
+    text = inputs[0].get("value","")
+    model = node.get("data", {}).get("model", "")
+    instruction = node.get("data", {}).get("instruction", "")
+    result = call_llm(text,instruction,model)
 
     # 自动生成 outputs（按输出定义）
     outputs = {}
