@@ -1,31 +1,22 @@
 <script setup lang="ts">
-import {computed, onBeforeMount, onMounted, ref} from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import {usePersistentRef} from '../../utils/usePersistentRef'
 import ClassifierNodeDetail from './node-details/ClassifierNodeDetail.vue'
 import CodeNodeDetail from "./node-details/CodeNodeDetail.vue"
 import ConditionNodeDetail from "./node-details/ConditionNodeDetail.vue"
-import ExtractNodeDetail from './node-details/ExtractNodeDetail.vue'
-import HttpNodeDetail from "./node-details/HttpNodeDetail.vue"
 import KnowledgeNodeDetail from "./node-details/KnowledgeNodeDetail.vue"
-import LoopNodeDetail from "./node-details/LoopNodeDetail.vue"
 import ModelNodeDetail from './node-details/ModelNodeDetail.vue'
-import WorkflowNodeDetail from './node-details/WorkflowNodeDetail.vue'
-import CodeExplainPlugin from "./node-details/CodeExplainPlugin.vue";
-import CurrentTimePlugin from "./node-details/CurrentTimePlugin.vue";
-import TimestampPlugin from "./node-details/TimestampPlugin.vue";
-import TimestampTransformPlugin from "./node-details/TimestampTransformPlugin.vue";
-import TimezoneSwitchPlugin from "./node-details/TimezoneSwitchPlugin.vue";
-import WeekdayCalculatorPlugin from "./node-details/WeekdayCalculatorPlugin.vue";
-import WorkflowNodeManager from "./WorkflowNodeManager.vue";
+import WorkflowNodeManager from "./WorkflowNodeManager.vue"
 import StartNodeDetail from './node-details/StartNodeDetail.vue'
 import EndNodeDetail from './node-details/EndNodeDetail.vue'
-import WeatherPlugin from "./node-details/WeatherPlugin.vue";
-import {useRouter, useRoute} from "vue-router";
-import axios from "axios";
-import { ElMessage } from 'element-plus'
+import WeatherPlugin from "./node-details/WeatherPlugin.vue"
+import ParaNodeDetail from "./node-details/ParaNodeDetail.vue";
+import WebNodeDetail from "./node-details/WebNodeDetail.vue";
+import {useRouter, useRoute} from "vue-router"
+import axios from "axios"
 
 const router = useRouter()
-const route = useRoute();
+const route = useRoute()
 const workflow_id = route.params.id
 const uid = ref<string>('')
 
@@ -38,7 +29,6 @@ interface nodeType {
   label: string
   description: string
   image: string
-  isPlugin: boolean
 }
 
 const nodeTypes = ref<nodeType[]>([
@@ -47,131 +37,56 @@ const nodeTypes = ref<nodeType[]>([
     label: '大模型',
     description: '使用AI大模型处理任务',
     image: 'https://api.iconify.design/carbon:machine-learning-model.svg',
-    isPlugin: false
   },
-  // {
-  //   type: 'workflow',
-  //   label: '工作流',
-  //   description: '嵌套调用其他工作流',
-  //   image: 'https://api.iconify.design/material-symbols:account-tree.svg',
-  //   isPlugin: false
-  // },
-  // {
-  //   type: 'http',
-  //   label: 'HTTP请求',
-  //   description: '发送HTTP请求获取数据',
-  //   image: 'https://api.iconify.design/material-symbols:api.svg',
-  //   isPlugin: false
-  // },
   { 
     type: 'code',
     label: '代码',
     description: '执行自定义代码逻辑',
     image: 'https://api.iconify.design/material-symbols:code.svg',
-    isPlugin: false
   },
   { 
     type: 'if_else',
     label: '条件分支',
     description: '根据条件选择执行路径',
     image: 'https://api.iconify.design/material-symbols:fork-right.svg',
-    isPlugin: false
   },
-  // {
-  //   type: 'loop',
-  //   label: '循环',
-  //   description: '重复执行特定任务',
-  //   image: 'https://api.iconify.design/material-symbols:repeat.svg',
-  //   isPlugin: false
-  // },
   { 
     type: 'classifier',
     label: '问题分类器',
     description: '对输入内容进行分类',
     image: 'https://api.iconify.design/material-symbols:category.svg',
-    isPlugin: false
   },
   { 
     type: 'kbRetrieval',
     label: '知识库检索',
     description: '从知识库中检索信息',
     image: 'https://api.iconify.design/material-symbols:database.svg',
-    isPlugin: false
   },
-  // {
-  //   type: 'extract',
-  //   label: '提取文档',
-  //   description: '从文档中提取关键信息',
-  //   image: 'https://api.iconify.design/material-symbols:description.svg',
-  //   isPlugin: false
-  // },
   {
     type: 'weather',
     label: '天气查询',
     description: '查询指定城市未来7天的天气',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    isPlugin: false
+    image: 'https://api.iconify.design/material-symbols:cloud.svg',
+  },
+  {
+    type: 'paraExtractor',
+    label: '参数提取器',
+    description: '从自然语言输入中提取关键信息',
+    image: 'https://api.iconify.design/material-symbols:data-object.svg',
+  },
+  {
+    type: 'web',
+    label: '网页爬取',
+    description: '访问网页并提取信息',
+    image: 'https://api.iconify.design/material-symbols:language.svg',
   },
   {
     type: 'end',
     label: '结束节点',
     description: '整个工作流的结束',
     image: 'https://api.iconify.design/material-symbols:stop-circle.svg',
-    isPlugin: false
-  },
-  {
-    type: 'current-time',
-    label: '获取当前时间',
-    description: '获取当前时间，支持多种格式和时区',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    isPlugin: true
-  },
-  {
-    type: 'timezone-switch',
-    label: '时区转换',
-    description: '计算世界各个时区的时差，获取目标时区当前时间',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    isPlugin: true
-  },
-  {
-    type: 'timestamp',
-    label: '时间转时间戳',
-    description: '将当前时间转换为时间戳',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    isPlugin: true
-  },
-  {
-    type: 'timestamp-transform',
-    label: '时间戳转时间',
-    description: '将当前时间戳转换为时间',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    isPlugin: true
-  },
-  {
-    type: 'weekday-calculator',
-    label: '星期计算',
-    description: '计算所给日期对应的星期',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    isPlugin: true
-  },
-  {
-    type: 'code-explain',
-    label: '代码解释器',
-    description: '执行自定义代码逻辑',
-    image: 'https://api.iconify.design/material-symbols:extension.svg',
-    isPlugin: true
-  },
-  // {
-  //   type: 'weather',
-  //   label: '天气查询',
-  //   description: '查询指定城市未来7天的天气',
-  //   image: 'https://api.iconify.design/material-symbols:extension.svg',
-  //   isPlugin: false
-  // }
+  }
 ])
-
-const filteredNodeTypes = computed(() => nodeTypes.value.filter(n => !n.isPlugin))
-const pluginNodeTypes = computed(() => nodeTypes.value.filter(n => n.isPlugin))
 
 interface WorkflowNode {
   id: number
@@ -232,8 +147,6 @@ const isDraggingCanvas = ref(false)
 const lastMousePosition = ref({ x: 0, y: 0 })
 // 运行节点
 const nodeComponentRefs = new Map<number, any>()
-// 添加节点还是添加插件
-const selectorPage = ref<'nodes' | 'plugins'>('nodes')
 
 // 试运行相关
 const showRunDialog = ref(false)
@@ -519,10 +432,6 @@ async function executeRun() {
   }
 }
 
-function debug() {
-  // 调试逻辑
-}
-
 // 保存工作流
 async function saveWorkflow() {
   console.log("workflowNodes: ", workflowNodes.value)
@@ -569,32 +478,16 @@ function getNodeDetailComponent(type: string) {
       return CodeNodeDetail
     case 'if_else':
       return ConditionNodeDetail
-    case 'extract':
-      return ExtractNodeDetail
-    case 'http':
-      return HttpNodeDetail
     case 'kbRetrieval':
       return KnowledgeNodeDetail
-    case 'loop':
-      return LoopNodeDetail
     case 'llm':
       return ModelNodeDetail
-    case 'workflow':
-      return WorkflowNodeDetail
-    case 'current-time':
-      return CurrentTimePlugin
-    case 'timezone-switch':
-      return TimezoneSwitchPlugin
-    case 'timestamp':
-      return TimestampPlugin
-    case 'timestamp-transform':
-      return TimestampTransformPlugin
-    case 'weekday-calculator':
-      return WeekdayCalculatorPlugin
-    case 'code-explain':
-      return CodeExplainPlugin
     case 'weather':
       return WeatherPlugin
+    case 'paraExtractor':
+      return ParaNodeDetail
+    case 'web':
+      return WebNodeDetail
     default:
       return null
   }
@@ -682,10 +575,6 @@ const clearWorkflowCacheAndGoBack = () => {
         <img src="https://api.iconify.design/material-symbols:save.svg" alt="保存" class="tool-btn-icon">
         保存工作流
       </button>
-<!--      <button class="tool-btn secondary" @click="debug">-->
-<!--        <img src="https://api.iconify.design/material-symbols:bug-report.svg" alt="调试" class="tool-btn-icon">-->
-<!--        调试-->
-<!--      </button>-->
       <button class="tool-btn accent" @click="runTest">
         <img src="https://api.iconify.design/material-symbols:play-circle.svg" alt="运行" class="tool-btn-icon">
         试运行
@@ -696,41 +585,10 @@ const clearWorkflowCacheAndGoBack = () => {
     <div class="node-selector-modal" v-if="showNodeSelector" @click.self="showNodeSelector = false">
       <div class="node-selector-content">
         <div class="node-selector-header">
-          <h3>{{ selectorPage === 'nodes' ? '选择节点类型' : '选择插件' }}</h3>
-          <div class="selector-tabs">
-            <button 
-              :class="['tab-btn', { active: selectorPage === 'nodes' }]"
-              @click="selectorPage = 'nodes'"
-            >
-              节点类型
-            </button>
-<!--            <button -->
-<!--              :class="['tab-btn', { active: selectorPage === 'plugins' }]"-->
-<!--              @click="selectorPage = 'plugins'"-->
-<!--            >-->
-<!--              插件-->
-<!--            </button>-->
-          </div>
+          <h3>{{ '选择节点类型' }}</h3>
         </div>
-        
-        <!-- 节点类型网格 -->
-        <div v-if="selectorPage === 'nodes'" class="node-types-grid">
-          <div v-for="node in filteredNodeTypes" :key="node.type"
-               class="node-type-item"
-               @click="addNode(node.type, $event.x, $event.y)">
-            <div class="node-icon">
-              <img :src="node.image" :alt="node.label">
-            </div>
-            <div class="node-info">
-              <span class="node-label">{{ node.label }}</span>
-              <span class="node-desc">{{ node.description }}</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 插件类型网格 -->
-        <div v-if="selectorPage === 'plugins'" class="node-types-grid">
-          <div v-for="node in pluginNodeTypes" :key="node.type"
+        <div class="node-types-grid">
+          <div v-for="node in nodeTypes" :key="node.type"
                class="node-type-item"
                @click="addNode(node.type, $event.x, $event.y)">
             <div class="node-icon">
