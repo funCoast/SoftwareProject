@@ -66,6 +66,9 @@ urlpatterns = [
     path('workflow/delete',views.workflow_delete, name='workflow_delete'),
     path('admin/fetchPendingAgents', views.fetch_pending_agents, name='fetch_pending_agents'),
     path('admin/reviewAgent', views.review_agent, name='review_agent'),
+    path('admin/fetchUser', views.fetch_user, name='fetch_user'),
+    path('admin/banUser',   views.ban_user,   name='ban_user'),
+    path('admin/unbanUser', views.unban_user, name='unban_user'),
 
     #智能体
     path('agent/fetchAll',views.agent_fetch_all,name='agent_fetch_all'),
