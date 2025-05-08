@@ -387,7 +387,7 @@ class AgentCreateView(View):
             )
 
         # icon 上传
-        icon_url = None
+        icon_url = f"{settings.MEDIA_URL}agent_icons/defaultAgent.svg"
         if icon:
             icon_dir = os.path.join(settings.MEDIA_ROOT, 'agent_icons')
             os.makedirs(icon_dir, exist_ok=True)
