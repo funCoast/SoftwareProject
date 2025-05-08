@@ -3043,9 +3043,14 @@ def ban_user(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-    uid      = request.POST.get('uid')
-    ban_type = request.POST.get('type')   # 'account' | 'post'
-    time_str = request.POST.get('time')   # '数字 单位'
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败，需 JSON 格式"})
+
+    uid      = data.get('uid')
+    ban_type = data.get('type')   # 'account' | 'post'
+    time_str = data.get('time')   # '数字 单位'
 
     # ---------- 参数校验 ----------
     if not uid or not ban_type or not time_str:
@@ -3083,14 +3088,18 @@ def ban_user(request):
     user.save()
     return JsonResponse({"code": 0, "message": "封禁成功"})
 
-
 @csrf_exempt
 def unban_user(request):
     """接口3：解封用户（POST /admin/unbanUser）"""
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
 
-    uid = request.POST.get('uid')
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败，需 JSON 格式"})
+
+    uid = data.get('uid')
     if not uid:
         return JsonResponse({"code": -1, "message": "缺少 uid"})
 
