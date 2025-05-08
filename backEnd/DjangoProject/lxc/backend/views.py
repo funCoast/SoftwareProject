@@ -559,7 +559,7 @@ def announcement_add(request):
             'content': announcement.content,
             'time': announcement.time.isoformat()
         }]
-    }, status=status.HTTP_201_CREATED)
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['PUT'])
