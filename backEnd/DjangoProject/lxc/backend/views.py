@@ -2997,3 +2997,122 @@ def workflow_run_single(request):
             "code": 1,
             "message": f"服务器错误: {str(e)}"
         })
+
+# views.py
+import re
+import datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from dateutil.relativedelta import relativedelta
+
+from .models import User     # 根据实际路径调整
+# =================================================================
+# Admin-User 接口
+# =================================================================
+
+@csrf_exempt
+def fetch_user(request):
+    """接口1：获取用户列表（GET /admin/fetchUser）"""
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    users_data = []
+    for u in User.objects.all().order_by('-registered_at'):
+        users_data.append({
+            "uid":        u.user_id,
+            "email":      u.email,
+            "name":       u.username,
+            "avatar":     u.avatar_url or "",
+            "can_log":    (not u.is_banned),          # 取反 is_banned
+            "can_post":   u.can_post,
+            "ban_expire": u.ban_expire.strftime("%Y-%m-%d %H:%M:%S") if u.ban_expire else "",
+            "post_expire":u.post_expire.strftime("%Y-%m-%d %H:%M:%S") if u.post_expire else "",
+        })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "users": users_data
+    })
+
+
+@csrf_exempt
+def ban_user(request):
+    """接口2：封禁用户（POST /admin/banUser）"""
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败，需 JSON 格式"})
+
+    uid      = data.get('uid')
+    ban_type = data.get('type')   # 'account' | 'post'
+    time_str = data.get('time')   # '数字 单位'
+
+    # ---------- 参数校验 ----------
+    if not uid or not ban_type or not time_str:
+        return JsonResponse({"code": -1, "message": "缺少 uid、type 或 time"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    # ---------- 解析时间 ----------
+    m = re.fullmatch(r'\s*(\d+)\s*(年|月|日)\s*', time_str)
+    if not m:
+        return JsonResponse({"code": -1, "message": "time 格式应为“数字 单位（年|月|日）”"})
+
+    num, unit = int(m.group(1)), m.group(2)
+    now = timezone.now()
+    if unit == '年':
+        expire = now + relativedelta(years=num)
+    elif unit == '月':
+        expire = now + relativedelta(months=num)
+    else:  # '日'
+        expire = now + datetime.timedelta(days=num)
+
+    # ---------- 更新用户状态 ----------
+    if ban_type == 'account':
+        user.is_banned  = True
+        user.ban_expire = expire
+    elif ban_type == 'post':
+        user.can_post   = False
+        user.post_expire = expire
+    else:
+        return JsonResponse({"code": -1, "message": "type 参数非法，应为 'account' 或 'post'"})
+
+    user.save()
+    return JsonResponse({"code": 0, "message": "封禁成功"})
+
+@csrf_exempt
+def unban_user(request):
+    """接口3：解封用户（POST /admin/unbanUser）"""
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败，需 JSON 格式"})
+
+    uid = data.get('uid')
+    if not uid:
+        return JsonResponse({"code": -1, "message": "缺少 uid"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    # 复位所有封禁状态
+    user.is_banned   = False
+    user.can_post    = True
+    user.ban_expire  = None
+    user.post_expire = None
+    user.save()
+
+    return JsonResponse({"code": 0, "message": "解封成功"})
