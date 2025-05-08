@@ -195,6 +195,7 @@ class Agent(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agents')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='private')
     publish_time = models.DateTimeField(default=timezone.now)
+    llm = models.TextField(null=True, blank=True, default="qwen-plus")
 
     def __str__(self):
         return self.agent_name
