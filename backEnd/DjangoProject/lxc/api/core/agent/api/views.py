@@ -28,7 +28,7 @@ def temp_send_message(request):
         message = data.get('content')
         agent_id = data.get('agent_id')
 
-        input_str = f"\t- 用户输入: {message}\n"
+        input_str = f"这是用户输入: {message}\n"
         # 插件调用
         plugin_response = plugin_call(message)
         plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
@@ -49,9 +49,9 @@ def temp_send_message(request):
         workflow_str = f"\t- 调用工作流得到结果：{workflow_response}\n"
 
         persona_str = agent.persona
-        prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
+        prompt = "以上是用户的输入，下面是调用插件、调用用户知识库以及调用用户的工作流获得的信息，整合出适合回答用户输入部分的结果：\n"
 
-        total_message = prompt + input_str + plugin_str + kb_str + workflow_str
+        total_message = input_str + prompt + plugin_str + kb_str + workflow_str
         messages = [
             {
                 "role": "system",
@@ -97,7 +97,7 @@ def send_agent_message(request):
 
         # 保存用户消息
         save_message(session, message, True)
-        input_str = f"\t- 用户输入: {message}\n"
+        input_str = f"用户输入: {message}\n"
         # aaa 插件调用
         plugin_response = plugin_call(message)
         plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
