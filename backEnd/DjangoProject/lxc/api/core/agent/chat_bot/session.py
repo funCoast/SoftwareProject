@@ -39,10 +39,10 @@ def generate_prompt_with_context(
     def count_tokens(text):
         return len(text.split())
 
-    prompt = "根据下面的信息，整合出适合回答输入部分的结果：\n"
-    input_str = f"\t- 输入: {message}\n"
+    prompt = "以上是用户的输入，下面是调用插件、调用用户知识库以及调用用户的工作流获得的信息，整合出适合回答用户输入部分的结果：\n"
+    input_str = f"输入: {message}\n"
     plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
     kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
     workflow_str = f"\t- 调用工作流得到结果：{workflow_response}\n"
 
-    return prompt + input_str + plugin_str + kb_str + workflow_str
+    return input_str + prompt + plugin_str + kb_str + workflow_str
