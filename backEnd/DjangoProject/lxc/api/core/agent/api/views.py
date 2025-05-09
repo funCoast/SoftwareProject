@@ -219,7 +219,6 @@ class AgentFetchAgentMessageView(View):
                 "chatHistory": [],
             })
 
-
 class AgentInfoView(View):
     """
     GET /agent/getInfo?agent_id=xxx
@@ -301,6 +300,7 @@ class AgentUpdateView(View):
         system_prompt = data.get('system_prompt')
         selected_kbs = data.get('selectedKbs', [])
         selected_workflows = data.get('selectedWorkflows', [])
+        selected_model = data.get('selectedModel', [])
 
         if not agent_id:
             return JsonResponse({"code": -1, "message": "缺少 agent_id 参数"}, status=400)
@@ -311,6 +311,7 @@ class AgentUpdateView(View):
             return JsonResponse({"code": -1, "message": "未找到对应的智能体"}, status=404)
 
         agent.persona = system_prompt
+        agent.llm = selected_model
         agent.save()
 
         AgentKnowledgeEntry.objects.filter(agent=agent).delete()
