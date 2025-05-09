@@ -35,7 +35,8 @@ def run_llm_node(node, inputs):
     """
     user_prompt = inputs[1].get("value", "")
     system_prompt = inputs[0].get("value","")
-    result = call_llm(user_prompt,system_prompt)
+    model = node.get("data", {}).get("model", "")
+    result = call_llm(user_prompt,system_prompt,model)
 
     # 自动生成 outputs（按输出定义）
     outputs = {}
