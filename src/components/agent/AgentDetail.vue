@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, type Ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
+const userAvatar = inject('avatar') as Ref
 const route = useRoute()
 const router = useRouter()
 const agent_id = route.params.id
@@ -410,7 +411,7 @@ onMounted(() => {
             <!-- 用户消息 -->
             <template v-if="message.sender === 'user'">
               <div class="message-avatar">
-                <img src="https://picsum.photos/40/40?random=1" alt="用户头像" />
+                <img :src="userAvatar" alt="用户头像" />
               </div>
               <div class="message-content">
                 {{ message.content }}
@@ -421,10 +422,7 @@ onMounted(() => {
             <!-- 助手消息 -->
             <template v-else-if="message.sender === 'assistant'">
               <div class="message-avatar">
-                <img
-                  src="https://api.iconify.design/material-symbols:robot.svg"
-                  alt="助手头像"
-                />
+                <img :src="'http://122.9.33.84:8000' + agentInfo.icon" alt="助手头像" />
               </div>
               <div class="message-content">
                 {{ message.content }}

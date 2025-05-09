@@ -165,42 +165,53 @@ onMounted(() => {
       <!-- 智能体列表 -->
       <div class="agent-list">
         <div v-for="agent in paginatedAgents" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
-          <div class="agent-image">
-            <img :src="baseImageUrl + agent.image" :alt="agent.name">
-            <div class="agent-category">{{ agent.category }}</div>
-          </div>
-          <div class="agent-info">
-            <div class="agent-header">
-              <h3>{{ agent.name }}</h3>
-              <div class="agent-author">
-                <img :src="baseImageUrl + agent.author.avatar" :alt="agent.author.name">
-                <span>{{ agent.author.name }}</span>
+          <el-container>
+            <el-header style="height: 160px;">
+              <el-container>
+                <el-aside style="width: 100px; height: 160px;">
+                  <div class="agent-image">
+                    <img :src="baseImageUrl + agent.image" :alt="agent.name">
+                  </div>
+                </el-aside>
+                <el-main style="width: 180px; height: 160px; padding: 0;">
+                  <div class="agent-info">
+                    <div class="agent-header">
+                      <h3>{{ agent.name }}</h3>
+                    </div>
+                    <div class="agent-author">
+                      <img :src="baseImageUrl + agent.author.avatar" :alt="agent.author.name">
+                      <span>{{ agent.author.name }}</span>
+                    </div>
+                    <p class="agent-description">{{ agent.description }}</p>
+                  </div>
+                </el-main>
+              </el-container>
+            </el-header>  
+            <el-footer>
+              <div class="agent-stats">
+                <span class="stat-item" title="点赞量">
+                  <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                  {{ agent.likes }}
+                </span>
+                <span class="stat-item" title="收藏量">
+                  <svg class="favorite-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/>
+                  </svg>
+                  {{ agent.favorites }}
+                </span>
+                <span class="stat-item" title="评论量">
+                  <svg class="comment-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v14l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                  </svg>
+                  {{ agent.comments }}
+                </span>
               </div>
-            </div>
-            <p class="agent-description">{{ agent.description }}</p>
-            <div class="agent-stats">
-<!--              <span class="stat-item" title="使用量">-->
-<!--                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">-->
-<!--                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>-->
-<!--                </svg>-->
-<!--                {{ agent.usage }}-->
-<!--              </span>-->
-              <span class="stat-item" title="点赞量">
-                <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                {{ agent.likes }}
-              </span>
-              <span class="stat-item" title="收藏量">
-                <svg class="favorite-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/>
-                </svg>
-                {{ agent.favorites }}
-              </span>
-            </div>
+              </el-footer>
+            </el-container>
           </div>
         </div>
-      </div>
 
       <!-- 分页控件 -->
       <div class="pagination">
@@ -337,6 +348,9 @@ onMounted(() => {
 }
 
 .agent-card {
+  height: 205px;
+  width: 320px;
+  display: flex;
   background: white;
   border-radius: 12px;
   overflow: hidden;
@@ -351,49 +365,47 @@ onMounted(() => {
 }
 
 .agent-image {
-  position: relative;
-  width: 100%;
-  padding-top: 75%;
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin: 18px 0 0 0; 
+  background: #f8f9fa;
 }
 
 .agent-image img {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.agent-category {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: white;
-  background: rgba(0,0,0,0.6);
+  border-radius: 8px; /* 确保图片的圆角与容器一致 */
 }
 
 .agent-info {
-  padding: 16px;
+  margin: 18px 0 0 10px;
+  width: 170px;
+  height: 130px;
+  justify-content: space-between;
 }
 
 .agent-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: center; 
   margin-bottom: 10px;
 }
 
 .agent-header h3 {
   margin: 0;
   color: #2c3e50;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
 }
 
 .agent-author {
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -418,24 +430,30 @@ onMounted(() => {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 3; /* 限制描述显示三行 */
 }
 
 .agent-stats {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* 平均分布 */
+  align-items: center;
   padding-top: 10px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #eee; /* 添加分隔线 */
 }
 
 .stat-item {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   color: #666;
   font-size: 13px;
   padding: 4px 8px;
-  border-radius: 12px;
+  flex: 1; /* 平均分配宽度 */
+  text-align: center; /* 居中对齐 */
   background: #f8f9fa;
+  border-radius: 8px;
   transition: all 0.3s ease;
 }
 
@@ -506,4 +524,4 @@ onMounted(() => {
   color: #666;
   font-size: 14px;
 }
-</style> 
+</style>
