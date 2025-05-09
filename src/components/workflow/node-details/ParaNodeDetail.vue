@@ -1,25 +1,24 @@
 <script setup lang="ts">
-import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
-import axios from "axios";
+import axios from 'axios'
 
 interface Input {
   id: number
   name: string
-  type: 'string'
+  type: string
   value: {
-    type?: number // 1: 上游节点的输出
-    nodeId?: number
-    outputId?: number
-    text?: string // 手动输入的内容
+    type: number // 1: 上游节点的输出
+    nodeId: number
+    outputId: number
+    text: string
   }
 }
 
 interface Output {
   id: number
-  name: 'text'
+  name: 'output'
   type: 'string'
-  value?: string
 }
 
 const props = defineProps<{
@@ -31,9 +30,10 @@ const props = defineProps<{
     outputs: Output[]
     data: {
       model?: string
+      instruction?: string
     }
   }
-  allNodes: any[],
+  allNodes: any[]
   workflow_id: string
 }>()
 
@@ -47,39 +47,17 @@ const allUpstreamNodes = computed(() => {
 })
 
 // 初始化输入
-const inputs = ref<Input[]>(props.node.inputs?.length ? props.node.inputs : [
-  {
-    id: 0,
-    name: 'system_prompt',
-    type: 'string',
-    value: {
-      text: '',
-      type: 0,
-      nodeId: -1,
-      outputId: -1
-    }
-  },
-  {
-    id: 1,
-    name: 'user_prompt',
-    type: 'string',
-    value: {
-      text: '',
-      type: 0,
-      nodeId: -1,
-      outputId: -1
-    }
+const input = ref<Input>(props.node.inputs?.[0] || {
+  id: 0,
+  name: '',
+  type: 'string',
+  value: {
+    type: 1,
+    nodeId: -1,
+    outputId: -1,
+    text: ''
   }
-])
-
-// 运行相关
-const showRunPanel = ref(false)
-const isRunning = ref(false)
-const runStatus = ref<'running' | 'success' | 'error' | null>(null)
-const runResult = ref<string | null>(null)
-const runError = ref<string | null>(null)
-const runSystemPrompt = ref('')
-const runUserPrompt = ref('')
+})
 
 // 模型选项
 const modelOptions = [
@@ -91,32 +69,35 @@ const modelOptions = [
 // 选中的模型
 const selectedModel = ref(props.node.data?.model || 'qwen-plus')
 
-// 是否为手动输入
-function isManualInput(input: Input) {
-  return !input.value?.type || input.value.type !== 1
-}
+// 指令内容
+const instruction = ref(props.node.data?.instruction || '')
+
+// 运行相关状态
+const showRunPanel = ref(false)
+const isRunning = ref(false)
+const runStatus = ref<'running' | 'success' | 'error' | null>(null)
+const runResult = ref<string | null>(null)
+const runError = ref<string | null>(null)
+const runInput = ref('')
 
 // 生成选择器的值
 function generateSelectValue(val?: Input['value']): string {
-  if (!val?.type || val.type !== 1) return 'manual'
+  if (!val?.type || val.type !== 1) return ''
   return `${val.nodeId}|${val.outputId}`
 }
 
 // 处理选择变化
-function onSelectChange(inputId: number, val: string) {
-  const input = inputs.value.find(i => i.id === inputId)
-  if (!input) return
+function onSelectChange(val: string) {
+  if (!val) return
+  const [nodeId, outputId] = val.split('|').map(Number)
+  const node = allUpstreamNodes.value.find(n => n.id === nodeId)
+  const output = node?.outputs?.find(o => o.id === outputId)
 
-  if (val === 'manual') {
-    input.value = {
-      type: 0,
-      nodeId: -1,
-      outputId: -1,
-      text: ''
-    }
-  } else {
-    const [nodeId, outputId] = val.split('|').map(Number)
-    input.value = {
+  input.value = {
+    id: 0,
+    name: output?.name || '',
+    type: output?.type || 'string',
+    value: {
       type: 1,
       nodeId,
       outputId,
@@ -130,14 +111,15 @@ function onSelectChange(inputId: number, val: string) {
 function updateNode() {
   emit('update:node', {
     ...props.node,
-    inputs: inputs.value,
+    inputs: [input.value],
     outputs: [{
       id: 0,
-      name: 'text',
+      name: 'output',
       type: 'string'
     }],
     data: {
-      model: selectedModel.value
+      model: selectedModel.value,
+      instruction: instruction.value
     }
   })
 }
@@ -152,17 +134,12 @@ async function run() {
   try {
     const formattedInputs = [
       {
-        "name": "system_prompt",
-        "type": "string",
-        "value": runSystemPrompt.value
-      },
-      {
-        "name": "user_prompt",
-        "type": "string",
-        "value": runUserPrompt.value
+        name: input.value.name,
+        type: input.value.type,
+        value: runInput.value
       }
     ]
-    console.log(props.workflow_id)
+
     const response = await axios({
       method: 'post',
       url: '/workflow/runSingle',
@@ -172,7 +149,8 @@ async function run() {
         inputs: JSON.stringify(formattedInputs)
       }
     })
-    const data = await response.data
+
+    const data = response.data
     if (data.code === 0) {
       runResult.value = data.result
       runStatus.value = 'success'
@@ -191,83 +169,50 @@ async function run() {
 // 暴露方法给父组件
 defineExpose({
   openRunPanel: () => {
-    const systemPromptInput = inputs.value.find(i => i.name === 'system_prompt')
-    const userPromptInput = inputs.value.find(i => i.name === 'user_prompt')
-    runSystemPrompt.value = systemPromptInput?.value?.text || ''
-    runUserPrompt.value = userPromptInput?.value?.text || ''
+    runInput.value = input.value.value.text || ''
     showRunPanel.value = true
   }
 })
 </script>
 
 <template>
-  <div class="model-node-detail">
+  <div class="para-node-detail">
     <!-- 输入配置 -->
     <div class="section">
       <div class="section-header">
         <h4>输入变量</h4>
       </div>
-      
-      <div class="input-config">
-        <template v-for="input in inputs" :key="input.id">
-          <div class="input-group">
-            <div class="input-header">
-              <h5>{{ input.name === 'system_prompt' ? '系统提示词' : '用户提示词' }}</h5>
-            </div>
-            
-            <div class="form-group">
-              <label>输入来源</label>
-              <el-select
-                :model-value="generateSelectValue(input.value)"
-                placeholder="选择输入来源"
-                size="small"
-                class="source-select"
-                @change="val => onSelectChange(input.id, val)"
-              >
-                <el-option
-                  label="手动输入"
-                  value="manual"
-                />
-                <template v-for="node in allUpstreamNodes" :key="node.id">
-                  <el-option
-                    v-for="(nodeOutput, idx) in node.outputs"
-                    :key="`${node.id}-${idx}`"
-                    :label="`${node.name}: ${nodeOutput.name}`"
-                    :value="`${node.id}|${nodeOutput.id}`"
-                  />
-                </template>
-              </el-select>
-            </div>
-            
-            <div v-if="isManualInput(input)" class="form-group">
-              <label>输入内容</label>
-              <el-input
-                v-model="input.value.text"
-                type="textarea"
-                :rows="3"
-                :placeholder="input.name === 'system_prompt' ? '请输入系统提示词' : '请输入用户提示词'"
-                @input="updateNode"
-              />
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
 
-    <!-- 输出信息 -->
-    <div class="section">
-      <div class="section-header">
-        <h4>输出变量</h4>
-      </div>
-      
-      <div class="output-info">
-        <div class="info-item">
-          <label>变量名称:</label>
-          <span>text</span>
+      <div class="input-config">
+        <div class="form-group">
+          <label>选择上游输出</label>
+          <el-select
+              :model-value="generateSelectValue(input.value)"
+              placeholder="选择上游节点的输出变量"
+              size="small"
+              class="source-select"
+              @change="onSelectChange"
+          >
+            <template v-for="node in allUpstreamNodes" :key="node.id">
+              <el-option
+                  v-for="(nodeOutput, idx) in node.outputs"
+                  :key="`${node.id}-${idx}`"
+                  :label="`${node.name}: ${nodeOutput.name}`"
+                  :value="`${node.id}|${nodeOutput.id}`"
+              />
+            </template>
+          </el-select>
         </div>
-        <div class="info-item">
-          <label>变量类型:</label>
-          <span>string</span>
+
+        <div v-if="input.value.nodeId !== -1" class="input-info">
+          <div class="info-item">
+            <label>变量名称:</label>
+            <span>{{ input.name }}</span>
+          </div>
+          <div class="info-item">
+            <label>变量类型:</label>
+            <span>{{ input.type }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -295,32 +240,52 @@ defineExpose({
           />
         </el-select>
       </div>
+
+      <div class="form-group">
+        <label>提取指令</label>
+        <el-input
+            v-model="instruction"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入提取指令，例如：提取时间、地点、人物等信息"
+            @input="updateNode"
+        />
+      </div>
+    </div>
+
+    <!-- 输出信息 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>输出变量</h4>
+      </div>
+
+      <div class="output-info">
+        <div class="info-item">
+          <label>变量名称:</label>
+          <span>output</span>
+        </div>
+        <div class="info-item">
+          <label>变量类型:</label>
+          <span>string</span>
+        </div>
+      </div>
     </div>
 
     <!-- 运行面板 -->
     <el-dialog
-      v-model="showRunPanel"
-      title="运行模型"
-      width="500px"
-      :close-on-click-modal="false"
+        v-model="showRunPanel"
+        title="运行参数提取"
+        width="500px"
+        :close-on-click-modal="false"
     >
       <div class="run-panel">
         <div class="run-input">
-          <label>系统提示词</label>
+          <label>输入内容</label>
           <el-input
-            v-model="runSystemPrompt"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入系统提示词"
-          />
-        </div>
-        <div class="run-input">
-          <label>用户提示词</label>
-          <el-input
-            v-model="runUserPrompt"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入用户提示词"
+              v-model="runInput"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入需要提取参数的内容"
           />
         </div>
       </div>
@@ -329,21 +294,21 @@ defineExpose({
         <div class="run-result-header">
           <h4>运行结果</h4>
           <span :class="['status-badge', runStatus]">
-            {{ runStatus === 'running' ? '运行中' : 
-               runStatus === 'success' ? '成功' : '失败' }}
+            {{ runStatus === 'running' ? '运行中' :
+              runStatus === 'success' ? '成功' : '失败' }}
           </span>
         </div>
-        
-        <div v-if="runStatus === 'success' && runResult" 
+
+        <div v-if="runStatus === 'success' && runResult"
              class="result-content success">
           <pre>{{ runResult }}</pre>
         </div>
-        
-        <div v-if="runStatus === 'error' && runError" 
+
+        <div v-if="runStatus === 'error' && runError"
              class="result-content error">
           <pre>{{ runError }}</pre>
         </div>
-        
+
         <div v-if="runStatus === 'running'" class="result-content loading">
           <div class="loading-spinner"></div>
           <span>正在运行中...</span>
@@ -353,9 +318,9 @@ defineExpose({
       <template #footer>
         <el-button @click="showRunPanel = false">取消</el-button>
         <el-button
-          type="primary"
-          :loading="isRunning"
-          @click="run"
+            type="primary"
+            :loading="isRunning"
+            @click="run"
         >
           运行
         </el-button>
@@ -365,7 +330,7 @@ defineExpose({
 </template>
 
 <style scoped>
-.model-node-detail {
+.para-node-detail {
   padding: 16px;
 }
 
@@ -386,27 +351,6 @@ defineExpose({
   color: #2c3e50;
 }
 
-.input-group {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.input-group:last-child {
-  margin-bottom: 0;
-}
-
-.input-header {
-  margin-bottom: 16px;
-}
-
-.input-header h5 {
-  margin: 0;
-  font-size: 14px;
-  color: #2c3e50;
-}
-
 .form-group {
   margin-bottom: 16px;
 }
@@ -422,14 +366,12 @@ label {
   color: #2c3e50;
 }
 
+.source-select,
 .model-select {
   width: 100%;
 }
 
-.source-select {
-  width: 100%;
-}
-
+.input-info,
 .output-info {
   background: #f5f7fa;
   border-radius: 4px;
@@ -552,4 +494,4 @@ label {
   justify-content: center;
   color: #666;
 }
-</style> 
+</style>

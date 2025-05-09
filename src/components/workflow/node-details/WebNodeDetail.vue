@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
-import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
-import axios from "axios";
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 
 interface Input {
   id: number
-  name: string
+  name: 'url'
   type: 'string'
   value: {
-    type?: number // 1: 上游节点的输出
-    nodeId?: number
-    outputId?: number
-    text?: string // 手动输入的内容
+    type: number // 0: 用户输入
+    text: string
+    nodeId: number
+    outputId: number
   }
 }
 
@@ -19,7 +18,6 @@ interface Output {
   id: number
   name: 'text'
   type: 'string'
-  value?: string
 }
 
 const props = defineProps<{
@@ -33,7 +31,7 @@ const props = defineProps<{
       model?: string
     }
   }
-  allNodes: any[],
+  allNodes: any[]
   workflow_id: string
 }>()
 
@@ -41,45 +39,26 @@ const emit = defineEmits<{
   (e: 'update:node', node: any): void
 }>()
 
-// 获取所有上游节点
-const allUpstreamNodes = computed(() => {
-  return getAllUpstreamNodes(props.node, props.allNodes)
+// 初始化输入
+const input = ref<Input>(props.node.inputs?.[0] || {
+  id: 0,
+  name: 'url',
+  type: 'string',
+  value: {
+    type: 0,
+    text: '',
+    nodeId: -1,
+    outputId: -1
+  }
 })
 
-// 初始化输入
-const inputs = ref<Input[]>(props.node.inputs?.length ? props.node.inputs : [
-  {
-    id: 0,
-    name: 'system_prompt',
-    type: 'string',
-    value: {
-      text: '',
-      type: 0,
-      nodeId: -1,
-      outputId: -1
-    }
-  },
-  {
-    id: 1,
-    name: 'user_prompt',
-    type: 'string',
-    value: {
-      text: '',
-      type: 0,
-      nodeId: -1,
-      outputId: -1
-    }
-  }
-])
-
-// 运行相关
+// 运行相关状态
 const showRunPanel = ref(false)
 const isRunning = ref(false)
 const runStatus = ref<'running' | 'success' | 'error' | null>(null)
 const runResult = ref<string | null>(null)
 const runError = ref<string | null>(null)
-const runSystemPrompt = ref('')
-const runUserPrompt = ref('')
+const runInput = ref('')
 
 // 模型选项
 const modelOptions = [
@@ -91,46 +70,11 @@ const modelOptions = [
 // 选中的模型
 const selectedModel = ref(props.node.data?.model || 'qwen-plus')
 
-// 是否为手动输入
-function isManualInput(input: Input) {
-  return !input.value?.type || input.value.type !== 1
-}
-
-// 生成选择器的值
-function generateSelectValue(val?: Input['value']): string {
-  if (!val?.type || val.type !== 1) return 'manual'
-  return `${val.nodeId}|${val.outputId}`
-}
-
-// 处理选择变化
-function onSelectChange(inputId: number, val: string) {
-  const input = inputs.value.find(i => i.id === inputId)
-  if (!input) return
-
-  if (val === 'manual') {
-    input.value = {
-      type: 0,
-      nodeId: -1,
-      outputId: -1,
-      text: ''
-    }
-  } else {
-    const [nodeId, outputId] = val.split('|').map(Number)
-    input.value = {
-      type: 1,
-      nodeId,
-      outputId,
-      text: ''
-    }
-  }
-  updateNode()
-}
-
 // 更新节点
 function updateNode() {
   emit('update:node', {
     ...props.node,
-    inputs: inputs.value,
+    inputs: [input.value],
     outputs: [{
       id: 0,
       name: 'text',
@@ -142,7 +86,7 @@ function updateNode() {
   })
 }
 
-// 运行模型
+// 运行爬虫
 async function run() {
   isRunning.value = true
   runStatus.value = 'running'
@@ -152,17 +96,12 @@ async function run() {
   try {
     const formattedInputs = [
       {
-        "name": "system_prompt",
-        "type": "string",
-        "value": runSystemPrompt.value
-      },
-      {
-        "name": "user_prompt",
-        "type": "string",
-        "value": runUserPrompt.value
+        name: 'url',
+        type: 'string',
+        value: runInput.value
       }
     ]
-    console.log(props.workflow_id)
+
     const response = await axios({
       method: 'post',
       url: '/workflow/runSingle',
@@ -172,7 +111,8 @@ async function run() {
         inputs: JSON.stringify(formattedInputs)
       }
     })
-    const data = await response.data
+
+    const data = response.data
     if (data.code === 0) {
       runResult.value = data.result
       runStatus.value = 'success'
@@ -191,17 +131,21 @@ async function run() {
 // 暴露方法给父组件
 defineExpose({
   openRunPanel: () => {
-    const systemPromptInput = inputs.value.find(i => i.name === 'system_prompt')
-    const userPromptInput = inputs.value.find(i => i.name === 'user_prompt')
-    runSystemPrompt.value = systemPromptInput?.value?.text || ''
-    runUserPrompt.value = userPromptInput?.value?.text || ''
+    runInput.value = input.value.value.text || ''
     showRunPanel.value = true
+  }
+})
+
+// 组件挂载时初始化
+onMounted(() => {
+  if (!props.node.inputs?.length) {
+    updateNode()
   }
 })
 </script>
 
 <template>
-  <div class="model-node-detail">
+  <div class="web-node-detail">
     <!-- 输入配置 -->
     <div class="section">
       <div class="section-header">
@@ -209,48 +153,50 @@ defineExpose({
       </div>
       
       <div class="input-config">
-        <template v-for="input in inputs" :key="input.id">
-          <div class="input-group">
-            <div class="input-header">
-              <h5>{{ input.name === 'system_prompt' ? '系统提示词' : '用户提示词' }}</h5>
-            </div>
-            
-            <div class="form-group">
-              <label>输入来源</label>
-              <el-select
-                :model-value="generateSelectValue(input.value)"
-                placeholder="选择输入来源"
-                size="small"
-                class="source-select"
-                @change="val => onSelectChange(input.id, val)"
-              >
-                <el-option
-                  label="手动输入"
-                  value="manual"
-                />
-                <template v-for="node in allUpstreamNodes" :key="node.id">
-                  <el-option
-                    v-for="(nodeOutput, idx) in node.outputs"
-                    :key="`${node.id}-${idx}`"
-                    :label="`${node.name}: ${nodeOutput.name}`"
-                    :value="`${node.id}|${nodeOutput.id}`"
-                  />
-                </template>
-              </el-select>
-            </div>
-            
-            <div v-if="isManualInput(input)" class="form-group">
-              <label>输入内容</label>
-              <el-input
-                v-model="input.value.text"
-                type="textarea"
-                :rows="3"
-                :placeholder="input.name === 'system_prompt' ? '请输入系统提示词' : '请输入用户提示词'"
-                @input="updateNode"
-              />
-            </div>
+        <div class="form-group">
+          <label>URL</label>
+          <el-input
+            v-model="input.value.text"
+            placeholder="请输入要爬取的网页URL"
+            @input="updateNode"
+          />
+        </div>
+
+        <div class="input-info">
+          <div class="info-item">
+            <label>变量名称:</label>
+            <span>url</span>
           </div>
-        </template>
+          <div class="info-item">
+            <label>变量类型:</label>
+            <span>string</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 模型配置 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>模型配置</h4>
+      </div>
+      
+      <div class="form-group">
+        <label>选择模型</label>
+        <el-select
+          v-model="selectedModel"
+          placeholder="请选择模型"
+          size="small"
+          class="model-select"
+          @change="updateNode"
+        >
+          <el-option
+            v-for="option in modelOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </el-select>
       </div>
     </div>
 
@@ -272,55 +218,19 @@ defineExpose({
       </div>
     </div>
 
-    <!-- 模型配置 -->
-    <div class="section">
-      <div class="section-header">
-        <h4>模型配置</h4>
-      </div>
-
-      <div class="form-group">
-        <label>选择模型</label>
-        <el-select
-            v-model="selectedModel"
-            placeholder="请选择模型"
-            size="small"
-            class="model-select"
-            @change="updateNode"
-        >
-          <el-option
-              v-for="option in modelOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-          />
-        </el-select>
-      </div>
-    </div>
-
     <!-- 运行面板 -->
     <el-dialog
       v-model="showRunPanel"
-      title="运行模型"
+      title="运行网页爬取"
       width="500px"
       :close-on-click-modal="false"
     >
       <div class="run-panel">
         <div class="run-input">
-          <label>系统提示词</label>
+          <label>URL</label>
           <el-input
-            v-model="runSystemPrompt"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入系统提示词"
-          />
-        </div>
-        <div class="run-input">
-          <label>用户提示词</label>
-          <el-input
-            v-model="runUserPrompt"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入用户提示词"
+            v-model="runInput"
+            placeholder="请输入要爬取的网页URL"
           />
         </div>
       </div>
@@ -365,7 +275,7 @@ defineExpose({
 </template>
 
 <style scoped>
-.model-node-detail {
+.web-node-detail {
   padding: 16px;
 }
 
@@ -386,27 +296,6 @@ defineExpose({
   color: #2c3e50;
 }
 
-.input-group {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.input-group:last-child {
-  margin-bottom: 0;
-}
-
-.input-header {
-  margin-bottom: 16px;
-}
-
-.input-header h5 {
-  margin: 0;
-  font-size: 14px;
-  color: #2c3e50;
-}
-
 .form-group {
   margin-bottom: 16px;
 }
@@ -422,14 +311,7 @@ label {
   color: #2c3e50;
 }
 
-.model-select {
-  width: 100%;
-}
-
-.source-select {
-  width: 100%;
-}
-
+.input-info,
 .output-info {
   background: #f5f7fa;
   border-radius: 4px;
@@ -552,4 +434,8 @@ label {
   justify-content: center;
   color: #666;
 }
-</style> 
+
+.model-select {
+  width: 100%;
+}
+</style>
