@@ -27,7 +27,7 @@ def workflow_intent_recognition(text, description):
             工作流描述："{description}"
             """
     completion = client.chat.completions.create(
-        model="qwen-max",
+        model="qwen-plus",
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -67,7 +67,7 @@ def workflow_extract_parameters_by_model(text, description, parameters):
             """
 
     completion = client.chat.completions.create(
-        model="qwen-max",
+        model="qwen-plus",
         messages=[{"role": "user", "content": prompt}]
     )
 
