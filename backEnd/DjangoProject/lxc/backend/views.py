@@ -429,10 +429,10 @@ def user_get_contacts(request):
 
         # 然后再统一生成联系人信息
         contact_dict = {}
-        for idx, (cid, msg) in enumerate(latest_msg_map.items(), start=1):
+        for cid, msg in latest_msg_map.items():
             contact_user = msg.receiver if msg.sender == user else msg.sender
             contact_dict[cid] = {
-                "id": idx,
+                "id": contact_user.user_id,  # ✅ 使用真实数据库主键
                 "name": contact_user.username,
                 "unread": PrivateMessage.objects.filter(sender=contact_user, receiver=user, is_read=False).count(),
                 "lastMessage": {
