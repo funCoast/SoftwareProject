@@ -254,17 +254,13 @@ class AgentInfoView(View):
             .filter(agent=agent)
             .values_list('workflow_id', flat=True)
         )
-        # 如果有插件关联表，放在这里类似查询
-        plugin_ids = ["CurrentTimePlugin", "TimestampPlugin", "TimestampTransformPlugin",
-                      "TimezoneSwitchPlugin", "WeekdayCalculatorPlugin", "CodeRunPlugin",
-                      "SpeechToTextPlugin", "WeatherScraperPlugin"]
 
         # 组装 config
         config = {
             "system_prompt": agent.persona or "",
             "selectedKbs": kb_ids,
-            "selectedPlugins": plugin_ids,
             "selectedWorkflows": workflow_ids,
+            "selectedModel": agent.llm,
         }
 
         if agent.status=='published':
