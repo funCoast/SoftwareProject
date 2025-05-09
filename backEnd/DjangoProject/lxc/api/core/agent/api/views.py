@@ -2,12 +2,14 @@ import json
 import os
 import time
 import uuid
+from re import search
 
 from django.http import JsonResponse
 from django.views import View
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 
+from api.core.agent.chat_bot.gen_response import gen_response_temp, gen_response
 from api.core.agent.chat_bot.llm_integration import LLMClient
 from api.core.agent.chat_bot.session import get_or_create_session, save_message, get_limited_session_history, \
     generate_prompt_with_context
@@ -22,47 +24,21 @@ from lxc import settings
 @require_http_methods(["POST"])
 def temp_send_message(request):
     try:
-        llm_client = LLMClient()
-        data = json.loads(request.body)
-        user_id = data.get('uid')
-        message = data.get('content')
-        agent_id = data.get('agent_id')
+        user_id = request.POST.get('uid')
+        message = request.POST.get('content')
+        agent_id = request.POST.get('agent_id')
+        files = request.FILES.get('file')
+        can_search = request.POST.get('search')
 
-        input_str = f"这是用户输入: {message}\n"
-        # 插件调用
-        plugin_response = plugin_call(message)
-        plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
+        response = gen_response_temp(user_id, agent_id, message, files, can_search)
 
-        # 知识库调用
-        agent = Agent.objects.get(agent_id=agent_id)
-        entries = AgentKnowledgeEntry.objects.filter(agent=agent)
-        kbs = [entry.kb for entry in entries]
-        kb_response = []
-        for kb in kbs:
-            kb_response.append(query_kb(agent.user_id, kb.kb_id, message))
-        kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
-
-        # 工作流调用
-        entries = AgentWorkflowRelation.objects.filter(agent=agent)
-        workflow_ids = [entry.workflow_id for entry in entries]
-        workflow_response = workflows_call(input_str + plugin_str + kb_str, workflow_ids)
-        workflow_str = f"\t- 调用工作流得到结果：{workflow_response}\n"
-
-        persona_str = agent.persona
-        prompt = "以上是用户的输入，下面是调用插件、调用用户知识库以及调用用户的工作流获得的信息，整合出适合回答用户输入部分的结果：\n"
-
-        total_message = input_str + prompt + plugin_str + kb_str + workflow_str
-        messages = [
-            {
-                "role": "system",
-                "content": persona_str
-            },
-            {
-                "role": "user",
-                "content": total_message
-            }
-        ]
-        response = llm_client.get_agent_response(messages).choices[0].message.content
+        if not ('think_chain' in response):
+            return JsonResponse({
+                "code": -1,
+                "message": "发送失败",
+                "content": response['response'],
+                "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+            }, status=500)
 
         return JsonResponse({
             "code": 0,
@@ -82,72 +58,38 @@ def temp_send_message(request):
 @require_http_methods(["POST"])
 def send_agent_message(request):
     try:
-        # 解析数据
-        data = json.loads(request.body)
-        user = data.get('uid')
-        agent_id = data.get('agent_id')
-        message = data.get('content')
+        user_id = request.POST.get('uid')
+        message = request.POST.get('content')
+        agent_id = request.POST.get('agent_id')
+        files = request.FILES.get('file')
+        can_search = request.POST.get('search')
 
         # 获取或创建会话
-        session, error = get_or_create_session(User.objects.get(user_id=user), agent_id)
+        session, error = get_or_create_session(User.objects.get(user_id=user_id), agent_id)
         if not session:
-            return JsonResponse({"status": "error", "message": error}, status=500)
+            return JsonResponse({
+                "code": -1,
+                "message": "发送失败",
+                "content": error,
+                "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+            }, status=500)
         # 获取会话历史（最近10条消息）
         session_history = get_limited_session_history(session, max_messages=10)
 
         # 保存用户消息
         save_message(session, message, True)
-        input_str = f"用户输入: {message}\n"
-        # aaa 插件调用
-        plugin_response = plugin_call(message)
-        plugin_str = f"\t- 调用插件得到结果: {str(plugin_response)}\n"
-        # bbb 知识库调用
-        agent = Agent.objects.get(agent_id=agent_id)
-        entries = AgentKnowledgeEntry.objects.filter(agent=agent)
-        kbs = [entry.kb for entry in entries]
-        kb_response = []
-        for kb in kbs:
-            kb_response.append(query_kb(agent.user_id, kb.kb_id, message))
-        kb_str = f"\t- 调用已有知识库中的内容，得到：{kb_response}\n"
-        # ccc 工作流调用
-        entries = AgentWorkflowRelation.objects.filter(agent=agent)
-        workflow_ids = [entry.workflow_id for entry in entries]
-        workflow_response = workflows_call(input_str + plugin_str + kb_str, workflow_ids)
 
-        # 生成提示词
-        prompt = generate_prompt_with_context(
-            message=message,
-            plugin_response=str(plugin_response),
-            kb_response=str(kb_response),
-            workflow_response=str(workflow_response)
-        )
+        response = gen_response(user_id, agent_id, message, files, can_search, session_history)
+        if not ('think_chain' in response):
+            return JsonResponse({
+                "code": -1,
+                "message": "发送失败",
+                "content": response['response'],
+                "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+            }, status=500)
 
-        messages = [
-            {
-                "role": "system",
-                "content": agent.persona
-            }
-        ]
-
-        for msg in session_history:
-            cur_message = {}
-            if msg.is_user:
-                cur_message["role"] = "user"
-            else:
-                cur_message["role"] = "assistant"
-            cur_message["content"] = msg.content
-            messages.append(cur_message)
-
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
-
-        # 调用大模型 API
-        llm_client = LLMClient()
-        response = llm_client.get_agent_response(messages).choices[0].message.content
         # 保存智能体响应
-        save_message(session, response, False)
+        save_message(session, response['response'], False)
 
         return JsonResponse({
             "code": 0,
