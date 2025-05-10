@@ -39,7 +39,7 @@ from .utils.tree import build_chunk_tree
 from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
 from .utils.vector_store import add_chunks_to_agent_index
-from .models import Announcement
+from .models import Announcement, AgentReport, Administrator
 import pandas as pd
 import requests
 
@@ -434,6 +434,7 @@ def user_get_contacts(request):
             contact_dict[cid] = {
                 "id": contact_user.user_id,  # ✅ 使用真实数据库主键
                 "name": contact_user.username,
+                "avatar": contact_user.avatar_url,
                 "unread": PrivateMessage.objects.filter(sender=contact_user, receiver=user, is_read=False).count(),
                 "lastMessage": {
                     "text": msg.content
@@ -479,7 +480,8 @@ def user_get_messages(request):
             data.append({
                 "sender": msg.sender.username,
                 "time": msg.send_time,
-                "text": msg.content
+                "text": msg.content,
+                "avatar": msg.sender.avatar_url,
             })
 
         return JsonResponse({
@@ -2689,6 +2691,8 @@ def fetch_all_published_agents(request):
         published_agents = Agent.objects.filter(status='published')
         agents_list = []
         for agent in published_agents:
+            # 统计当前智能体的评论数
+            comment_count = Comment.objects.filter(agent=agent).count()
             agents_list.append({
                 "id": agent.agent_id,
                 "name": agent.agent_name,
@@ -2697,6 +2701,7 @@ def fetch_all_published_agents(request):
                 "image": agent.icon_url,
                 "likes": agent.likes_count,
                 "favorites": agent.favorites_count,
+                "comments": comment_count,  # 新增字段：评论数
                 "author": {
                     "id": agent.user.user_id,
                     "name": agent.user.username,
@@ -3116,3 +3121,97 @@ def unban_user(request):
     user.save()
 
     return JsonResponse({"code": 0, "message": "解封成功"})
+
+@csrf_exempt
+def report_agent(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        uid = data.get('uid')
+        agent_id = data.get('agent_id')
+        reason = data.get('reason')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+
+    if not uid or not agent_id or not reason:
+        return JsonResponse({"code": -1, "message": "缺少 uid、agent_id 或 reason 参数"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        agent = Agent.objects.get(agent_id=agent_id)
+    except Agent.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "被举报智能体不存在"})
+
+    AgentReport.objects.create(
+        reporter=user,
+        agent=agent,
+        reason=reason
+    )
+
+    return JsonResponse({"code": 0, "message": "举报成功"})
+
+def get_agent_reports(request):
+    if request.method != 'GET':
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    report_list = AgentReport.objects.select_related('reporter', 'agent').order_by('-report_time')
+
+    reports = []
+    for r in report_list:
+        reports.append({
+            "report_id": r.report_id,
+            "reporter": r.reporter.username,
+            "agent_id": r.agent.agent_id,
+            "agent_name": r.agent.agent_name,
+            "reason": r.reason,
+            "is_processed": r.is_processed,
+            "process_result": r.process_result,
+            "processed_by": r.processed_by.account if r.processed_by else "",
+            "report_time": r.report_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "processed_time": r.processed_time.strftime("%Y-%m-%d %H:%M:%S") if r.processed_time else ""
+        })
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "reports": reports
+    })
+
+@csrf_exempt
+def process_agent_report(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        report_id = data.get('report_id')
+        admin_id = data.get('admin_id')
+        result = data.get('result')
+    except Exception:
+        return JsonResponse({"code": -1, "message": "请求体解析失败"})
+
+    if not report_id or not admin_id or not result:
+        return JsonResponse({"code": -1, "message": "缺少 report_id、admin_id 或 result 参数"})
+
+    try:
+        report = AgentReport.objects.get(report_id=report_id)
+        admin = Administrator.objects.get(admin_id=admin_id)
+    except (AgentReport.DoesNotExist, Administrator.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "举报记录或管理员不存在"})
+
+    if report.is_processed:
+        return JsonResponse({"code": -1, "message": "该举报已被处理"})
+
+    report.is_processed = True
+    report.process_result = result
+    report.processed_by = admin
+    report.processed_time = timezone.now()
+    report.save()
+
+    return JsonResponse({"code": 0, "message": "处理完成"})
