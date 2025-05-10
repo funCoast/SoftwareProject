@@ -32,7 +32,7 @@ def temp_send_message(request):
 
         response = gen_response_temp(user_id, agent_id, message, files, can_search)
 
-        if not ('think_chain' in response):
+        if not ('thinking_chain' in response):
             return JsonResponse({
                 "code": -1,
                 "message": "发送失败",
@@ -46,6 +46,7 @@ def temp_send_message(request):
             "content": response,
             "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
         })
+
     except Exception as e:
         return JsonResponse({
             "code": -1,
@@ -80,7 +81,7 @@ def send_agent_message(request):
         save_message(session, message, True)
 
         response = gen_response(user_id, agent_id, message, files, can_search, session_history)
-        if not ('think_chain' in response):
+        if not ('thinking_chain' in response):
             return JsonResponse({
                 "code": -1,
                 "message": "发送失败",
