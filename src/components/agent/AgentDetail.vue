@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, inject, type Ref } from 'vue'
+import { ref, onMounted, inject, type Ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { Document, Search, Close, Plus } from '@element-plus/icons-vue'
 
 const userAvatar = inject('avatar') as Ref
 const route = useRoute()
@@ -99,36 +100,98 @@ interface Message {
   sender: 'user' | 'assistant'
   content: string
   time: string
+  files?: string[]
+  search?: boolean
 }
 
 // 聊天相关
 const messageInput = ref('')
 const chatHistory = ref<Message[]>([])
+const fileList = ref<File[]>([])
+const enableSearch = ref(false)
+
+// 文件上传相关
+const handleFileUpload = (file: File) => {
+  if (enableSearch.value) {
+    ElMessage.warning('请先关闭联网搜索')
+    return false
+  }
+  fileList.value.push(file)
+  return false // 阻止自动上传
+}
+
+const removeFile = (file: File) => {
+  const index = fileList.value.indexOf(file)
+  if (index !== -1) {
+    fileList.value.splice(index, 1)
+  }
+}
+
+// 切换搜索模式
+const toggleSearch = () => {
+  if (fileList.value.length > 0) {
+    ElMessage.warning('请先移除已上传的文件')
+    return
+  }
+  enableSearch.value = !enableSearch.value
+}
+
+// 处理回车键
+const handleEnter = (e: KeyboardEvent) => {
+  if (e.ctrlKey && e.shiftKey) {
+    trySendMessage()
+  } else {
+    // 普通回车，插入换行
+    const textarea = e.target as HTMLTextAreaElement
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    messageInput.value = messageInput.value.substring(0, start) + '\n' + messageInput.value.substring(end)
+    // 保持光标位置
+    nextTick(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + 1
+    })
+  }
+}
 
 // 发送消息
 const trySendMessage = () => {
-  if (!messageInput.value.trim()) return
+  if (!messageInput.value.trim() && fileList.value.length === 0) return
+  
   sendMessage()
   chatHistory.value.push({
     sender: 'user',
     content: messageInput.value,
-    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    files: fileList.value.map(file => file.name),
+    search: enableSearch.value
   })
 
   messageInput.value = ''
+  fileList.value = []
+  enableSearch.value = false
 }
 
 async function sendMessage() {
   try {
+    const formData = new FormData()
+    formData.append('uid', sessionStorage.getItem('uid') as string)
+    formData.append('content', messageInput.value)
+    formData.append('agent_id', agent_id as string)
+    formData.append('search', enableSearch.value.toString())
+    
+    for (const file of fileList.value) {
+      formData.append('file', file)
+    }
+
     const response = await axios({
       method: 'post',
       url: 'agent/sendAgentMessage',
-      data: {
-        uid: sessionStorage.getItem('uid'),
-        agent_id: agent_id,
-        content: messageInput.value
-      },
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     })
+    
     if (response.data.code === 0) {
       chatHistory.value.push({
         sender: 'assistant',
@@ -414,7 +477,17 @@ onMounted(() => {
                 <img :src="userAvatar" alt="用户头像" />
               </div>
               <div class="message-content">
-                {{ message.content }}
+                <div class="message-text">{{ message.content }}</div>
+                <div v-if="message.files && message.files.length > 0" class="message-files">
+                  <div v-for="file in message.files" :key="file" class="message-file">
+                    <el-icon><Document /></el-icon>
+                    <span class="file-name">{{ file }}</span>
+                  </div>
+                </div>
+                <div v-if="message.search" class="message-search">
+                  <el-icon><Search /></el-icon>
+                  <span>已开启联网搜索</span>
+                </div>
               </div>
               <div class="message-time">{{ message.time }}</div>
             </template>
@@ -425,7 +498,7 @@ onMounted(() => {
                 <img :src="'http://122.9.33.84:8000' + agentInfo.icon" alt="助手头像" />
               </div>
               <div class="message-content">
-                {{ message.content }}
+                <div class="message-text">{{ message.content }}</div>
               </div>
               <div class="message-time">{{ message.time }}</div>
             </template>
@@ -435,19 +508,60 @@ onMounted(() => {
         <!-- 输入区域 -->
         <div class="chat-input-area">
           <div class="input-container">
-            <textarea
-                class="chat-input"
-                v-model="messageInput"
-                placeholder="输入消息..."
-                rows="1"
-            ></textarea>
-            <div class="input-actions">
-              <button class="action-btn" title="上传文件">
-                <img src="https://api.iconify.design/material-symbols:attach-file.svg" alt="上传" class="action-icon">
-              </button>
-              <button class="send-btn" title="发送" @click="trySendMessage">
-                <img src="https://api.iconify.design/material-symbols:send.svg" alt="发送" class="action-icon">
-              </button>
+            <div class="input-wrapper">
+              <div v-if="fileList.length > 0" class="file-preview">
+                <div class="file-list">
+                  <div v-for="file in fileList" :key="file.name" class="file-item">
+                    <el-icon><Document /></el-icon>
+                    <span class="file-name">{{ file.name }}</span>
+                    <el-button type="text" class="remove-file" @click="removeFile(file)">
+                      <el-icon><Close /></el-icon>
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="input-area">
+                <textarea
+                  class="chat-input"
+                  v-model="messageInput"
+                  placeholder="输入消息... (Ctrl+Shift+Enter 发送)"
+                  rows="1"
+                  @keydown.enter.prevent="handleEnter"
+                ></textarea>
+                
+                <div class="input-actions">
+                  <el-upload
+                    class="upload-button"
+                    :auto-upload="false"
+                    :show-file-list="false"
+                    :on-change="handleFileUpload"
+                    :disabled="enableSearch"
+                  >
+                    <el-button type="text" class="upload-icon" :class="{ 'disabled': enableSearch }">
+                      <el-icon><Plus /></el-icon>
+                    </el-button>
+                  </el-upload>
+                  
+                  <el-button
+                    class="search-button"
+                    :class="{ 'active': enableSearch }"
+                    @click="toggleSearch"
+                    :disabled="fileList.length > 0"
+                  >
+                    <el-icon><Search /></el-icon>
+                    <span>联网搜索</span>
+                  </el-button>
+                  
+                  <el-button 
+                    class="send-button"
+                    :disabled="!messageInput.trim()"
+                    @click="trySendMessage"
+                  >
+                    发送
+                  </el-button>
+                </div>
+              </div>
             </div>
           </div>
 <!--          <div class="input-tips">-->
@@ -897,47 +1011,219 @@ onMounted(() => {
 }
 
 .input-container {
-  display: flex;
-  gap: 12px;
-  background: #f8f9fa;
-  border: 1px solid #e6e6e6;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.input-wrapper {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e5e5e5;
   border-radius: 8px;
-  padding: 8px 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.input-area {
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-input {
-  flex: 1;
+  padding: 12px;
   border: none;
   outline: none;
   background: none;
   resize: none;
   font-size: 14px;
   line-height: 1.5;
-  max-height: 150px;
+  max-height: 200px;
   min-height: 24px;
 }
 
 .input-actions {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
 }
 
-.send-btn {
-  background: #2c3e50;
-  border: none;
-  border-radius: 6px;
+.upload-button {
+  margin-right: 8px;
+}
+
+.upload-icon {
   padding: 8px;
+  font-size: 20px;
+  color: #2c3e50;
+  border-radius: 4px;
+}
+
+.upload-icon:hover {
+  background: #f5f7fa;
+  color: #34495e;
+}
+
+.upload-icon.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.search-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #2c3e50;
+  border: 1px solid #2c3e50;
+  background: #fff;
+  transition: all 0.3s;
+  height: 32px;
+}
+
+.search-button:hover:not(:disabled) {
+  background: #2c3e50;
+  color: white;
+}
+
+.search-button.active {
+  background: #2c3e50;
+  color: white;
+}
+
+.search-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.send-button {
+  background: #2c3e50 !important;
+  border: none !important;
+  border-radius: 6px;
+  padding: 8px 20px;
+  color: white !important;
   cursor: pointer;
   transition: all 0.3s;
+  font-size: 14px;
 }
 
-.send-btn:hover {
-  background: #34495e;
+.send-button:hover:not(:disabled) {
+  background: #34495e !important;
 }
 
-.send-btn .action-icon {
-  filter: brightness(0) invert(1);
+.send-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.file-preview {
+  padding: 8px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 600px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #fff;
+  border-radius: 4px;
+  border: 1px solid #e5e5e5;
+  max-width: 200px;
+}
+
+.file-item .el-icon {
+  font-size: 16px;
+  color: #909399;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-file {
+  padding: 2px;
+  color: #909399;
+}
+
+.remove-file:hover {
+  color: #f56c6c;
+}
+
+.message-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.message-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.message-file .el-icon {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.message-file .file-name {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message.assistant .message-file {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.message.assistant .message-file .el-icon,
+.message.assistant .message-file .file-name {
+  color: #2c3e50;
+}
+
+.message-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.message.assistant .message-search {
+  background: rgba(0, 0, 0, 0.03);
+  color: #2c3e50;
+}
+
+.message-search .el-icon {
+  font-size: 14px;
 }
 
 .input-tips {

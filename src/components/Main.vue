@@ -55,6 +55,11 @@ const navItems = ref<NavItem[]>([
     icon: 'https://api.iconify.design/material-symbols:groups.svg'
   },
   {
+    path: '/user-manage',
+    label: '用户管理',
+    icon: 'https://api.iconify.design/material-symbols:manage-accounts.svg'
+  },
+  {
     path: '/publish-anno',
     label: '公告管理',
     icon: 'https://api.iconify.design/material-symbols:announcement.svg'
@@ -76,7 +81,8 @@ const filteredNavItems = computed(() => {
   } else {
     return navItems.value.filter(item => 
       item.path !== '/publish-anno' &&
-      item.path !== '/review-agent'
+      item.path !== '/review-agent' &&
+        item.path !== '/user-manage'
     )
   }
 })

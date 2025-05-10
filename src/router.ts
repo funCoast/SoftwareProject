@@ -104,6 +104,11 @@ const routes = [
         component: () => import("./components/admin/ReviewAgent.vue")
       },
       {
+        path: "user-manage",
+        name: "UserManage",
+        component: () => import("./components/admin/UserManage.vue")
+      },
+      {
         path: "agentDetail/:id",
         name: "AgentDetail",
         component: () => import("./components/agent/AgentDetail.vue"),

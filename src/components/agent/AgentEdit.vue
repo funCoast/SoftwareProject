@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeMount, watch, inject } from 'vue'
+import { ref, computed, onMounted, onBeforeMount, watch, inject, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import {useRoute} from "vue-router";
+import { marked } from 'marked'
 import router from "../../router.ts";
+import {Close, Document, Plus, Search} from "@element-plus/icons-vue";
 
 const route = useRoute()
 const agent_id = route.params.id
@@ -17,13 +19,6 @@ interface KnowledgeBase {
   description: string
   icon: string
   type: string
-}
-
-interface Plugin {
-  id: number
-  name: string
-  description: string
-  icon: string
 }
 
 interface Workflow {
@@ -44,6 +39,7 @@ interface AgentInfo {
     selectedKbs: number[]
     selectedPlugins: number[]
     selectedWorkflows: number[]
+    selectedModel: string
   }
 }
 
@@ -51,7 +47,6 @@ onMounted(() => {
   getAgentInfo()
   getKnowledgeBases()
   getWorkflows()
-  // getPlugins()
 })
 
 onBeforeMount(() => {
@@ -70,10 +65,17 @@ const agentInfo = ref<AgentInfo>({
     system_prompt: '',
     selectedKbs: [],
     selectedPlugins: [],
-    selectedWorkflows: []
+    selectedWorkflows: [],
+    selectedModel: 'qwen-plus'
   }
 })
 
+// 模型选项
+const modelOptions = [
+  { label: '通义千问', value: 'qwen-plus' },
+  { label: 'DeepSeek', value: 'deepseek-r1' },
+  { label: '智谱AI', value: 'chatglm-6b-v2' }
+]
 
 const userName = ref('')
 function fetchUserInfo() {
@@ -118,30 +120,6 @@ async function getKnowledgeBases() {
     }
   } catch (error) {
     console.error('获取知识库列表失败:', error)
-  }
-}
-
-// 插件相关
-const plugins = ref<Plugin[]>([])
-
-async function getPlugins() {
-  try {
-    const response = await axios({
-      method: 'get',
-      url: '/plugins/getPlugins',
-      params: {
-        uid: uid.value
-      },
-    })
-
-    if (response.data.code === 0) {
-      plugins.value = response.data.plugins
-      console.log('获取插件列表成功')
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error('获取插件列表失败:', error)
   }
 }
 
@@ -296,13 +274,12 @@ async function updateAgentInfo() {
         agent_id: agent_id,
         system_prompt: agentInfo.value.config.system_prompt,
         selectedKbs: agentInfo.value.config.selectedKbs,
-        selectedPlugins: [],
-        selectedWorkflows: agentInfo.value.config.selectedWorkflows
+        selectedWorkflows: agentInfo.value.config.selectedWorkflows,
+        selectedModel: agentInfo.value.config.selectedModel
       }
     })
     if (response.data.code === 0) {
       console.log("配置: ", agentInfo.value.config)
-      // ElMessage.success('配置已保存')
       alert("保存成功！")
     } else {
       ElMessage.error(response.data.message)
@@ -317,7 +294,7 @@ async function updateAgentInfo() {
 const selectedKbs = ref<number[]>([])
 const selectedWorkflows = ref<number[]>([])
 
-// 监听agentInfo的变化，更新选中的知识库和工作流
+// 监听agentInfo的变化，更新选中的知识库和大模型
 watch(() => agentInfo.value.config.selectedKbs, (newVal) => {
   if (JSON.stringify(newVal) !== JSON.stringify(selectedKbs.value)) {
     selectedKbs.value = [...newVal]
@@ -330,7 +307,7 @@ watch(() => agentInfo.value.config.selectedWorkflows, (newVal) => {
   }
 }, { immediate: true })
 
-// 监听选中的知识库和工作流变化，更新agentInfo
+// 监听选中的知识库和大模型变化，更新agentInfo
 watch(selectedKbs, (newVal) => {
   if (JSON.stringify(newVal) !== JSON.stringify(agentInfo.value.config.selectedKbs)) {
     agentInfo.value.config.selectedKbs = [...newVal]
@@ -350,7 +327,8 @@ function goToWorkflowEdit(id: number) {
   })
 }
 
-function goToKBEdit(id: number, type: string) {
+function goToKBEdit(id: number, type: string | undefined) {
+  if (!type) return
   router.push({
     path: `/workspace/${type}/${id}`,
     query: { uid: uid.value }
@@ -360,25 +338,94 @@ function goToKBEdit(id: number, type: string) {
 
 interface Message {
   sender: 'user' | 'assistant'
-  content: string
+  content: {
+    thinking_chain: string,
+    response: string
+  }
   time: string
+  files?: string[]
+  search?: boolean
 }
 
 // 聊天相关
 const messageInput = ref('')
 const chatHistory = ref<Message[]>([])
+const fileList = ref<File[]>([])
+const enableSearch = ref(false)
 
+// 添加加载状态
+const isLoading = ref(false)
+
+// 文件上传相关
+const handleFileUpload = (file: File) => {
+  if (enableSearch.value) {
+    ElMessage.warning('请先关闭联网搜索')
+    return false
+  }
+  fileList.value.push(file)
+  return false // 阻止自动上传
+}
+
+const removeFile = (file: File) => {
+  const index = fileList.value.indexOf(file)
+  if (index !== -1) {
+    fileList.value.splice(index, 1)
+  }
+}
+
+// 切换搜索模式
+const toggleSearch = () => {
+  if (fileList.value.length > 0) {
+    ElMessage.warning('请先移除已上传的文件')
+    return
+  }
+  enableSearch.value = !enableSearch.value
+}
+
+// 修改发送消息函数
+const sendMessage = () => {
+  if (!messageInput.value.trim() && fileList.value.length === 0) return
+  
+  isLoading.value = true
+  sendsendMessage()
+  chatHistory.value.push({
+    sender: 'user',
+    content: {
+      thinking_chain: '',
+      response: messageInput.value
+    },
+    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    files: fileList.value.map(file => file.name),
+    search: enableSearch.value
+  })
+
+  messageInput.value = ''
+  fileList.value = []
+  enableSearch.value = false
+}
+
+// 修改sendsendMessage函数
 async function sendsendMessage() {
   try {
+    const formData = new FormData()
+    formData.append('uid', uid.value)
+    formData.append('content', messageInput.value)
+    formData.append('agent_id', agent_id as string)
+    formData.append('search', enableSearch.value.toString())
+
+    for (const file of fileList.value) {
+      formData.append('file', file)
+    }
+
     const response = await axios({
       method: 'post',
       url: 'agent/sendMessage',
-      data: {
-        uid: uid.value,
-        agent_id: agent_id,
-        content: messageInput.value
-      },
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     })
+    
     if (response.data.code === 0) {
       chatHistory.value.push({
         sender: 'assistant',
@@ -391,25 +438,36 @@ async function sendsendMessage() {
     }
   } catch (error) {
     console.error('信息发送失败:', error)
+  } finally {
+    isLoading.value = false
   }
-}
-
-// 发送消息
-const sendMessage = () => {
-  if (!messageInput.value.trim()) return
-  sendsendMessage()
-  chatHistory.value.push({
-    sender: 'user',
-    content: messageInput.value,
-    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-  })
-
-  messageInput.value = ''
 }
 
 // 确认按钮处理函数
 const handleConfirm = () => {
   updateAgentInfo()
+}
+
+// 处理回车键
+const handleEnter = (e: KeyboardEvent) => {
+  if (e.ctrlKey && e.shiftKey) {
+    sendMessage()
+  } else {
+    // 普通回车，插入换行
+    const textarea = e.target as HTMLTextAreaElement
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    messageInput.value = messageInput.value.substring(0, start) + '\n' + messageInput.value.substring(end)
+    // 保持光标位置
+    nextTick(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + 1
+    })
+  }
+}
+
+// 渲染Markdown格式
+function renderedMarkdown(content: string) {
+  return marked(content)
 }
 </script>
 
@@ -455,11 +513,9 @@ const handleConfirm = () => {
               :value="kb.id"
             >
               <div class="option-item">
-                <el-avatar :size="24" :src="kb.icon" />
+                <el-avatar :size="24" :src="kb.icon" style="margin-top: -6px;"/>
                 <div class="option-info">
-                  <div class="option-name">{{ kb.name }}</div>
-                  <div class="option-desc">{{ kb.description }}</div>
-                  <div class="option-type">类型: {{ kb.type }}</div>
+                  <div class="option-name" style="margin-top: -3px;">{{ kb.name }}</div>
                 </div>
               </div>
             </el-option>
@@ -472,7 +528,7 @@ const handleConfirm = () => {
                  @click="goToKBEdit(kb, knowledgeBases.find(k => k.id === kb)?.type)"
                  style="cursor: pointer;"
             >
-              <el-avatar :size="32" :src="knowledgeBases.find(k => k.id === kb)?.icon" />
+              <el-avatar :size="32" :src="knowledgeBases.find(k => k.id === kb)?.icon"/>
               <div class="item-info">
                 <div class="item-name">{{ knowledgeBases.find(k => k.id === kb)?.name }}</div>
                 <div class="item-desc">{{ knowledgeBases.find(k => k.id === kb)?.description }}</div>
@@ -481,43 +537,6 @@ const handleConfirm = () => {
             </div>
           </div>
         </div>
-
-<!--        <div class="config-section">-->
-<!--          <h3>插件配置</h3>-->
-<!--          <el-select-->
-<!--            v-model="selectedPlugins"-->
-<!--            multiple-->
-<!--            filterable-->
-<!--            placeholder="选择插件"-->
-<!--            class="full-width"-->
-<!--            popper-class="custom-select-dropdown"-->
-<!--          >-->
-<!--            <el-option-->
-<!--              v-for="plugin in plugins"-->
-<!--              :key="plugin.id"-->
-<!--              :label="plugin.name"-->
-<!--              :value="plugin.id"-->
-<!--            >-->
-<!--              <div class="option-item">-->
-<!--                <el-avatar :size="24" :src="plugin.icon" />-->
-<!--                <div class="option-info">-->
-<!--                  <div class="option-name">{{ plugin.name }}</div>-->
-<!--                  <div class="option-desc">{{ plugin.description }}</div>-->
-<!--                </div>-->
-<!--              </div>-->
-<!--            </el-option>-->
-<!--          </el-select>-->
-
-<!--          <div class="selected-items">-->
-<!--            <div v-for="plugin in selectedPlugins" :key="plugin.id" class="selected-item">-->
-<!--              <el-avatar :size="32" :src="plugin.icon" />-->
-<!--              <div class="item-info">-->
-<!--                <div class="item-name">{{ plugin.name }}</div>-->
-<!--                <div class="item-desc">{{ plugin.description }}</div>-->
-<!--              </div>-->
-<!--            </div>-->
-<!--          </div>-->
-<!--        </div>-->
 
         <div class="config-section">
           <h3>工作流配置</h3>
@@ -536,10 +555,9 @@ const handleConfirm = () => {
               :value="workflow.id"
             >
               <div class="option-item">
-                <el-avatar :size="24" :src="workflow.icon" />
+                <el-avatar :size="24" :src="workflow.icon" style="margin-top: -6px;"/>
                 <div class="option-info">
-                  <div class="option-name">{{ workflow.name }}</div>
-                  <div class="option-desc">{{ workflow.description }}</div>
+                  <div class="option-name" style="margin-top: -3px;">{{ workflow.name }}</div>
                 </div>
               </div>
             </el-option>
@@ -558,6 +576,22 @@ const handleConfirm = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="config-section">
+          <h3>大模型配置</h3>
+          <el-select
+            v-model="agentInfo.config.selectedModel"
+            placeholder="请选择大模型"
+            class="full-width"
+          >
+            <el-option
+              v-for="option in modelOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
         </div>
 
         <div class="config-section">
@@ -586,7 +620,17 @@ const handleConfirm = () => {
                   <span class="message-time">{{ message.time }}</span>
                   <span class="sender-name">{{ message.sender }}</span>
                 </div>
-                <div class="message-text" style="white-space: pre-line;">{{ message.content }}</div>
+                <div class="message-text" style="white-space: pre-line;">{{ message.content.response }}</div>
+                <div v-if="message.files && message.files.length > 0" class="message-files">
+                  <div v-for="file in message.files" :key="file" class="message-file">
+                    <el-icon><Document /></el-icon>
+                    <span class="file-name">{{ file }}</span>
+                  </div>
+                </div>
+                <div v-if="message.search" class="message-search">
+                  <el-icon><Search /></el-icon>
+                  <span>已开启联网搜索</span>
+                </div>
               </div>
               <el-avatar class="user-avatar" :size="40" :src="userAvatar" />
             </template>
@@ -597,21 +641,93 @@ const handleConfirm = () => {
                   <span class="sender-name">{{ message.sender }}</span>
                   <span class="message-time">{{ message.time }}</span>
                 </div>
-                <div class="message-text" style="white-space: pre-line;">{{ message.content }}</div>
+                <div class="message-text">
+                  <div v-if="message.content.thinking_chain" class="thinking-chain" v-html="renderedMarkdown(message.content.thinking_chain)"></div>
+                  <div class="response" v-html="renderedMarkdown(message.content.response)"></div>
+                </div>
               </div>
             </template>
+          </div>
+          
+          <!-- 添加加载提示 -->
+          <div v-if="isLoading" class="message assistant">
+            <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
+            <div class="message-content assistant-message">
+              <div class="message-info">
+                <span class="sender-name">assistant</span>
+              </div>
+              <div class="message-text">
+                <div class="typing-indicator">
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="chat-input">
-          <el-input
-            v-model="messageInput"
-            type="textarea"
-            :rows="3"
-            placeholder="输入消息..."
-            @keyup.enter.native="sendMessage"
-          />
-          <el-button type="primary" @click="sendMessage">发送</el-button>
+          <div class="input-container">
+            <div class="input-wrapper">
+              <div v-if="fileList.length > 0" class="file-preview">
+                <div class="file-list">
+                  <div v-for="file in fileList" :key="file.name" class="file-item">
+                    <el-icon><Document /></el-icon>
+                    <span class="file-name">{{ file.name }}</span>
+                    <el-button type="text" class="remove-file" @click="removeFile(file)">
+                      <el-icon><Close /></el-icon>
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="input-area">
+                <el-input
+                  v-model="messageInput"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="输入消息... (Ctrl+Shift+Enter 发送)"
+                  @keydown.enter.prevent="handleEnter"
+                  resize="none"
+                  class="message-input"
+                />
+                
+                <div class="input-actions">
+                  <el-upload
+                    class="upload-button"
+                    :auto-upload="false"
+                    :show-file-list="false"
+                    :on-change="handleFileUpload"
+                    :disabled="enableSearch"
+                  >
+                    <el-button type="text" class="upload-icon" :class="{ 'disabled': enableSearch }">
+                      <el-icon><Plus /></el-icon>
+                    </el-button>
+                  </el-upload>
+                  
+                  <el-button
+                    class="search-button"
+                    :class="{ 'active': enableSearch }"
+                    @click="toggleSearch"
+                    :disabled="fileList.length > 0"
+                  >
+                    <el-icon><Search /></el-icon>
+                    <span>联网搜索</span>
+                  </el-button>
+                  
+                  <el-button 
+                    type="primary" 
+                    class="send-button"
+                    :disabled="!messageInput.trim()"
+                    @click="sendMessage"
+                  >
+                    发送
+                  </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -847,49 +963,240 @@ const handleConfirm = () => {
   word-break: break-word;
 }
 
+.thinking-chain {
+  background: #f8f9fa;
+  border-left: 3px solid #409EFF;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  color: #666;
+  white-space: pre-wrap;
+}
+
+.response {
+  color: #2c3e50;
+}
+
 .chat-input {
   padding: 20px;
   border-top: 1px solid #eee;
-  display: flex;
-  gap: 12px;
   background: #fff;
 }
 
-.chat-input .el-textarea {
-  flex: 1;
+.input-container {
+  max-width: 800px;
+  margin: 0 auto;
 }
 
-.chat-input .el-button {
-  align-self: flex-end;
+.input-wrapper {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
-:deep(.el-select-dropdown__item) {
+.input-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-input {
+  padding: 12px;
+}
+
+.message-input :deep(.el-textarea__inner) {
+  border: none;
+  box-shadow: none;
+  resize: none;
+  padding: 0;
+  min-height: 24px;
+  max-height: 200px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.input-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
-  height: auto;
-  line-height: inherit;
-}
-
-:deep(.el-select-dropdown__item.selected) {
-  font-weight: normal;
-}
-
-:deep(.el-select-dropdown__item .el-avatar) {
-  vertical-align: middle;
-}
-
-.config-actions {
-  margin-top: 20px;
-  padding: 0 20px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.agent-icon {
-  width: 24px;
-  height: 24px;
-  padding: 2px;
   background: #fff;
+}
+
+.search-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: #909399;
+  border: 1px solid #dcdfe6;
+  background: #fff;
+  transition: all 0.3s;
+  height: 32px;
+}
+
+.search-button:hover:not(:disabled) {
+  color: #409EFF;
+  border-color: #409EFF;
+}
+
+.search-button.active {
+  color: #409EFF;
+  border-color: #409EFF;
+  background: #ecf5ff;
+}
+
+.search-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.file-preview {
+  padding: 8px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.file-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 600px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #fff;
+  border-radius: 4px;
+  border: 1px solid #e5e5e5;
+  max-width: 200px;
+}
+
+.file-item .el-icon {
+  font-size: 16px;
+  color: #909399;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-file {
+  padding: 2px;
+  color: #909399;
+}
+
+.remove-file:hover {
+  color: #f56c6c;
+}
+
+.upload-button {
+  margin-right: 8px;
+}
+
+.upload-icon {
+  padding: 8px;
+  font-size: 20px;
+  color: #909399;
+  border-radius: 4px;
+}
+
+.upload-icon:hover {
+  background: #f5f7fa;
+  color: #409EFF;
+}
+
+.send-button {
+  padding: 8px 20px;
+  font-size: 14px;
+}
+
+.send-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.message-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.message-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f0f2f5;
   border-radius: 6px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border: 1px solid #e5e5e5;
+}
+
+.message-file .el-icon {
+  font-size: 16px;
+  color: #909399;
+}
+
+.message-file .file-name {
+  font-size: 13px;
+  color: #333;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: #ecf5ff;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #409EFF;
+}
+
+.message-search .el-icon {
+  font-size: 14px;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background: #409EFF;
+  border-radius: 50%;
+  animation: typing 1s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0.2s; }
+.typing-dot:nth-child(2) { animation-delay: 0.3s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 </style>
