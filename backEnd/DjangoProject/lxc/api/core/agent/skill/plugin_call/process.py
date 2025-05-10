@@ -18,7 +18,7 @@ def intent_recognition(text, labels):
         Intents:
         """
     completion = client.chat.completions.create(
-        model="qwen-max",
+        model="qwen-plus",
         messages=[{"role": "user", "content": prompt}]
     )
     # 假设模型的输出直接是意图标签，用空格隔开
@@ -65,7 +65,7 @@ def extract_parameters_by_model(text, tool):
         """
 
     completion = client.chat.completions.create(
-        model="qwen-max",
+        model="qwen-plus",
         messages=[{"role": "user", "content": prompt}]
     )
 
