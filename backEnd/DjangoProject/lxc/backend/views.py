@@ -2841,6 +2841,8 @@ class FetchFavoritesView(View):
             a = ui.agent
             if a.status == 'published':
                 author = a.user
+                # 统计当前智能体的评论数
+                comment_count = Comment.objects.filter(agent=a).count()
                 data.append({
                     "id": a.agent_id,
                     "name": a.agent_name,
@@ -2849,6 +2851,7 @@ class FetchFavoritesView(View):
                     "image": a.icon_url or "",
                     "likes": a.likes_count,
                     "favorites": a.favorites_count,
+                    "comments": comment_count,  # 新增字段
                     "author": {
                         "id": author.user_id,
                         "name": author.username,
@@ -2861,7 +2864,6 @@ class FetchFavoritesView(View):
             json_dumps_params={'ensure_ascii': False}
         )
 
-
 class FetchHotView(View):
     """
     GET /user/fetchHot
@@ -2870,7 +2872,6 @@ class FetchHotView(View):
 
     def get(self, request):
         try:
-            # 为每个 Agent 动态计算 hot_score = likes_count + favorites_count
             hot_agents = (
                 Agent.objects
                 .annotate(hot_score=ExpressionWrapper(
@@ -2885,6 +2886,8 @@ class FetchHotView(View):
             for a in hot_agents:
                 if a.status == 'published':
                     author = a.user
+                    # 统计当前智能体的评论数
+                    comment_count = Comment.objects.filter(agent=a).count()
                     data.append({
                         "id": a.agent_id,
                         "name": a.agent_name,
@@ -2893,6 +2896,7 @@ class FetchHotView(View):
                         "image": a.icon_url or "",
                         "likes": a.likes_count,
                         "favorites": a.favorites_count,
+                        "comments": comment_count,  # 新增字段
                         "author": {
                             "id": author.user_id,
                             "name": author.username,
@@ -2933,10 +2937,8 @@ class FetchFollowWorksView(View):
                 json_dumps_params={'ensure_ascii': False}
             )
 
-        # 获取该用户关注的所有用户
         followees = FollowRelationship.objects.filter(follower=user).values_list('followee', flat=True)
 
-        # 查询这些用户的所有 Agent
         agents = (
             Agent.objects
                  .filter(user_id__in=followees)
@@ -2947,6 +2949,8 @@ class FetchFollowWorksView(View):
         for a in agents:
             if a.status == 'published':
                 author = a.user
+                # 统计当前智能体的评论数
+                comment_count = Comment.objects.filter(agent=a).count()
                 data.append({
                     "id": a.agent_id,
                     "name": a.agent_name,
@@ -2955,6 +2959,7 @@ class FetchFollowWorksView(View):
                     "image": a.icon_url or "",
                     "likes": a.likes_count,
                     "favorites": a.favorites_count,
+                    "comments": comment_count,  # 新增字段
                     "author": {
                         "id": author.user_id,
                         "name": author.username,
