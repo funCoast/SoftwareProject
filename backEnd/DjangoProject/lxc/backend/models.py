@@ -251,3 +251,21 @@ class Message(models.Model):
     content = models.TextField()
     is_user = models.BooleanField()  # True为用户消息，False为AI回复
     timestamp = models.DateTimeField(auto_now_add=True)
+
+
+class AgentReport(models.Model):
+    report_id = models.AutoField(primary_key=True)
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agent_reports')
+    agent = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='reports')
+    reason = models.TextField()
+    report_time = models.DateTimeField(auto_now_add=True)
+
+    # 后续处理结果
+    is_processed = models.BooleanField(default=False)  # 是否已处理
+    process_result = models.CharField(max_length=100, null=True, blank=True)
+    processed_by = models.ForeignKey(Administrator, null=True, blank=True, on_delete=models.SET_NULL,
+                                     related_name='processed_agent_reports')
+    processed_time = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Report {self.report_id} on Agent {self.agent.agent_id} by {self.reporter.username}"
