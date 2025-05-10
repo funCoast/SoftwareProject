@@ -39,7 +39,7 @@ from .utils.tree import build_chunk_tree
 from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
 from .utils.vector_store import add_chunks_to_agent_index
-from .models import Announcement, AgentReport
+from .models import Announcement, AgentReport, Administrator
 import pandas as pd
 import requests
 
