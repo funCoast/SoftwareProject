@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch,onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import moment from 'moment'
 
 const baseImageUrl = "http://122.9.33.84:8000"
+const personID = ref('')
+const messageListRef = ref<HTMLElement | null>(null)
 // 联系人列表
 const contacts = ref<{
   id: number
@@ -42,7 +44,7 @@ async function fetchContacts() {
       method: 'get',
       url: 'user/getContacts',
       params: {
-        uid: sessionStorage.getItem('uid')
+        uid: personID.value
       }
     })
     if (response.data.code === 0) {
@@ -57,7 +59,17 @@ async function fetchContacts() {
     ElMessage.error('获取联系人列表失败')
   }
 }
+function scrollToBottom() {
+  nextTick(() => {
+    const el = messageListRef.value
+    if (!el) return
 
+    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10
+    if (isAtBottom) {
+      el.scrollTop = el.scrollHeight
+    }
+  })
+}
 // 获取与特定联系人的消息记录
 async function fetchMessages(contactId: string) {
   try {
@@ -65,19 +77,12 @@ async function fetchMessages(contactId: string) {
       method: 'get',
       url: 'user/getMessages',
       params: {
-        messagerId1: sessionStorage.getItem('uid'),
+        messagerId1: personID.value,
         messagerId2: contactId
       }
     })
     if (response.data.code === 0) {
       messages.value = response.data.data
-      // 滚动到底部
-      setTimeout(() => {
-        const messageContainer = document.querySelector('.message-list')
-        if (messageContainer) {
-          messageContainer.scrollTop = messageContainer.scrollHeight
-        }
-      }, 100)
     } else {
       console.log(response.data.message)
       ElMessage.error('获取消息记录失败：' + response.data.message)
@@ -99,7 +104,7 @@ async function sendMessage() {
       method: 'post',
       url: 'user/sendMessage',
       data: {
-        sender: sessionStorage.getItem('uid'),
+        sender: personID.value,
         receiver: currentContact.value.id,
         message: newMessage.value
       }
@@ -107,6 +112,12 @@ async function sendMessage() {
     if (response.data.code === 0) {
       newMessage.value = ''
       await fetchMessages(currentContact.value.id.toString())
+      nextTick(() => {
+        const el = messageListRef.value
+        if (el) {
+          el.scrollTop = el.scrollHeight
+        }
+      })
     } else {
       ElMessage.error('发送消息失败：' + response.data.message)
     }
@@ -117,13 +128,27 @@ async function sendMessage() {
 }
 
 // 选择联系人
-function selectContact(contact: any) {
+async function selectContact(contact: any) {
   currentContact.value = {
     id: contact.id,
     name: contact.name,
     avatar: contact.avatar
   }
-  fetchMessages(contact.id.toString())
+  await fetchMessages(contact.id.toString())
+  nextTick(() => {
+    const el = messageListRef.value
+    if (el) {
+      el.scrollTop = el.scrollHeight
+    }
+  })
+}
+
+function handleEnterKey(event : KeyboardEvent) {
+  if (event.ctrlKey || !event.shiftKey) {
+    // 阻止默认行为（换行）
+    event.preventDefault()
+    sendMessage()
+  }
 }
 
 // 监听当前联系人变化
@@ -132,9 +157,46 @@ watch(currentContact, (newVal) => {
     fetchMessages(newVal.id.toString())
   }
 })
+let refreshTimer: ReturnType<typeof setInterval> | null = null
 
+function startAutoRefresh() {
+  refreshTimer = setInterval(async () => {
+    if (!currentContact.value || !messageListRef.value) return
+
+    const el = messageListRef.value
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10
+
+    await fetchMessages(currentContact.value.id.toString())
+    await fetchContacts()
+
+    nextTick(() => {
+      if (isNearBottom) {
+        el.scrollTop = el.scrollHeight
+      }
+    })
+  }, 1000)
+}
+function stopAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer)
+}
+function formatMessageTime(time: string) {
+  const msgTime = moment(time)
+  const now = moment()
+
+  if (msgTime.isSame(now, 'day')) {
+    return msgTime.format('HH:mm') // 同一天只显示时间
+  } else {
+    return msgTime.format('MM-DD HH:mm') // 不同天显示日期+时间
+  }
+}
 onMounted(() => {
+  personID.value = sessionStorage.getItem('uid') || ''
   fetchContacts()
+  startAutoRefresh()
+  //sendHelloTo9()
+})
+onUnmounted(() => {
+  stopAutoRefresh()
 })
 </script>
 
@@ -146,27 +208,34 @@ onMounted(() => {
         <h2>联系人</h2>
       </div>
       <div class="contact-items">
+        <!-- 没有联系人时显示 -->
+        <div v-if="contacts.length === 0" class="no-contacts">
+          暂无联系人
+        </div>
         <div
-          v-for="contact in contacts"
-          :key="contact.id"
-          class="contact-item"
-          :class="{ active: currentContact?.id === contact.id }"
-          @click="selectContact(contact)"
+            v-for="contact in contacts"
+            :key="contact.id"
+            class="contact-item"
+            :class="{ active: currentContact?.id === contact.id }"
+            @click="selectContact(contact)"
         >
-          <el-avatar :size="40" :src="baseImageUrl + contact.avatar" />
+          <div class="avatar-wrapper">
+            <el-avatar :size="40" :src="baseImageUrl + contact.avatar" />
+            <span v-if="contact.unread > 0" class="unread-dot">{{ contact.unread }}</span>
+          </div>
           <div class="contact-info">
             <div class="contact-name">
               {{ contact.name }}
-<!--              <span v-if="contact.unread > 0" class="unread-badge">-->
-<!--                {{ contact.unread }}-->
-<!--              </span>-->
+              <!--              <span v-if="contact.unread > 0" class="unread-badge">-->
+              <!--                {{ contact.unread }}-->
+              <!--              </span>-->
             </div>
             <div class="last-message">
               {{ contact.lastMessage.text }}
             </div>
           </div>
           <div class="message-time">
-            {{ moment(contact.lastMessageTime).format('MM-DD HH:mm') }}
+            {{ formatMessageTime(contact.lastMessageTime)}}
           </div>
         </div>
       </div>
@@ -183,18 +252,18 @@ onMounted(() => {
       </div>
 
       <!-- 消息列表 -->
-      <div v-if="currentContact" class="message-list">
+      <div v-if="currentContact" ref="messageListRef" class="message-list">
         <div
-          v-for="(message, index) in messages"
-          :key="index"
-          class="message-item"
-          :class="{ 'message-self': message.sender !== currentContact.name }"
+            v-for="(message, index) in messages"
+            :key="index"
+            class="message-item"
+            :class="{ 'message-self': message.sender !== currentContact.name }"
         >
           <el-avatar :size="32" :src="baseImageUrl + message.avatar" />
           <div class="message-content">
             <div class="message-text">{{ message.text }}</div>
             <div class="message-time">
-              {{ moment(message.time).format('HH:mm') }}
+              {{ formatMessageTime(message.time) }}
             </div>
           </div>
         </div>
@@ -203,11 +272,11 @@ onMounted(() => {
       <!-- 消息输入框 -->
       <div v-if="currentContact" class="message-input">
         <el-input
-          v-model="newMessage"
-          type="textarea"
-          :rows="3"
-          placeholder="输入消息..."
-          @keyup.enter.ctrl="sendMessage"
+            v-model="newMessage"
+            type="textarea"
+            :autosize="{ minRows: 1, maxRows: 3 }"
+            placeholder="输入消息..."
+            @keydown.enter="handleEnterKey"
         />
         <el-button type="primary" @click="sendMessage">发送</el-button>
       </div>
@@ -220,6 +289,31 @@ onMounted(() => {
   display: flex;
   height: 100%;
   background-color: #f5f5f5;
+}
+.avatar-wrapper {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.unread-dot {
+  position: absolute;
+  bottom: -2px;
+  left: -2px;
+  background-color: #f56c6c;
+  color: white;
+  border-radius: 50%;
+  font-size: 10px;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px white; /* 白边更像微信 */
+}
+.no-contacts {
+  text-align: center;
+  color: #999;
+  padding: 20px;
 }
 
 .contact-list {
