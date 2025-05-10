@@ -68,13 +68,6 @@ const paginatedAgents = computed(() => {
   return filteredAgents.value.slice(start, end)
 })
 
-watch (
-  () => currentTag,
-  () => {
-    currentPage.value = 1
-  }
-)
-
 watch(
   () => totalPages.value,
   (newTotalPages) => {
