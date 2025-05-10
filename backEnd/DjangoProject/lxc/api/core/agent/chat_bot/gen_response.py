@@ -75,7 +75,6 @@ def upload_and_process_file(uploaded_file, session_id, message):
         if os.path.exists(save_path):
             try:
                 os.remove(save_path)
-                print(f"已清理临时文件：{save_path}")
             except Exception as e:
                 print(f"文件删除失败：{str(e)}")
 
@@ -186,6 +185,7 @@ def gen_response_temp(user_id, agent_id, message, files, can_search):
         else:
             response = LLMClient().call_qwen_message(messages)
 
+        print(response)
         return response
 
     except Exception as e:

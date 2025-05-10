@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from openai import OpenAI
 
 
@@ -9,7 +11,7 @@ class FileAnalyse:
         )
 
     def analyze(self, file_path, input_message):
-        file_object = self.client.files.create(file=file_path, purpose="file-extract")
+        file_object = self.client.files.create(file=Path(file_path), purpose="file-extract")
 
         completion = self.client.chat.completions.create(
             model="qwen-long",
@@ -28,6 +30,5 @@ class FileAnalyse:
             if chunk.choices and chunk.choices[0].delta.content:
                 # 拼接输出内容
                 full_content += chunk.choices[0].delta.content
-                print(chunk.model_dump())
 
-        print({full_content})
+        return {full_content}
