@@ -27,7 +27,7 @@ def temp_send_message(request):
         user_id = request.POST.get('uid')
         message = request.POST.get('content')
         agent_id = request.POST.get('agent_id')
-        files = request.FILES.get('file')
+        files = request.FILES.get('file') or []
         can_search = request.POST.get('search')
 
         response = gen_response_temp(user_id, agent_id, message, files, can_search)
@@ -61,7 +61,7 @@ def send_agent_message(request):
         user_id = request.POST.get('uid')
         message = request.POST.get('content')
         agent_id = request.POST.get('agent_id')
-        files = request.FILES.get('file')
+        files = request.FILES.get('file') or []
         can_search = request.POST.get('search')
 
         # 获取或创建会话
