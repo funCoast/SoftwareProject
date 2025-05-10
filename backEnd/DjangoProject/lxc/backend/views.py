@@ -480,7 +480,8 @@ def user_get_messages(request):
             data.append({
                 "sender": msg.sender.username,
                 "time": msg.send_time,
-                "text": msg.content
+                "text": msg.content,
+                "avatar": msg.sender.avatar_url,
             })
 
         return JsonResponse({
