@@ -5,7 +5,7 @@ import axios from "axios";
 
 const currentTag = ref('all')
 const currentPage = ref(1)
-const itemsPerPage = ref(20)
+const itemsPerPage = ref(12)
 const baseImageUrl = "http://122.9.33.84:8000"
 
 interface agent {
@@ -16,6 +16,7 @@ interface agent {
   image: string
   likes: number
   favorites: number
+  comments: number
   author: {
     id?: number
     name: string
@@ -57,8 +58,10 @@ const filteredAgents = computed(() => {
   return agents.value.filter(agent => agent.category === currentTag.value)
 })
 const totalPages = computed(() => {
-  return Math.ceil(filteredAgents.value.length / itemsPerPage.value)
-})
+  const pages = Math.ceil(filteredAgents.value.length / itemsPerPage.value);
+  return pages > 0 ? pages : 0; // 如果没有智能体，页码为 0
+});
+
 const paginatedAgents = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value
   const end = start + itemsPerPage.value
@@ -71,6 +74,17 @@ watch (
     currentPage.value = 1
   }
 )
+
+watch(
+  () => totalPages.value,
+  (newTotalPages) => {
+    if (newTotalPages === 0) {
+      currentPage.value = 0; // 如果总页数为 0，当前页也设置为 0
+    } else {
+      currentPage.value = 1;
+    }
+  }
+);
 
 function goToAgentDetail(id: number) {
   router.push(`/agentDetail/${id}`)
@@ -162,8 +176,11 @@ onMounted(() => {
         </div>
       </div>
 
+      <div v-if="filteredAgents.length === 0" class="no-content">
+          暂无相关内容
+      </div>
       <!-- 智能体列表 -->
-      <div class="agent-list">
+      <div v-else class="agent-list">
         <div v-for="agent in paginatedAgents" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
           <el-container>
             <el-header style="height: 160px;">
@@ -216,16 +233,16 @@ onMounted(() => {
       <!-- 分页控件 -->
       <div class="pagination">
         <button 
-          :disabled="currentPage === 1"
+          :disabled="currentPage <= 1"
           @click="currentPage--"
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
           </svg>
         </button>
-        <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+        <span class="page-info">{{ totalPages === 0 ? 0 : currentPage }} / {{ totalPages }}</span>
         <button 
-          :disabled="currentPage === totalPages"
+          :disabled="currentPage >= totalPages || totalPages === 0"
           @click="currentPage++"
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -432,6 +449,7 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   -webkit-line-clamp: 3; /* 限制描述显示三行 */
+  line-clamp: 3; /* Standard property for compatibility */
 }
 
 .agent-stats {
@@ -479,12 +497,17 @@ onMounted(() => {
 }
 
 .pagination {
+  position: fixed;
+  bottom: 20px;
+  width: 500px;
+  left: 250px;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  height: 50px;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
-  margin-top: 30px;
-  padding: 20px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -523,5 +546,12 @@ onMounted(() => {
 .page-info {
   color: #666;
   font-size: 14px;
+}
+
+.no-content {
+  text-align: center;
+  color: #999;
+  font-size: 30px;
+  padding: 20px;
 }
 </style>

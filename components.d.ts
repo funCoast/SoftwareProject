@@ -19,6 +19,7 @@ declare module 'vue' {
     ConditionNodeDetail: typeof import('./src/components/workflow/node-details/ConditionNodeDetail.vue')['default']
     EditProfile: typeof import('./src/components/profile/EditProfile.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
+    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCol: typeof import('element-plus/es')['ElCol']
     ElContainer: typeof import('element-plus/es')['ElContainer']
