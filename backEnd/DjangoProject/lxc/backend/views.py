@@ -434,6 +434,7 @@ def user_get_contacts(request):
             contact_dict[cid] = {
                 "id": contact_user.user_id,  # ✅ 使用真实数据库主键
                 "name": contact_user.username,
+                "avatar": contact_user.avatar_url,
                 "unread": PrivateMessage.objects.filter(sender=contact_user, receiver=user, is_read=False).count(),
                 "lastMessage": {
                     "text": msg.content
