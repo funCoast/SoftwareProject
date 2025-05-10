@@ -42,12 +42,29 @@ class LLMClient:
     def call_deepseek_messages(self, messages):
         completion = self.deepseek_client.chat.completions.create(
             model="deepseek-r1",
-            messages=messages
+            messages=messages,
+            stream=True,
         )
+        reasoning_content = ""
+        answer_content = ""
+        is_answering = False
+
+        for chunk in completion:
+            if not chunk.choices:
+                pass
+            else:
+                delta = chunk.choices[0].delta
+                # 打印思考过程
+                if hasattr(delta, 'reasoning_content') and delta.reasoning_content is not None:
+                    reasoning_content += delta.reasoning_content
+                else:
+                    if delta.content != "" and is_answering == False:
+                        is_answering = True
+                    answer_content += delta.content
 
         return {
-            'thinking_chain': completion.choices[0].message.reasoning_content,
-            'response': completion.choices[0].message.content
+            'thinking_chain': reasoning_content,
+            'response': answer_content
         }
 
     def call_qwen_message(self, prompt, search=False):
