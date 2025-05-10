@@ -2689,6 +2689,8 @@ def fetch_all_published_agents(request):
         published_agents = Agent.objects.filter(status='published')
         agents_list = []
         for agent in published_agents:
+            # 统计当前智能体的评论数
+            comment_count = Comment.objects.filter(agent=agent).count()
             agents_list.append({
                 "id": agent.agent_id,
                 "name": agent.agent_name,
@@ -2697,6 +2699,7 @@ def fetch_all_published_agents(request):
                 "image": agent.icon_url,
                 "likes": agent.likes_count,
                 "favorites": agent.favorites_count,
+                "comments": comment_count,  # 新增字段：评论数
                 "author": {
                     "id": agent.user.user_id,
                     "name": agent.user.username,
