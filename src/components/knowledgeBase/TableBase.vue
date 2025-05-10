@@ -13,8 +13,8 @@ let originalValue = "" // 用于存储单元格的原始值
 const selectedRows = ref<number[]>([]) // 存储选中行的索引
 const haveSelected = computed(() => {
   return (selectedRows.value.length > 0)
-}); // 判断是否有选中行
-const newRowIndexes = ref<number[]>([]); // 用于存储新增行的序号
+}) // 判断是否有选中行
+const newRowIndexes = ref<number[]>([]) // 用于存储新增行的序号
 
 const getData = () => {
   axios({
@@ -46,10 +46,10 @@ const handleBlur = (row: RowData, prop: string, index: number) => {
   if (originalValue !== newValue) {
     if (newRowIndexes.value.includes(index)) {
       // 如果是新增行，调用新增接口
-      uploadNewRow(row, index);
+      uploadNewRow(row, index)
     } else {
       // 如果是已有行，调用更新接口
-      updateTable(row, prop, index);
+      updateTable(row, prop, index)
     }
   }
 }
@@ -71,24 +71,23 @@ const updateTable = (row: RowData, prop: string, index: number) => {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      alert("更新成功！")
+      ElMessage.success("更新成功！")
     } else {
-      alert("更新失败！" + response.data.message)
+      ElMessage.error("更新失败！" + response.data.message)
     }
   })
-  console.log(`更新第 ${index + 1} 行，字段 ${prop} 的值为：${row[prop]}`)
 }
 
 // 新增一行空白数据
 const addRow = () => {
-  const newRow: RowData = {}; // 创建一个空白行
+  const newRow: RowData = {} // 创建一个空白行
   tableColumns.value.forEach((column) => {
-    newRow[column] = ""; // 初始化每列为空字符串
-  });
-  tableData.value.push(newRow); // 将新行添加到表格数据中
-  newRowIndexes.value.push(tableData.value.length - 1); // 记录新增行的序号
-  console.log("新增行序号：", newRowIndexes.value);
-};
+    newRow[column] = "" // 初始化每列为空字符串
+  })
+  tableData.value.push(newRow) // 将新行添加到表格数据中
+  newRowIndexes.value.push(tableData.value.length - 1) // 记录新增行的序号
+  console.log("新增行序号：", newRowIndexes.value)
+}
 
 const uploadNewRow = (row: RowData, index: number) => {
   axios({
@@ -99,25 +98,17 @@ const uploadNewRow = (row: RowData, index: number) => {
       kb_id: router.currentRoute.value.params.id,
       rowData: row, // 新增行的数据
     },
+  }).then((response) => {
+    if (response.data.code === 0) {
+      ElMessage.success("新增行已上传！")
+      newRowIndexes.value = newRowIndexes.value.filter((i) => i !== index) // 移除已上传的行序号
+    } else {
+      ElMessage.error("新增行上传失败！" + response.data.message)
+    }
   })
-    .then((response) => {
-      if (response.data.code === 0) {
-        alert("新增行已上传！");
-        newRowIndexes.value = newRowIndexes.value.filter((i) => i !== index); // 移除已上传的行序号
-      } else {
-        alert("新增行上传失败！" + response.data.message);
-      }
-    })
-    .catch((error) => {
-      console.error("新增行上传失败：", error);
-    });
-};
+}
 
 const deleteSelectedRows = () => {
-  if (selectedRows.value.length === 0) {
-    alert("请先选择要删除的行！")
-    return
-  }
   axios({
     method: "post",
     url: "/kb/deleteTableRows",
@@ -128,11 +119,11 @@ const deleteSelectedRows = () => {
     },
   }).then((response) => {
     if (response.data.code === 0) {
-      alert("删除成功！")
+      ElMessage.success("删除成功！")
       selectedRows.value = []
       getData()
     } else {
-      alert("删除失败！" + response.data.message)
+      ElMessage.error("删除失败！" + response.data.message)
     }
   })
 }

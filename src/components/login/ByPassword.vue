@@ -24,7 +24,7 @@ function login() {
       sessionStorage.setItem('uid', response.data.id);
       router.push('/home');
     } else {
-      alert(response.data.message)
+      ElMessage.error(response.data.message)
     }
   })
 }

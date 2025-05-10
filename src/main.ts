@@ -15,15 +15,15 @@ axios.defaults.baseURL = '/api/linksoul'
 
 // 每次请求都带上token
 axios.interceptors.request.use(function (config) {
-        console.log('url:', config.url);
-        const token = sessionStorage.getItem('token')
-        if (token) {
-            config.headers.token = token
-        }
-        return config
-    }, function (error) {
-        return Promise.reject(error)
+    console.log('url:', config.url);
+    const token = sessionStorage.getItem('token')
+    if (token) {
+        config.headers.token = token
     }
+    return config
+}, function (error) {
+    return Promise.reject(error)
+}
 )
 
 axios.interceptors.response.use(function (response) {
@@ -37,22 +37,22 @@ axios.interceptors.response.use(function (response) {
     switch (error.response.status) {
         // 401: 未登录,跳转登录界面
         case 401:
-            alert("请登录");
+            ElMessage.error('用户未登录，请登录')
             router.push('/login');
             break;
         // 403: token过期,清除本地token,跳转登录页面
         case 403:
-            alert("登录过期");
+            ElMessage.error('登录过期，请重新登录')
             sessionStorage.removeItem('token');
             router.push('/login');
             break;
         // 404: 请求不存在
         case 404:
-            alert("请求不存在");
+            ElMessage.error('请求不存在')
             break;
         // 其他错误，直接抛出错误提示
         default:
-            alert(error.response.data.message);
+            ElMessage.error(error.response.data.message)
     }
     return Promise.reject(error.response);
 });

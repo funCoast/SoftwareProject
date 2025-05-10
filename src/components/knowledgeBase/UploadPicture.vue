@@ -13,7 +13,7 @@ const dialogVisible = ref(false)
 function handleChange(file: File, fileList: File[]) {
   const isLt5M = file.size / 1024 / 1024 < 5
   if (!isLt5M) {
-    alert("图片大小不能超过 5MB！")
+    ElMessage.warning("图片大小不能超过 5MB！")
     fileList.splice(fileList.indexOf(file), 1)
   }
   listLength.value = fileList.length

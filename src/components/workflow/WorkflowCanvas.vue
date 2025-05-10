@@ -372,7 +372,7 @@ function updateConnections(newConnections: Connection[]) {
 // 打开试运行弹窗
 function runTest() {
   if (!startNode.value) {
-    alert('未找到开始节点')
+    ElMessage.error('未找到开始节点')
     return
   }
   // 初始化输入值
@@ -448,8 +448,7 @@ async function saveWorkflow() {
       },
     })
     if (response.data.code === 0) {
-      // ElMessage.success("保存成功")
-      alert("保存成功！")
+      ElMessage.success("保存成功")
     } else {
       console.log(response.data.message)
     }

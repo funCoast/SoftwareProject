@@ -83,7 +83,7 @@ function handleIconChange(event: Event) {
 
     // 验证文件大小和类型
     if (file.size > 5 * 1024 * 1024) {
-      alert("图片大小不能超过5MB")
+      ElMessage.warning("图片大小不能超过5MB")
       return
     }
 
@@ -116,10 +116,10 @@ function submitKB() {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      alert("创建成功！")
+      ElMessage.success(response.data.message)
       router.push("/workspace/" + baseInfo.value.type + 'Base/' +response.data.kb_id)
     } else {
-      alert(response.data.message)
+      ElMessage.error(response.data.message)
     }
   })
   KBDialog.value = false // 关闭弹窗
@@ -146,7 +146,7 @@ function handleImageUpload(event: Event) {
     const file = input.files[0]
     // 验证文件大小和类型
     if (file.size > 2 * 1024 * 1024) {
-      alert('图片大小不能超过2MB')
+      ElMessage.warning('图片大小不能超过2MB')
       return;
     }
     const reader = new FileReader()
@@ -161,7 +161,7 @@ function handleImageUpload(event: Event) {
 // 提交工作流表单并跳转
 async function submitWorkflow() {
   if (!workflowForm.value.name) {
-    alert('请输入工作流名称')
+    ElMessage.warning('请输入工作流名称')
     return
   }
   const formData = new FormData()
@@ -258,14 +258,14 @@ function handleDelete() {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      alert("删除成功！")
+      ElMessage.success(response.data.message)
       resources.value = []
       getKnowledgeBases()
       getWorkflows()
       deleteDialog.value = false
       deleteTarget.value = null
     } else {
-      alert(response.data.message)
+      ElMessage.error(response.data.message)
       deleteDialog.value = false
       deleteTarget.value = null
     }

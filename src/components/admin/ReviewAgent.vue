@@ -66,9 +66,9 @@ async function reviewAgent(agentId: number, action: 'approve' | 'reject', catego
     })
     if (response.data.code === 0) {
       if (action === 'approve') {
-        alert("审核通过")
+        ElMessage.success('已通过')
       } else {
-        alert("审核拒绝")
+        ElMessage.success('已拒绝')
       }
       await fetchPendingAgents()
     } else {

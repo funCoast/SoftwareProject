@@ -118,7 +118,7 @@ function removeCase(index: number) {
 // 添加条件
 function addCondition(case_: Case) {
   if (inputs.value.length === 0) {
-    alert('请先添加输入变量')
+    ElMessage.warning('请先添加输入变量')
     return
   }
   case_.condition.push({

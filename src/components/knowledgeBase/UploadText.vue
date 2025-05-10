@@ -14,7 +14,7 @@ const dialogVisible = ref(false)
 function handleChange(file: File, fileList: File[]) {
   const isLt5M = file.size / 1024 / 1024 < 20
   if (!isLt5M) {
-    alert("文件大小不能超过 20MB！")
+    ElMessage.warning("文件大小不能超过 20MB！")
     fileList.splice(fileList.indexOf(file), 1)
   }
   listLength.value = fileList.length

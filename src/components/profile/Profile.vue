@@ -89,7 +89,7 @@ function getAvatar() {
     if (response.data.code === 0) {
       avatar.value = 'http://122.9.33.84:8000' + response.data.avatar + '?' + Date.now()
     } else {
-      alert(response.data.message)
+      ElMessage.error(response.data.message)
     }
   })
 }
@@ -108,7 +108,7 @@ async function fetchUserInfo() {
     if (response.data.code === 0) {
       userInfo.value = response.data.data
     } else {
-      alert(response.data.message)
+      ElMessage.error(response.data.message)
       console.error('获取用户信息失败:', response.data.message)
       error.value.userInfo = response.data.message || '获取用户信息失败'
     }

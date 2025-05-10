@@ -29,11 +29,11 @@ function getPictures() {
     if (response.data.code === 0) {
       pictures.value = response.data.pictures
     } else {
-      console.log(response.data.message)
+      ElMessage.error(response.data.message)
     }
   }).catch(function (error) {
     console.error(error)
-    alert(error.message)
+    ElMessage.error(error.message)
   })
 }
 
@@ -65,11 +65,11 @@ function updateEdit() {
     },
   }).then((response) => {
     if (response.data.code === 0) {
-      alert("编辑成功！");
-      getPictures(); // 重新获取图像列表
-      editDialog.value = false; // 关闭弹窗
+      ElMessage.success("编辑成功！")
+      getPictures() // 重新获取图像列表
+      editDialog.value = false // 关闭弹窗
     } else {
-      alert(response.data.message);
+      ElMessage.error(response.data.message)
     }
   })
 }
@@ -96,14 +96,14 @@ function confirmDelete() {
     },
   }).then((response) => {
     if (response.data.code === 0) {
-      alert("删除成功！");
-      getPictures(); // 重新获取图像列表
-      deleteDialog.value = false; // 关闭弹窗
-      deleteTarget.value = null; // 清空待删除的图像信息
+      ElMessage.success("删除成功！")
+      getPictures() // 重新获取图像列表
+      deleteDialog.value = false // 关闭弹窗
+      deleteTarget.value = null // 清空待删除的图像信息
     } else {
-      alert(response.data.message);
-      deleteDialog.value = false; // 关闭弹窗
-      deleteTarget.value = null; // 清空待删除的图像信息
+      ElMessage.error(response.data.message)
+      deleteDialog.value = false // 关闭弹窗
+      deleteTarget.value = null // 清空待删除的图像信息
     }
   })
 }

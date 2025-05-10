@@ -97,12 +97,12 @@ function confirmDelete() {
     },
   }).then(async (response) => {
     if (response.data.code === 0) {
-      alert("删除成功！");
+      ElMessage.success("删除成功！")
       deleteDialog.value = false; // 关闭弹窗
       selectedText.value = undefined; // 清空选中的文本
       getTexts()  // 等待获取文本列表完成
     } else {
-      alert(response.data.message);
+      ElMessage.error(response.data.message)
       deleteDialog.value = false; // 关闭弹窗
     }
   })

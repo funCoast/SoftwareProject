@@ -65,9 +65,9 @@ function uploadAvatar() {
     if (response.data.code === 0) {
       refreshAvatar('http://122.9.33.84:8000' + response.data.avatar + '?' + Date.now())
       newAvatar.value = ''
-      alert(response.data.message)
+      ElMessage.success(response.data.message)
     } else {
-      alert(response.data.message)
+      ElMessage.error(response.data.message)
     }
   })
 }
@@ -80,7 +80,7 @@ function handleAvatarChange(event: Event) {
     
     // 验证文件大小和类型
     if (file.size > 2 * 1024 * 1024) {
-      alert('图片大小不能超过2MB')
+      ElMessage.warning('图片大小不能超过2MB')
       return;
     }
     
@@ -105,9 +105,9 @@ function updateBasicInfo() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      alert(response.data.message)
+      ElMessage.success(response.data.message)
     } else {
-      alert(response.data.message)
+      ElMessage.error(response.data.message)
     }
   })
 }
@@ -127,10 +127,13 @@ function updatePwd() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      alert('修改成功')
+      ElMessage.success(response.data.message)
+      oldPwd.value = ''
+      newPwd.value = ''
+      confirmPwd.value = ''
       dialogVisible.value = false
     } else {
-      alert(response.data.message)
+      ElMessage.error(response.data.message)
     }
   })
 }

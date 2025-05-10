@@ -41,7 +41,7 @@ function count(time:number) {
 function sendCode() {
   const reg =  /^([A-Za-z0-9_\.\-])+\@([A-Za-z0-9_\.\-])+\.([A-Za-z]{2,4})$/
   if (!reg.test(email.value)) {
-    alert("请输入正确的邮箱")
+    ElMessage.warning("请输入正确的邮箱")
     return
   }
   axios({
@@ -52,7 +52,7 @@ function sendCode() {
     }
   }).then(function (response) {
       if(response.data.code === 0) {
-        alert('验证码已发送')
+        ElMessage.success("验证码已发送")
       }
       count(60)
   })
@@ -74,12 +74,12 @@ function login() {
       console.log(sessionStorage)
       if(response.data.is_new_user) {
         router.push('/editProfile');
-        alert("初始密码为123456，请及时修改")
+        ElMessage.warning("初始密码为123456，请及时修改")
       } else {
         router.push('/home');
       }
     } else {
-      alert("验证码错误")
+      ElMessage.error(response.data.message)
     }
   })
 }
