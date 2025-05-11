@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.core.validators import validate_email
 from django.http import HttpResponse
+from django.utils.timezone import localtime
 # user/views.py
 from django.http import JsonResponse
 from django.utils import timezone
@@ -3056,14 +3057,14 @@ def fetch_user(request):
     users_data = []
     for u in User.objects.all().order_by('-registered_at'):
         users_data.append({
-            "uid":        u.user_id,
-            "email":      u.email,
-            "name":       u.username,
-            "avatar":     u.avatar_url or "",
-            "can_log":    (not u.is_banned),          # 取反 is_banned
-            "can_post":   u.can_post,
-            "ban_expire": u.ban_expire.strftime("%Y-%m-%d %H:%M:%S") if u.ban_expire else "",
-            "post_expire":u.post_expire.strftime("%Y-%m-%d %H:%M:%S") if u.post_expire else "",
+            "uid": u.user_id,
+            "email": u.email,
+            "name": u.username,
+            "avatar": u.avatar_url or "",
+            "can_log": (not u.is_banned),
+            "can_post": u.can_post,
+            "ban_expire": localtime(u.ban_expire).strftime("%Y-%m-%d %H:%M:%S") if u.ban_expire else "",
+            "post_expire": localtime(u.post_expire).strftime("%Y-%m-%d %H:%M:%S") if u.post_expire else "",
         })
 
     return JsonResponse({
