@@ -178,12 +178,12 @@ onMounted(() => {
           <el-container>
             <el-header style="height: 160px;">
               <el-container>
-                <el-aside style="width: 100px; height: 160px;">
+                <el-aside style="width: 70px; height: 160px;">
                   <div class="agent-image">
                     <img :src="baseImageUrl + agent.image" :alt="agent.name">
                   </div>
                 </el-aside>
-                <el-main style="width: 180px; height: 160px; padding: 0;">
+                <el-main style="width: 210px; height: 160px; padding: 0;">
                   <div class="agent-info">
                     <div class="agent-header">
                       <h3>{{ agent.name }}</h3>
@@ -375,8 +375,8 @@ onMounted(() => {
 }
 
 .agent-image {
-  width: 100px;
-  height: 100px;
+  width: 70px;
+  height: 70px;
   overflow: hidden;
   border-radius: 8px;
   margin: 18px 0 0 0; 
@@ -392,7 +392,7 @@ onMounted(() => {
 
 .agent-info {
   margin: 18px 0 0 10px;
-  width: 170px;
+  width: 200px;
   height: 130px;
   justify-content: space-between;
 }
@@ -454,13 +454,14 @@ onMounted(() => {
 }
 
 .stat-item {
+  margin-left: 5px;
+  margin-right: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
   color: #666;
   font-size: 13px;
-  padding: 4px 8px;
+  padding: 4px 0;
   flex: 1; /* 平均分配宽度 */
   text-align: center; /* 居中对齐 */
   background: #f8f9fa;

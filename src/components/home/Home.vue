@@ -202,12 +202,12 @@ function goToAgentDetail(agentId: number) {
               <el-container>
                 <el-header style="height: 150px;">
                   <el-container>
-                    <el-aside style="width: 100px; height: 150px;">
+                    <el-aside style="width: 80px; height: 150px;">
                       <div class="agent-image">
                         <img :src="baseImageUrl + agent.image" :alt="agent.name">
                       </div>
                     </el-aside>
-                    <el-main style="width: 180px; height: 150px; padding: 0;">
+                    <el-main style="width: 200px; height: 150px; padding: 0;">
                       <div class="agent-info">
                         <div class="agent-header">
                           <h3>{{ agent.name }}</h3>
@@ -393,8 +393,8 @@ function goToAgentDetail(agentId: number) {
 }
 
 .agent-image {
-  width: 90px;
-  height: 90px;
+  width: 70px;
+  height: 70px;
   overflow: hidden;
   border-radius: 8px;
   margin: 16px 0 0 0;
@@ -410,7 +410,7 @@ function goToAgentDetail(agentId: number) {
 
 .agent-info {
   margin: 16px 0 0 10px;
-  width: 170px;
+  width: 190px;
   height: 120px;
   justify-content: space-between;
 }
@@ -472,13 +472,14 @@ function goToAgentDetail(agentId: number) {
 }
 
 .stat-item {
+  margin-left:  5px;
+  margin-right: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
   color: #666;
   font-size: 13px;
-  padding: 4px 8px;
+  padding: 4px 0;
   flex: 1; /* 平均分配宽度 */
   text-align: center; /* 居中对齐 */
   background: #f8f9fa;
