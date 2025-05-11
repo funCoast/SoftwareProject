@@ -2790,7 +2790,6 @@ def fetch_all_published_agents(request):
         return JsonResponse({"code": -1, "message": f"获取失败: {str(e)}"})
 
 class FetchWorksView(View):
-
     def get(self, request):
         uid = request.GET.get('uid')
         if not uid:
@@ -2808,11 +2807,13 @@ class FetchWorksView(View):
                 json_dumps_params={'ensure_ascii': False}
             )
 
-        agents = Agent.objects.filter(user=user)
+        agents = Agent.objects.filter(user=user).select_related('user')
 
         data = []
         for a in agents:
             if a.status == 'published':
+                comment_count = Comment.objects.filter(agent=a).count()  # 新增评论数
+                author = a.user
                 data.append({
                     "id": a.agent_id,
                     "name": a.agent_name,
@@ -2821,6 +2822,12 @@ class FetchWorksView(View):
                     "image": a.icon_url or "",
                     "likes": a.likes_count,
                     "favorites": a.favorites_count,
+                    "comments": comment_count,  # 新增字段
+                    "author": {
+                        "id": author.user_id,
+                        "name": author.username,
+                        "avatar": author.avatar_url or ""
+                    }
                 })
 
         return JsonResponse(
@@ -2860,6 +2867,7 @@ class FetchLikesView(View):
         for ui in interactions:
             a = ui.agent
             if a.status == 'published':
+                comment_count = Comment.objects.filter(agent=a).count()  # 新增评论数
                 author = a.user
                 data.append({
                     "id": a.agent_id,
@@ -2869,6 +2877,7 @@ class FetchLikesView(View):
                     "image": a.icon_url or "",
                     "likes": a.likes_count,
                     "favorites": a.favorites_count,
+                    "comments": comment_count,  # 新增字段
                     "author": {
                         "id": author.user_id,
                         "name": author.username,
