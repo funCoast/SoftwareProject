@@ -93,9 +93,9 @@ def gen_response(user_id, agent_id, message, files, can_search, session_history)
 
         # 文件读取
         file_str = ""
-        if len(files) != 0:
+        for file in files:
             session_id = "temp" + str(uuid.uuid4())
-            file_str = f"\t- 上传的文件识别结果：{upload_and_process_file(files[0], session_id, message)}"
+            file_str += f"\t- 上传的文件识别结果：{upload_and_process_file(file, session_id, message)}"
         # 插件调用
         plugin_str = f"\t- 插件调用结果：{call_plugin(message)}"
         # 知识库查询
@@ -170,9 +170,9 @@ def gen_response_temp(user_id, agent_id, message, files, can_search):
 
         # 文件读取
         file_str = ""
-        if len(files) != 0:
+        for file in files:
             session_id = "temp" + str(uuid.uuid4())
-            file_str = f"\t- 上传的文件识别结果：{upload_and_process_file(files[0], session_id, message)}"
+            file_str += f"\t- 上传的文件识别结果：{upload_and_process_file(file, session_id, message)}"
         # 插件调用
         plugin_str = f"\t- 插件调用结果：{call_plugin(message)}"
         # 知识库查询
