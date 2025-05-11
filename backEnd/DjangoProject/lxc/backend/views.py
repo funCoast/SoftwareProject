@@ -2547,6 +2547,7 @@ def community_agent_handle_copy(request):
             likes_count=0,
             favorites_count=0
         )
+        copied_agent.save()
 
         return JsonResponse({
             "code": 0,
