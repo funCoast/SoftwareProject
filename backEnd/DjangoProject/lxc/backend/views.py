@@ -18,7 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pycparser import parse_file
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord,Contact
 from django.db.models import Q, ExpressionWrapper, F, IntegerField
 import base64
 import json
@@ -418,6 +418,41 @@ def user_get_avatar(request):
     except User.DoesNotExist:
         return JsonResponse({"code": -1, "message": "用户不存在", "avatar": ""})
 
+def user_contact_request(request):
+    uid = request.POST.get("uid")
+    target_uid = request.POST.get("target_uid")
+
+    # 参数校验
+    if not uid or not target_uid:
+        return JsonResponse({"code": -1, "message": "缺少参数 uid 或 target_uid"})
+
+    if uid == target_uid:
+        return JsonResponse({"code": -1, "message": "不能添加自己为联系人"})
+
+    try:
+        user1 = User.objects.get(pk=uid)
+        user2 = User.objects.get(pk=target_uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    # 保证 user1.id < user2.id（实现对称）
+    if user1.id > user2.id:
+        user1, user2 = user2, user1
+
+    # 判断是否已经存在关系
+    contact, created = Contact.objects.get_or_create(
+        user1=user1,
+        user2=user2,
+        defaults={"status": "好友"}
+    )
+
+    if not created:
+        if contact.status == "好友":
+            return JsonResponse({"code": 1, "message": "你们已经是好友"})
+        elif contact.status == "申请":
+            return JsonResponse({"code": 1, "message": "已发送过申请，等待通过"})
+
+    return JsonResponse({"code": 0, "message": "联系人申请已发送"})
 
 def user_get_contacts(request):
     try:
@@ -429,34 +464,44 @@ def user_get_contacts(request):
             user = User.objects.get(user_id=uid)
         except User.DoesNotExist:
             return JsonResponse({"code": -1, "message": "用户不存在"})
-        # 查询与该用户有通信记录的用户（联系人）
-        messages = PrivateMessage.objects.filter(Q(sender=user) | Q(receiver=user)) \
-            .select_related('sender', 'receiver') \
-            .order_by('-send_time')
 
+        # 获取联系人（状态为好友）
+        contacts = Contact.objects.filter(status='好友').filter(
+            Q(user1=user) | Q(user2=user)
+        )
+
+        contact_users = []
+        for c in contacts:
+            contact_user = c.user2 if c.user1 == user else c.user1
+            contact_users.append(contact_user)
+
+        # 获取所有与这些联系人之间的消息
+        messages = PrivateMessage.objects.filter(
+            Q(sender=user, receiver__in=contact_users) |
+            Q(receiver=user, sender__in=contact_users)
+        ).select_related('sender', 'receiver').order_by('-send_time')
+
+        # 建立联系人 ID -> 最近消息 映射
         latest_msg_map = {}
-
         for msg in messages:
             contact_user = msg.receiver if msg.sender == user else msg.sender
             cid = contact_user.user_id
             if cid not in latest_msg_map:
-                latest_msg_map[cid] = msg  # 第一次
-            elif msg.send_time > latest_msg_map[cid].send_time:
-                latest_msg_map[cid] = msg  # 更新为更晚的消息
+                latest_msg_map[cid] = msg
 
-        # 然后再统一生成联系人信息
+        # 构造联系人信息
         contact_dict = {}
-        for cid, msg in latest_msg_map.items():
-            contact_user = msg.receiver if msg.sender == user else msg.sender
-            contact_dict[cid] = {
-                "id": contact_user.user_id,  # ✅ 使用真实数据库主键
-                "name": contact_user.username,
-                "avatar": contact_user.avatar_url,
-                "unread": PrivateMessage.objects.filter(sender=contact_user, receiver=user, is_read=False).count(),
+        for cu in contact_users:
+            msg = latest_msg_map.get(cu.user_id)
+            contact_dict[cu.user_id] = {
+                "id": cu.user_id,
+                "name": cu.username,
+                "avatar": cu.avatar_url,
+                "unread": PrivateMessage.objects.filter(sender=cu, receiver=user, is_read=False).count(),
                 "lastMessage": {
-                    "text": msg.content
+                    "text": msg.content if msg else ""
                 },
-                "lastMessageTime": msg.send_time
+                "lastMessageTime": msg.send_time if msg else None
             }
 
         return JsonResponse({
