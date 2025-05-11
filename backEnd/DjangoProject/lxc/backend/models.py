@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 # 1. 用户表（User）
 class User(models.Model):
@@ -270,3 +271,38 @@ class AgentReport(models.Model):
 
     def __str__(self):
         return f"Report {self.report_id} on Agent {self.agent.agent_id} by {self.reporter.username}"
+
+class Contact(models.Model):
+    user1 = models.ForeignKey('User', on_delete=models.CASCADE, related_name='contact_initiator')
+    user2 = models.ForeignKey('User', on_delete=models.CASCADE, related_name='contact_receiver')
+
+    STATUS_CHOICES = [
+        ('申请', '申请'),
+        ('好友', '好友'),
+        ('拉黑', '拉黑')
+    ]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='申请')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user1', 'user2'], name='unique_symmetric_contact')
+        ]
+        verbose_name = '联系人'
+        verbose_name_plural = '联系人'
+
+    def clean(self):
+        # 不允许添加自己为联系人
+        if self.user1 == self.user2:
+            raise ValidationError("不能添加自己为联系人")
+
+        # 强制 user1 的 id 小于 user2，实现对称存储
+        if self.user1.id > self.user2.id:
+            self.user1, self.user2 = self.user2, self.user1
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # 自动触发 clean() 中的对称处理
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user1.username} <-> {self.user2.username} ({self.status})"
