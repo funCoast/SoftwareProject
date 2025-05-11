@@ -104,7 +104,26 @@ def gen_response(user_id, agent_id, message, files, can_search, session_history)
         workflow_str = f"\t- 工作流运行结果：{call_workflow(agent, file_str + plugin_str + kb_str + message)}"
 
         # 总结输入
-        total_prompt = (f"{message}\n" + "上面是我的输入，下面是调用各个工具得到的补充信息，请整合出最适合回答我的文本" +
+        total_prompt = (f"{message}\n" + """
+以上是用户输入，请按以下流程处理用户请求：
+1. **多源信息整合**：
+   - 优先使用用户知识库的权威信息
+   - 补充插件提供的实时数据
+   - 适配用户工作流的具体场景
+   
+2. **自然语言生成**：
+   - 将技术术语转换为日常表达（如："数据库查询结果" → "根据现有记录"）
+   - 使用连接词平滑衔接不同来源信息
+   - 避免出现"系统检测""调用接口"等技术表述
+
+3. **结果呈现**：
+   - 采用「结论先行」结构
+   - 复杂信息使用分项说明（•）
+   - 数据展示需附带简要解释
+   - 保持口语化表达（Flesch可读性分数>60）
+   
+最终输出应让用户感知为连贯的自然答复，不暴露后台处理过程。
+        """ +
                         file_str + plugin_str + kb_str + workflow_str)
 
         messages = [
@@ -162,7 +181,26 @@ def gen_response_temp(user_id, agent_id, message, files, can_search):
         workflow_str = f"\t- 工作流运行结果：{call_workflow(agent, file_str + plugin_str + kb_str + message)}"
 
         # 总结输入
-        total_prompt = (f"{message}\n" + "上面是我的输入，下面是调用各个工具得到的补充信息，请整合出最适合回答我的文本" +
+        total_prompt = (f"{message}\n" + """
+以上是用户输入，请按以下流程处理用户请求：
+1. **多源信息整合**：
+   - 优先使用用户知识库的权威信息
+   - 补充插件提供的实时数据
+   - 适配用户工作流的具体场景
+   
+2. **自然语言生成**：
+   - 将技术术语转换为日常表达（如："数据库查询结果" → "根据现有记录"）
+   - 使用连接词平滑衔接不同来源信息
+   - 避免出现"系统检测""调用接口"等技术表述
+
+3. **结果呈现**：
+   - 采用「结论先行」结构
+   - 复杂信息使用分项说明（•）
+   - 数据展示需附带简要解释
+   - 保持口语化表达（Flesch可读性分数>60）
+   
+最终输出应让用户感知为连贯的自然答复，不暴露后台处理过程。
+        """ +
                         file_str + plugin_str + kb_str + workflow_str)
 
         messages = [
