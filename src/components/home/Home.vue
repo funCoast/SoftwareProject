@@ -36,14 +36,11 @@ interface agent {
   }
 }
 
-const hotAgents = ref<agent[]> ([
-])
+const hotAgents = ref<agent[]> ([])
 
-const followingAgents = ref<agent[]> ([
-])
+const followingAgents = ref<agent[]> ([])
 
-const favoriteAgents = ref<agent[]> ([
-])
+const favoriteAgents = ref<agent[]> ([])
 
 const currentAgents =  computed(() => {
   switch (currentAgentTab.value) {
@@ -194,7 +191,10 @@ function goToAgentDetail(agentId: number) {
           </div>
         </div>
         <div v-if="currentAgents.length === 0" class="no-content">
-          暂无相关内容
+          <span v-if="currentAgentTab === 'hot'">似乎没有相关内容，去社区看看吧</span>
+          <span v-else-if="currentAgentTab === 'following'">似乎没有相关内容，去关注更多用户吧</span>
+          <span v-else-if="currentAgentTab === 'favorite'">您还没有收藏任何智能体，去社区看看吧</span>
+          <span v-else>暂无相关内容</span>
         </div>
         <div v-else class="agent-content">
           <div class="agent-grid">
@@ -516,9 +516,7 @@ function goToAgentDetail(agentId: number) {
   gap: 15px;
   margin-top: 10px;
   padding: 10px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: transparent;
 }
 
 .pagination button {

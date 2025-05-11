@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 const avatar = ref<string>('')
 const baseImageUrl = 'http://122.9.33.84:8000'
 
-const currentTab = ref('works')
+const currentTab = ref('likes')
 const tabs = ref([
   { id: 'works', name: '作品' },
   { id: 'likes', name: '喜欢' },
@@ -27,7 +27,7 @@ const route = useRoute()
 const uid = computed(() => route.params.id)
 const currentUid = sessionStorage.getItem('uid')
 
-interface myWork {
+interface agent {
   id: number
   name: string
   category: string
@@ -35,9 +35,7 @@ interface myWork {
   image: string
   likes: number
   favorites: number
-}
-
-interface work extends myWork {
+  comments: number
   author: {
     id?: number
     name: string
@@ -45,11 +43,46 @@ interface work extends myWork {
   }
 }
 
-interface favorite extends work {}
+const myWorks = ref<agent[]>([])
+const likes = ref<agent[]>([])
+const favorites = ref<agent[]>([])
+const agentsPerPage = ref(6) // 每页显示的智能体数量
+const currentPage = ref(1) // 当前页码  
 
-const myWorks = ref<myWork[]>([])
-const likes = ref<work[]>([])
-const favorites = ref<favorite[]>([])
+const curAgents =  computed(() => {
+  switch (currentTab.value) {
+    case 'works':
+      return myWorks.value
+    case 'likes':
+      return likes.value
+    case 'favorites':
+      return favorites.value
+    default:
+      return myWorks.value
+  }
+})
+
+const totalPages = computed(() => {
+  const pages = Math.ceil(curAgents.value.length / agentsPerPage.value);
+  return pages > 0 ? pages : 0; // 如果没有智能体，页码为 0
+});
+
+const paginatedAgents = computed(()=> {
+  const start = (currentPage.value - 1) * agentsPerPage.value
+  const end = start + agentsPerPage.value
+  return curAgents.value.slice(start, end)
+})
+
+watch(
+  () => totalPages.value,
+  (newTotalPages) => {
+    if (newTotalPages === 0) {
+      currentPage.value = 0; // 如果总页数为 0，当前页也设置为 0
+    } else {
+      currentPage.value = 1;
+    }
+  }
+)
 
 const error = ref({
   userInfo: '',
@@ -248,11 +281,11 @@ function logout() {
           <div class="user-account">{{ userInfo.account }}</div>
           <div class="user-description">{{ userInfo.description }}</div>
           <div class="user-stats">
-            <div class="stat-item">
+            <div class="socialInfo-item">
               <span class="stat-value">{{ userInfo.following }}</span>
               <span class="stat-label">关注</span>
             </div>
-            <div class="stat-item">
+            <div class="socialInfo-item">
               <span class="stat-value">{{ userInfo.followers }}</span>
               <span class="stat-label">粉丝</span>
             </div>
@@ -299,123 +332,81 @@ function logout() {
 
     <!-- 内容展示区 -->
     <div class="content-section">
-      <!-- 作品列表 -->
-      <div v-if="currentTab === 'works'" class="agent-list">
-        <div v-for="agent in myWorks" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
-          <div class="agent-image">
-            <img :src="baseImageUrl + agent.image" :alt="agent.name">
-            <div class="agent-category">{{ agent.category }}</div>
-          </div>
-          <div class="agent-info">
-            <div class="agent-header">
-              <h3>{{ agent.name }}</h3>
-              <div class="agent-author">
-                <img :src="avatar" :alt="userInfo.name">
-                <span>{{ userInfo.name }}</span>
-              </div>
-            </div>
-            <p class="agent-description">{{ agent.description }}</p>
-            <div class="agent-stats">
-<!--              <span class="stat-item" title="使用量">-->
-<!--                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">-->
-<!--                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>-->
-<!--                </svg>-->
-<!--                {{ agent.usage }}-->
-<!--              </span>-->
-              <span class="stat-item" title="点赞量">
-                <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                {{ agent.likes }}
-              </span>
-              <span class="stat-item" title="收藏量">
-                <svg class="favorite-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/>
-                </svg>
-                {{ agent.favorites }}
-              </span>
-            </div>
+      <div v-if="curAgents.length === 0" class="no-content">
+        <span v-if="currentTab === 'works'">您没有已发布的作品</span>
+        <span v-else-if="currentTab === 'likes'">您还没有点赞任何作品，去社区看看吧</span>
+        <span v-else-if="currentTab === 'favorites'">您还没有收藏任何作品，去社区看看吧</span>
+        <span v-else>暂无相关内容</span>
+      </div>
+      <div v-else>
+        <div class="agent-grid">
+          <div v-for="agent in paginatedAgents" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
+            <el-container>
+              <el-header style="height: 150px;">
+                <el-container>
+                  <el-aside style="width: 80px; height: 150px;">
+                    <div class="agent-image">
+                      <img :src="baseImageUrl + agent.image" :alt="agent.name">
+                    </div>
+                  </el-aside>
+                  <el-main style="width: 210px; height: 150px; padding: 0;">
+                    <div class="agent-info">
+                      <div class="agent-header">
+                        <h3>{{ agent.name }}</h3>
+                      </div>
+                      <div class="agent-author">
+                        <img :src="baseImageUrl + agent.author.avatar" :alt="agent.author.name">
+                        <span>{{ agent.author.name }}</span>
+                      </div>
+                      <p class="agent-description">{{ agent.description }}</p>
+                    </div>
+                  </el-main>
+                </el-container>
+              </el-header>
+              <el-footer>
+                <div class="agent-stats">
+                  <span class="stat-item" title="点赞量">
+                    <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    {{ agent.likes }}
+                  </span>
+                  <span class="stat-item" title="收藏量">
+                    <svg class="favorite-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/>
+                    </svg>
+                    {{ agent.favorites }}
+                  </span>
+                  <span class="stat-item" title="评论量">
+                    <svg class="comment-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20 2H4c-1.1 0-2 .9-2 2v14l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                    </svg>
+                    {{ agent.comments }}
+                  </span>
+                </div>
+              </el-footer>
+            </el-container>
           </div>
         </div>
-      </div>
-
-      <!-- 喜欢列表 -->
-      <div v-if="currentTab === 'likes'" class="agent-list">
-        <div v-for="agent in likes" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
-          <div class="agent-image">
-            <img :src="baseImageUrl + agent.image" :alt="agent.name">
-            <div class="agent-category">{{ agent.category }}</div>
-          </div>
-          <div class="agent-info">
-            <div class="agent-header">
-              <h3>{{ agent.name }}</h3>
-              <div class="agent-author">
-                <img :src="baseImageUrl + agent.author.avatar" :alt="agent.author.name">
-                <span>{{ agent.author.name }}</span>
-              </div>
-            </div>
-            <p class="agent-description">{{ agent.description }}</p>
-            <div class="agent-stats">
-<!--              <span class="stat-item" title="使用量">-->
-<!--                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">-->
-<!--                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>-->
-<!--                </svg>-->
-<!--                {{ agent.usage }}-->
-<!--              </span>-->
-              <span class="stat-item" title="点赞量">
-                <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                {{ agent.likes }}
-              </span>
-              <span class="stat-item" title="收藏量">
-                <svg class="favorite-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/>
-                </svg>
-                {{ agent.favorites }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 收藏列表 -->
-      <div v-if="currentTab === 'favorites'" class="agent-list">
-        <div v-for="agent in favorites" :key="agent.id" class="agent-card" @click="goToAgentDetail(agent.id)">
-          <div class="agent-image">
-            <img :src="baseImageUrl + agent.image" :alt="agent.name">
-            <div class="agent-category">{{ agent.category }}</div>
-          </div>
-          <div class="agent-info">
-            <div class="agent-header">
-              <h3>{{ agent.name }}</h3>
-              <div class="agent-author">
-                <img :src="baseImageUrl + agent.author.avatar" :alt="agent.author.name">
-                <span>{{ agent.author.name }}</span>
-              </div>
-            </div>
-            <p class="agent-description">{{ agent.description }}</p>
-            <div class="agent-stats">
-<!--              <span class="stat-item" title="使用量">-->
-<!--                <svg class="usage-icon" viewBox="0 0 24 24" fill="currentColor">-->
-<!--                  <path d="M13 3L4 14h7l-2 5 9-11h-7l2-5z"/>-->
-<!--                </svg>-->
-<!--                {{ agent.usage }}-->
-<!--              </span>-->
-              <span class="stat-item" title="点赞量">
-                <svg class="like-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-                {{ agent.likes }}
-              </span>
-              <span class="stat-item" title="收藏量">
-                <svg class="favorite-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"/>
-                </svg>
-                {{ agent.favorites }}
-              </span>
-            </div>
-          </div>
+        <!-- 分页控件 -->
+        <div class="pagination">
+          <button
+            :disabled="currentPage <= 1"
+            @click="currentPage--"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+          </button>
+          <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+          <button
+            :disabled="currentPage === totalPages"
+            @click="currentPage++"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -492,7 +483,7 @@ function logout() {
   margin-top: 20px;
 }
 
-.stat-item {
+.socialInfo-item {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -552,77 +543,74 @@ function logout() {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.agent-list {
+.agent-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  padding: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-rows:minmax(200px, 1fr) minmax(200px, 1fr) minmax(200px, 1fr);
+  column-gap: 20px;
+  row-gap: 10px;
+  padding: 10px;
 }
 
 .agent-card {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
+  height: 195px;
+  width: 330px;
   display: flex;
-  flex-direction: column;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .agent-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .agent-image {
-  position: relative;
-  width: 100%;
-  padding-top: 75%;
+  width: 70px;
+  height: 70px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin: 16px 0 0 0;
   background: #f8f9fa;
 }
 
 .agent-image img {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.agent-category {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: white;
-  background: rgba(0,0,0,0.6);
+  border-radius: 8px; /* 确保图片的圆角与容器一致 */
 }
 
 .agent-info {
-  padding: 16px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  margin: 16px 0 0 10px;
+  width: 200px;
+  height: 120px;
+  justify-content: space-between;
 }
 
 .agent-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 10px;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .agent-header h3 {
   margin: 0;
   color: #2c3e50;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .agent-author {
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -640,32 +628,39 @@ function logout() {
 }
 
 .agent-description {
-  margin: 0 0 15px 0;
+  margin: 0 0 10px 0;
   color: #666;
   font-size: 14px;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  flex: 1;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 3; /* 限制描述显示三行 */
+  line-clamp: 3; /* Standard property for compatibility */
 }
 
 .agent-stats {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* 平均分布 */
+  align-items: center;
   padding-top: 10px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #eee; /* 添加分隔线 */
 }
 
 .stat-item {
+  margin-left: 5px;
+  margin-right: 5px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
   color: #666;
   font-size: 13px;
-  padding: 4px 8px;
-  border-radius: 12px;
+  padding: 4px 0;
+  flex: 1; /* 平均分配宽度 */
+  text-align: center; /* 居中对齐 */
   background: #f8f9fa;
+  border-radius: 8px;
   transition: all 0.3s ease;
 }
 
@@ -678,16 +673,12 @@ function logout() {
   height: 16px;
 }
 
-.stat-item svg.usage-icon {
-  color: #e74c3c;
-}
-
 .stat-item svg.like-icon {
   color: #e74c3c;
 }
 
 .stat-item svg.favorite-icon {
-  color: #e74c3c;
+  color: #f1c40f;
 }
 
 /* 设置图标和按钮样式 */
@@ -732,4 +723,58 @@ function logout() {
 .logout-btn:hover {
   background: #c0392b;
 }
-</style> 
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  background: transparent;
+}
+
+.pagination button {
+  background: #f8f9fa;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #2c3e50;
+}
+
+.pagination button svg {
+  width: 20px;
+  height: 20px;
+  color: #2c3e50;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #e9ecef;
+  transform: scale(1.1);
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.page-info {
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 0 15px;
+}
+
+.no-content {
+  text-align: center;
+  color: #999;
+  font-size: 25px;
+  padding: 20px;
+}
+</style>

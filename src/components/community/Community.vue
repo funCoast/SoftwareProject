@@ -170,7 +170,7 @@ onMounted(() => {
       </div>
 
       <div v-if="filteredAgents.length === 0" class="no-content">
-          暂无相关内容
+          暂无相关内容，快来抢先发布吧！
       </div>
       <!-- 智能体列表 -->
       <div v-else class="agent-list">
