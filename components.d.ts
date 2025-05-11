@@ -34,6 +34,7 @@ declare module 'vue' {
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElInput: typeof import('element-plus/es')['ElInput']
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
+    ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
     ElMain: typeof import('element-plus/es')['ElMain']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElOptionGroup: typeof import('element-plus/es')['ElOptionGroup']
@@ -43,6 +44,7 @@ declare module 'vue' {
     ElSelect: typeof import('element-plus/es')['ElSelect']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
+    ElTag: typeof import('element-plus/es')['ElTag']
     ElText: typeof import('element-plus/es')['ElText']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     EndNodeDetail: typeof import('./src/components/workflow/node-details/EndNodeDetail.vue')['default']
@@ -66,10 +68,14 @@ declare module 'vue' {
     UploadPicture: typeof import('./src/components/knowledgeBase/UploadPicture.vue')['default']
     UploadTable: typeof import('./src/components/knowledgeBase/UploadTable.vue')['default']
     UploadText: typeof import('./src/components/knowledgeBase/UploadText.vue')['default']
+    UserManage: typeof import('./src/components/admin/UserManage.vue')['default']
     WeatherPlugin: typeof import('./src/components/workflow/node-details/WeatherPlugin.vue')['default']
     WebNodeDetail: typeof import('./src/components/workflow/node-details/WebNodeDetail.vue')['default']
     WorkflowCanvas: typeof import('./src/components/workflow/WorkflowCanvas.vue')['default']
     WorkflowNodeManager: typeof import('./src/components/workflow/WorkflowNodeManager.vue')['default']
     Workspace: typeof import('./src/components/workspace/Workspace.vue')['default']
+  }
+  export interface ComponentCustomProperties {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

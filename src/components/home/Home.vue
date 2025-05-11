@@ -67,14 +67,14 @@ const paginatedAgents = computed(()=> {
 })
 
 watch(
-  () => totalPages.value,
-  (newTotalPages) => {
-    if (newTotalPages === 0) {
-      currentPage.value = 0; // 如果总页数为 0，当前页也设置为 0
-    } else {
-      currentPage.value = 1;
+    () => totalPages.value,
+    (newTotalPages) => {
+      if (newTotalPages === 0) {
+        currentPage.value = 0; // 如果总页数为 0，当前页也设置为 0
+      } else {
+        currentPage.value = 1;
+      }
     }
-  }
 )
 
 onBeforeMount (() => {
@@ -160,7 +160,7 @@ function goToAgentDetail(agentId: number) {
         <div class="notice-content">
           <div class="notice-list">
             <div v-for="announcement in announcements" :key="announcement.id" class="notice-item">
-<!--              <i class="fas fa-check-circle"></i>-->
+              <!--              <i class="fas fa-check-circle"></i>-->
               <div class="notice-text">
                 <h4>{{ announcement.title }}</h4>
                 <p>{{ announcement.content }}</p>
@@ -322,14 +322,14 @@ function goToAgentDetail(agentId: number) {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
- .agent-section {
+.agent-section {
   width: 1000px;
   height: 750px;
   background: white;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
- }
+}
 .notice-list {
   display: flex;
   flex-direction: column;

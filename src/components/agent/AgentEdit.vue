@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeMount, watch, inject, nextTick } from
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import {useRoute} from "vue-router";
+import { marked } from 'marked'
 import router from "../../router.ts";
 import {Close, Document, Plus, Search} from "@element-plus/icons-vue";
 
@@ -292,9 +293,8 @@ async function updateAgentInfo() {
 // 修改计算属性为响应式引用
 const selectedKbs = ref<number[]>([])
 const selectedWorkflows = ref<number[]>([])
-const selectedModel = ref<string>('qwen-plus')
 
-// 监听agentInfo的变化，更新选中的知识库，工作流和大模型
+// 监听agentInfo的变化，更新选中的知识库和大模型
 watch(() => agentInfo.value.config.selectedKbs, (newVal) => {
   if (JSON.stringify(newVal) !== JSON.stringify(selectedKbs.value)) {
     selectedKbs.value = [...newVal]
@@ -307,13 +307,7 @@ watch(() => agentInfo.value.config.selectedWorkflows, (newVal) => {
   }
 }, { immediate: true })
 
-// watch(() => agentInfo.value.config.selectedModel, (newVal) => {
-//   if (newVal !== selectedModel.value) {
-//     selectedModel.value = newVal
-//   }
-// })
-
-// 监听选中的知识库，工作流和大模型变化，更新agentInfo
+// 监听选中的知识库和大模型变化，更新agentInfo
 watch(selectedKbs, (newVal) => {
   if (JSON.stringify(newVal) !== JSON.stringify(agentInfo.value.config.selectedKbs)) {
     agentInfo.value.config.selectedKbs = [...newVal]
@@ -333,7 +327,8 @@ function goToWorkflowEdit(id: number) {
   })
 }
 
-function goToKBEdit(id: number, type: string) {
+function goToKBEdit(id: number, type: string | undefined) {
+  if (!type) return
   router.push({
     path: `/workspace/${type}/${id}`,
     query: { uid: uid.value }
@@ -343,7 +338,10 @@ function goToKBEdit(id: number, type: string) {
 
 interface Message {
   sender: 'user' | 'assistant'
-  content: string
+  content: {
+    thinking_chain: string,
+    response: string
+  }
   time: string
   files?: string[]
   search?: boolean
@@ -354,6 +352,9 @@ const messageInput = ref('')
 const chatHistory = ref<Message[]>([])
 const fileList = ref<File[]>([])
 const enableSearch = ref(false)
+
+// 添加加载状态
+const isLoading = ref(false)
 
 // 文件上传相关
 const handleFileUpload = (file: File) => {
@@ -381,20 +382,39 @@ const toggleSearch = () => {
   enableSearch.value = !enableSearch.value
 }
 
+// 修改发送消息函数
+const sendMessage = () => {
+  if (!messageInput.value.trim() && fileList.value.length === 0) return
+  
+  isLoading.value = true
+  sendsendMessage()
+  chatHistory.value.push({
+    sender: 'user',
+    content: {
+      thinking_chain: '',
+      response: messageInput.value
+    },
+    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    files: fileList.value.map(file => file.name),
+    search: enableSearch.value
+  })
+
+  messageInput.value = ''
+  fileList.value = []
+  enableSearch.value = false
+}
+
+// 修改sendsendMessage函数
 async function sendsendMessage() {
   try {
     const formData = new FormData()
-    formData.append('sender', uid.value)
+    formData.append('uid', uid.value)
     formData.append('content', messageInput.value)
     formData.append('agent_id', agent_id as string)
     formData.append('search', enableSearch.value.toString())
 
     for (const file of fileList.value) {
       formData.append('file', file)
-    }
-
-    for (const [key, value] of formData.entries()) {
-      console.log(key, value)
     }
 
     const response = await axios({
@@ -418,25 +438,9 @@ async function sendsendMessage() {
     }
   } catch (error) {
     console.error('信息发送失败:', error)
+  } finally {
+    isLoading.value = false
   }
-}
-
-// 发送消息
-const sendMessage = () => {
-  if (!messageInput.value.trim() && fileList.value.length === 0) return
-  
-  sendsendMessage()
-  chatHistory.value.push({
-    sender: 'user',
-    content: messageInput.value,
-    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    files: fileList.value.map(file => file.name),
-    search: enableSearch.value
-  })
-
-  messageInput.value = ''
-  fileList.value = []
-  enableSearch.value = false
 }
 
 // 确认按钮处理函数
@@ -459,6 +463,11 @@ const handleEnter = (e: KeyboardEvent) => {
       textarea.selectionStart = textarea.selectionEnd = start + 1
     })
   }
+}
+
+// 渲染Markdown格式
+function renderedMarkdown(content: string) {
+  return marked(content)
 }
 </script>
 
@@ -611,7 +620,7 @@ const handleEnter = (e: KeyboardEvent) => {
                   <span class="message-time">{{ message.time }}</span>
                   <span class="sender-name">{{ message.sender }}</span>
                 </div>
-                <div class="message-text" style="white-space: pre-line;">{{ message.content }}</div>
+                <div class="message-text" style="white-space: pre-line;">{{ message.content.response }}</div>
                 <div v-if="message.files && message.files.length > 0" class="message-files">
                   <div v-for="file in message.files" :key="file" class="message-file">
                     <el-icon><Document /></el-icon>
@@ -632,9 +641,29 @@ const handleEnter = (e: KeyboardEvent) => {
                   <span class="sender-name">{{ message.sender }}</span>
                   <span class="message-time">{{ message.time }}</span>
                 </div>
-                <div class="message-text" style="white-space: pre-line;">{{ message.content }}</div>
+                <div class="message-text">
+                  <div v-if="message.content.thinking_chain" class="thinking-chain" v-html="renderedMarkdown(message.content.thinking_chain)"></div>
+                  <div class="response" v-html="renderedMarkdown(message.content.response)"></div>
+                </div>
               </div>
             </template>
+          </div>
+          
+          <!-- 添加加载提示 -->
+          <div v-if="isLoading" class="message assistant">
+            <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
+            <div class="message-content assistant-message">
+              <div class="message-info">
+                <span class="sender-name">assistant</span>
+              </div>
+              <div class="message-text">
+                <div class="typing-indicator">
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -934,6 +963,21 @@ const handleEnter = (e: KeyboardEvent) => {
   word-break: break-word;
 }
 
+.thinking-chain {
+  background: #f8f9fa;
+  border-left: 3px solid #409EFF;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  color: #666;
+  white-space: pre-wrap;
+}
+
+.response {
+  color: #2c3e50;
+}
+
 .chat-input {
   padding: 20px;
   border-top: 1px solid #eee;
@@ -1130,5 +1174,29 @@ const handleEnter = (e: KeyboardEvent) => {
 
 .message-search .el-icon {
   font-size: 14px;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background: #409EFF;
+  border-radius: 50%;
+  animation: typing 1s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) { animation-delay: 0.2s; }
+.typing-dot:nth-child(2) { animation-delay: 0.3s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 </style>

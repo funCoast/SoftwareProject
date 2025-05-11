@@ -84,8 +84,22 @@ function handleDrag(event: MouseEvent) {
   const rect = canvas.getBoundingClientRect()
   const x = (event.clientX - rect.left - dragOffset.value.x) / props.zoom
   const y = (event.clientY - rect.top - dragOffset.value.y) / props.zoom
-  draggedNode.value.x = Math.max(0, x)
-  draggedNode.value.y = Math.max(0, y)
+  
+  // 获取节点元素
+  const nodeEl = document.querySelector(`[data-node-id="${draggedNode.value.id}"]`)
+  if (!nodeEl) return
+  const nodeRect = nodeEl.getBoundingClientRect()
+  const nodeWidth = nodeRect.width / props.zoom
+  const nodeHeight = nodeRect.height / props.zoom
+  
+  // 计算画布边界（考虑缩放）
+  const maxX = rect.width / props.zoom - nodeWidth
+  const maxY = rect.height / props.zoom - nodeHeight
+  
+  // 限制节点位置在画布范围内
+  draggedNode.value.x = Math.max(0, Math.min(x, maxX))
+  draggedNode.value.y = Math.max(0, Math.min(y, maxY))
+  
   // 更新节点位置
   const updatedNodes = [...props.nodes]
   const nodeIndex = updatedNodes.findIndex(n => n.id === draggedNode.value.id)

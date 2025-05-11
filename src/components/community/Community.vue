@@ -50,7 +50,7 @@ async function fetchAllAgents() {
     console.error('获取智能体失败:', error)
   }
 }
-  
+
 const filteredAgents = computed(() => {
   if (currentTag.value === 'all') {
     return agents.value
@@ -69,14 +69,14 @@ const paginatedAgents = computed(() => {
 })
 
 watch(
-  () => totalPages.value,
-  (newTotalPages) => {
-    if (newTotalPages === 0) {
-      currentPage.value = 0; // 如果总页数为 0，当前页也设置为 0
-    } else {
-      currentPage.value = 1;
+    () => totalPages.value,
+    (newTotalPages) => {
+      if (newTotalPages === 0) {
+        currentPage.value = 0; // 如果总页数为 0，当前页也设置为 0
+      } else {
+        currentPage.value = 1;
+      }
     }
-  }
 );
 
 function goToAgentDetail(id: number) {
@@ -160,12 +160,12 @@ onMounted(() => {
               <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
             </svg>
           </div>
-<!--          <button class="publish-btn">-->
-<!--            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">-->
-<!--              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>-->
-<!--            </svg>-->
-<!--            发布智能体-->
-<!--          </button>-->
+          <!--          <button class="publish-btn">-->
+          <!--            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">-->
+          <!--              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>-->
+          <!--            </svg>-->
+          <!--            发布智能体-->
+          <!--          </button>-->
         </div>
       </div>
 
@@ -196,7 +196,7 @@ onMounted(() => {
                   </div>
                 </el-main>
               </el-container>
-            </el-header>  
+            </el-header>
             <el-footer>
               <div class="agent-stats">
                 <span class="stat-item" title="点赞量">
@@ -218,25 +218,25 @@ onMounted(() => {
                   {{ agent.comments }}
                 </span>
               </div>
-              </el-footer>
-            </el-container>
-          </div>
+            </el-footer>
+          </el-container>
         </div>
+      </div>
 
       <!-- 分页控件 -->
       <div class="pagination">
-        <button 
-          :disabled="currentPage <= 1"
-          @click="currentPage--"
+        <button
+            :disabled="currentPage <= 1"
+            @click="currentPage--"
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
           </svg>
         </button>
         <span class="page-info">{{ totalPages === 0 ? 0 : currentPage }} / {{ totalPages }}</span>
-        <button 
-          :disabled="currentPage >= totalPages || totalPages === 0"
-          @click="currentPage++"
+        <button
+            :disabled="currentPage >= totalPages || totalPages === 0"
+            @click="currentPage++"
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
@@ -379,7 +379,7 @@ onMounted(() => {
   height: 70px;
   overflow: hidden;
   border-radius: 8px;
-  margin: 18px 0 0 0; 
+  margin: 18px 0 0 0;
   background: #f8f9fa;
 }
 
@@ -400,7 +400,7 @@ onMounted(() => {
 .agent-header {
   display: flex;
   justify-content: space-between;
-  align-items: center; 
+  align-items: center;
   margin-bottom: 10px;
 }
 
@@ -409,9 +409,9 @@ onMounted(() => {
   color: #2c3e50;
   font-size: 18px;
   font-weight: bold;
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .agent-author {
