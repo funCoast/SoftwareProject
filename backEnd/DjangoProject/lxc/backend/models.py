@@ -1,5 +1,7 @@
 from django.db import models
 import uuid
+
+from django.db.models.fields.json import JSONField
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
@@ -253,6 +255,19 @@ class Message(models.Model):
     content = models.TextField()
     is_user = models.BooleanField()  # True为用户消息，False为AI回复
     timestamp = models.DateTimeField(auto_now_add=True)
+    # 新增字段：存储文件名列表（JSON 格式）
+    files_name = JSONField(
+        default=list,
+        blank=True,
+        help_text="关联文件名列表"
+    )
+
+    # 新增字段：存储思维链的字符串
+    thinking_chain = models.TextField(
+        blank=True,
+        null=True,
+        help_text="AI 的思考过程记录"
+    )
 
 
 class AgentReport(models.Model):
