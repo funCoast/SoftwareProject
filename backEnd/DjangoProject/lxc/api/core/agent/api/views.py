@@ -58,6 +58,10 @@ def temp_send_message(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def send_agent_message(request):
+    def get_uploaded_filenames(file_objects):
+        # 提取文件名列表（过滤空对象）
+        file_names = [file.name for file in file_objects if file]
+        return file_names
     try:
         user_id = request.POST.get('uid')
         message = request.POST.get('content')
@@ -78,7 +82,7 @@ def send_agent_message(request):
         session_history = get_limited_session_history(session, max_messages=10)
 
         # 保存用户消息
-        save_message(session, message, True)
+        save_message(session, message, True, get_uploaded_filenames(request), "", can_search)
 
         response = gen_response(user_id, agent_id, message, files, can_search, session_history)
         if not ('thinking_chain' in response):
@@ -90,7 +94,7 @@ def send_agent_message(request):
             }, status=500)
 
         # 保存智能体响应
-        save_message(session, response['response'], False)
+        save_message(session, response['response'], False, [], response['thinking_chain'], False)
 
         return JsonResponse({
             "code": 0,
