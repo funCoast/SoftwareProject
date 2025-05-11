@@ -106,7 +106,7 @@ def register(request):
 用户请求发送验证码
 """
 
-
+@csrf_exempt
 @api_view(['POST'])
 def send_code(request):
     def generate_code(length=6):
