@@ -143,21 +143,20 @@ def send_code(request):
         text_content = f"您的验证码是：{code}，5分钟内有效"
         html_content = f"<p>验证码：<strong>{code}</strong></p>"
 
-        email = EmailMultiAlternatives(
+        email_msg = EmailMultiAlternatives(
             subject, text_content, settings.DEFAULT_FROM_EMAIL, [email]
         )
-        email.attach_alternative(html_content, "text/html")
-        email.send()
+        email_msg.attach_alternative(html_content, "text/html")
+        email_msg.send()
 
         return JsonResponse({'code': 0, 'message': '验证码已发送'})
 
     except ValidationError:
         return JsonResponse({'code': -1, 'message': '邮箱格式无效'}, status=400)
-    except SMTPException as e:
+    except SMTPException:
         return JsonResponse({'code': -1, 'message': '邮件服务暂不可用'}, status=503)
     except Exception as e:
         return JsonResponse({'code': -1, 'message': str(e)}, status=500)
-    
 '''
 用户验证码登录接口
 '''
