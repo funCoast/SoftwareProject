@@ -268,6 +268,7 @@ class Message(models.Model):
         null=True,
         help_text="AI 的思考过程记录"
     )
+    search = models.BooleanField(default=False)
 
 
 class AgentReport(models.Model):
