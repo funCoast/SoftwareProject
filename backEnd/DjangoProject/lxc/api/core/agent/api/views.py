@@ -28,7 +28,7 @@ def temp_send_message(request):
         message = request.POST.get('content')
         agent_id = request.POST.get('agent_id')
         files = request.FILES.getlist('file') or []
-        can_search = request.POST.get('search')
+        can_search = request.POST.get('search') == 'true'
 
         response = gen_response_temp(user_id, agent_id, message, files, can_search)
 
@@ -63,7 +63,7 @@ def send_agent_message(request):
         message = request.POST.get('content')
         agent_id = request.POST.get('agent_id')
         files = request.FILES.get('file') or []
-        can_search = request.POST.get('search')
+        can_search = request.POST.get('search') == 'true'
 
         # 获取或创建会话
         session, error = get_or_create_session(User.objects.get(user_id=user_id), agent_id)
