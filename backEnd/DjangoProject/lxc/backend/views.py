@@ -127,7 +127,7 @@ def send_code(request):
                 return JsonResponse({
                     'code': -1,
                     'message': ban_message
-                }, status=403)
+                }, status=200)
         except User.DoesNotExist:
             pass  # 用户不存在则允许请求验证码以供注册
 
