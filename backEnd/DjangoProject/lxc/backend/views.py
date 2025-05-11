@@ -53,6 +53,29 @@ def index(request):
     # request.method 请求方式，GET、POST，例如用request.GET.get("key")读取数据
     return HttpResponse("Hello, welcome to our Lingxi Community")
 
+def check_user_post_status(user):
+    if not user.can_post:
+        now = timezone.now()
+        if user.post_expire and now >= user.post_expire:
+            user.can_post = True
+            user.post_expire = None
+            user.save()
+            return None  # 解封成功，可发布
+        else:
+            return f"您当前被禁止发布，解封时间为：{user.post_expire.strftime('%Y-%m-%d %H:%M:%S')}"
+    return None  # 可发布
+
+def check_user_ban_status(user):
+    if user.is_banned:
+        now = timezone.now()
+        if user.ban_expire and now >= user.ban_expire:
+            user.is_banned = False
+            user.ban_expire = None
+            user.save()
+            return None  # 解封成功
+        else:
+            return f"账号已被封禁，解封时间为：{user.ban_expire.strftime('%Y-%m-%d %H:%M:%S')}"
+    return None  # 没有封禁
 
 @csrf_exempt
 def register(request):
@@ -131,12 +154,13 @@ def send_code(request):
 '''
 用户验证码登录接口
 '''
+@csrf_exempt
 def user_login_by_code(request):
     try:
         data = json.loads(request.body)
         email = data.get('email', None)
         code = data.get('code', None)
-        print(email, code)
+
         stored_code = redis_client.get(f'verification_code_{email}')
         if not stored_code or stored_code != code:
             return JsonResponse({
@@ -144,45 +168,43 @@ def user_login_by_code(request):
                 'message': '验证码不正确或已过期'
             })
 
-        # 删除Redis中的验证码
         redis_client.delete(f'verification_code_{email}')
 
-        is_new_user = False  # 默认不是新用户
+        is_new_user = False
 
-        # 尝试获取用户信息
         try:
             user = User.objects.get(email=email)
-            user_id = user.user_id
         except User.DoesNotExist:
-            # 用户不存在，创建新用户
-            username = email.split('@')[0]  # 使用邮箱前缀作为用户名
-            default_avatar = '/media/avatars/defaultAvatar.svg'  # 这里替换为你的默认头像 URL
+            username = email.split('@')[0]
+            default_avatar = '/media/avatars/defaultAvatar.svg'
             user = User.objects.create(
                 username=username,
                 email=email,
-                password='123456',  # 密码可以稍后设置或留空
+                password='123456',
                 avatar_url=default_avatar
             )
-            user_id = user.user_id
             is_new_user = True
 
-        # 生成登录token
+        # 检查封禁状态
+        ban_message = check_user_ban_status(user)
+        if ban_message:
+            return JsonResponse({
+                'code': -1,
+                'message': ban_message
+            })
+
         token = str(uuid.uuid4())
+        redis_client.setex(f'token_{user.user_id}', 1800, token)
 
-        # 将token存储到Redis中，设置过期时间为30分钟
-        redis_client.setex(f'token_{user_id}', 1800, token)
-
-        # 返回成功响应json，包括 is_new_user 标记
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
             'token': token,
-            'id': user_id,
+            'id': user.user_id,
             'is_new_user': is_new_user
         })
 
     except Exception as e:
-        # 捕获异常并返回错误信息
         return JsonResponse({
             'code': -1,
             'message': str(e)
@@ -191,59 +213,47 @@ def user_login_by_code(request):
 """
 用户密码登录接口
 """
-
-
+@csrf_exempt
 def user_login_by_password(request):
     try:
         data = json.loads(request.body)
         account = data.get('account', None)
         password = data.get('password', None)
 
-        # 获取用户信息
         if '@' in account and '.' in account:
             try:
                 user = User.objects.get(email=account)
             except User.DoesNotExist:
-                return JsonResponse({
-                    'code': -1,
-                    'message': '用户不存在'
-                })
+                return JsonResponse({'code': -1, 'message': '用户不存在'})
         else:
             try:
                 user = User.objects.get(username=account)
             except User.DoesNotExist:
-                return JsonResponse({
-                    'code': -1,
-                    'message': '用户不存在'
-                })
+                return JsonResponse({'code': -1, 'message': '用户不存在'})
 
-        # 验证密码
-        if user.password != password:
+        # 检查封禁状态
+        ban_message = check_user_ban_status(user)
+        if ban_message:
             return JsonResponse({
                 'code': -1,
-                'message': '密码错误'
+                'message': ban_message
             })
 
-        # 生成登录token
+        if user.password != password:
+            return JsonResponse({'code': -1, 'message': '密码错误'})
+
         token = str(uuid.uuid4())
-        user_id = user.user_id
+        redis_client.setex(f'token_{user.user_id}', 1800, token)
 
-        # 将token存储到Redis中，设置过期时间为30分钟
-        redis_client.setex(f'token_{user_id}', 1800, token)
-
-        # 返回成功响应
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
             'token': token,
-            'id': user_id
+            'id': user.user_id
         })
 
     except Exception as e:
-        return JsonResponse({
-            'code': -1,
-            'message': str(e)
-        })
+        return JsonResponse({'code': -1, 'message': str(e)})
 
 
 """
@@ -2123,15 +2133,24 @@ def agent_release(request):
 
     try:
         user = User.objects.get(user_id=uid)
+
+        # 检查用户是否处于禁止发布状态
+        post_message = check_user_post_status(user)
+        if post_message:
+            return JsonResponse({
+                "code": -1,
+                "message": post_message
+            })
+
         agent = Agent.objects.get(agent_id=agent_id, user=user)
 
-        # 发布操作：将状态置为 1（审核中）
+        # 发布操作：将状态置为 'check'（待审核）
         agent.status = 'check'
         agent.save()
 
         return JsonResponse({
             "code": 0,
-            "message": "发布成功"
+            "message": "发布成功，待审核"
         })
 
     except User.DoesNotExist:
@@ -2144,6 +2163,7 @@ def agent_release(request):
             "code": -1,
             "message": "智能体不存在或不属于该用户"
         })
+
 def agent_remove(request):
     try:
         data = json.loads(request.body)
