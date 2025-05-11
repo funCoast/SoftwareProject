@@ -110,7 +110,7 @@ def register(request):
 @api_view(['POST'])
 def send_code(request):
     def generate_code(length=6):
-        chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnopqrstuvwxyz'  # 排除易混淆字符
+        chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnopqrstuvwxyz'
         return ''.join(random.choices(chars, k=length))
 
     try:
@@ -119,18 +119,26 @@ def send_code(request):
         # 邮箱格式校验
         validate_email(email)
 
+        # 若邮箱已注册，检查封禁状态
+        try:
+            user = User.objects.get(email=email)
+            ban_message = check_user_ban_status(user)
+            if ban_message:
+                return JsonResponse({
+                    'code': -1,
+                    'message': ban_message
+                }, status=403)
+        except User.DoesNotExist:
+            pass  # 用户不存在则允许请求验证码以供注册
+
         # 请求频率控制
         if redis_client.exists(f'code_cooldown_{email}'):
             return JsonResponse({'code': -1, 'message': '请求过于频繁'}, status=429)
 
-        # 3. 生成6位混合验证码
         code = generate_code(6)
-
-        # 4. 存储验证码（覆盖旧值）
         redis_client.setex(f'verification_code_{email}', 300, code)
-        redis_client.setex(f'code_cooldown_{email}', 30, '1')  # 冷却期
+        redis_client.setex(f'code_cooldown_{email}', 30, '1')
 
-        # 5. 发送邮件（HTML+文本双版本）
         subject = "灵犀AI社区安全验证码"
         text_content = f"您的验证码是：{code}，5分钟内有效"
         html_content = f"<p>验证码：<strong>{code}</strong></p>"
@@ -149,8 +157,7 @@ def send_code(request):
         return JsonResponse({'code': -1, 'message': '邮件服务暂不可用'}, status=503)
     except Exception as e:
         return JsonResponse({'code': -1, 'message': str(e)}, status=500)
-
-
+    
 '''
 用户验证码登录接口
 '''
