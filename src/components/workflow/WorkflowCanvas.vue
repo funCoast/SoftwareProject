@@ -272,7 +272,7 @@ function handleCanvasMouseDown(e: MouseEvent) {
 function handleCanvasMouseMove(e: MouseEvent) {
   const rect = canvasEl.value?.getBoundingClientRect()
   // 拖动添加的节点
-  if (isAddingNode.value && tempNode.value) {
+  if (isAddingNode.value && tempNode.value && rect) {
     tempNode.value.x = e.clientX - rect.left
     tempNode.value.y = e.clientY - rect.top
   }
@@ -280,9 +280,14 @@ function handleCanvasMouseMove(e: MouseEvent) {
   if (isDraggingCanvas.value) {
     const deltaX = e.clientX - lastMousePosition.value.x
     const deltaY = e.clientY - lastMousePosition.value.y
+    
+    // 获取当前transform
     const currentTransform = new DOMMatrix(getComputedStyle(canvasEl.value!).transform)
     const newTransform = currentTransform.translate(deltaX, deltaY)
+    
+    // 直接应用新的transform
     canvasEl.value!.style.transform = newTransform.toString()
+    
     // 更新所有节点的位置以保持连线同步
     const translateX = newTransform.e - currentTransform.e
     const translateY = newTransform.f - currentTransform.f
@@ -291,6 +296,7 @@ function handleCanvasMouseMove(e: MouseEvent) {
       x: node.x + translateX / zoom.value,
       y: node.y + translateY / zoom.value
     }))
+    
     lastMousePosition.value = {
       x: e.clientX,
       y: e.clientY
@@ -815,6 +821,7 @@ const clearWorkflowCacheAndGoBack = () => {
   touch-action: none;
   will-change: transform;
   z-index: 1;
+  overflow: hidden;
 }
 
 .canvas-area[data-dragging="true"]::after {
