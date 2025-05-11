@@ -8,3 +8,5 @@ import api.core.workflow.nodes.httpRequest.node
 import api.core.workflow.nodes.if_else.node
 import api.core.workflow.nodes.kbRetrieval.node
 import api.core.workflow.nodes.weather.node
+import api.core.workflow.nodes.web.node
+import api.core.workflow.nodes.paraExtractor.node
