@@ -152,6 +152,9 @@ class AgentFetchAgentMessageView(View):
                     "sender": "user" if msg.is_user else "assistant",
                     "content": msg.content,
                     "time": msg.timestamp,
+                    "file": msg.files_name,
+                    "thinking_chain": msg.thinking_chain,
+                    "search": msg.search,
                 })
 
             return JsonResponse({
