@@ -19,7 +19,7 @@ class FileAnalyse:
                 {'role': 'system', 'content': 'You are a helpful assistant.'},
                 # 请将 'file-fe-xxx'替换为您实际对话场景所使用的 file-id。
                 {'role': 'system', 'content': f'fileid://{file_object.id}'},
-                {'role': 'user', 'content': f"这是用户的输入{input_message},请你根据用户输入，从文件中提取需要的内容"}
+                {'role': 'user', 'content': f"请完整地，尽可能还原地提取文件中的内容，返回一段markdown形式的文本"}
             ],
             stream=True,
             stream_options={"include_usage": True}
