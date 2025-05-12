@@ -2,53 +2,32 @@ import requests
 
 from api.core.workflow.registry import register_node
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
-import time
 from itertools import groupby
 
 def extract_dynamic_text(url: str) -> str:
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")        # 无头模式
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--lang=zh-CN")      # 中文网页
-    chrome_options.add_argument(
-        "user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    )
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(url, wait_until="load")
 
-    driver = webdriver.Chrome(options=chrome_options)
+        html = page.content()
+        browser.close()
 
-    try:
-        driver.get(url)
-        time.sleep(3)  # 等待 JS 渲染
-
-        html = driver.page_source
         soup = BeautifulSoup(html, "html.parser")
-
-        # 提取所有可见文本
         texts = soup.find_all(string=True)
         visible_texts = [
             t.strip() for t in texts
             if t.strip() and t.parent.name not in ['script', 'style', 'meta', 'noscript']
         ]
 
-        # 去掉重复和杂乱内容
         cleaned = []
         for key, group in groupby(visible_texts):
             if len(key) > 1:
                 cleaned.append(key)
 
-        # 返回格式化后的字符串
         return "\n\n".join(cleaned)
-
-    except Exception as e:
-        return f"Error: {e}"
-
-    finally:
-        driver.quit()
 
 @register_node("web")
 def run_web_node(node, inputs):
