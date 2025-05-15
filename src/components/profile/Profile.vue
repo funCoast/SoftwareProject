@@ -232,24 +232,21 @@ async function sendMessage() {
   try {
     const response = await axios({
       method: 'post',
-      url: 'user/sendMessage',
+      url: 'user/contactRequest',
       data: {
-        sender: currentUid,
-        receiver: uid.value,
-        message: "你好"
+        uid: currentUid,
+        target_uid: uid.value,
       }
     })
     if (response.data.code === 0) {
-      ElMessage.success('消息发送成功')
-      console.log('成功')
       await router.push('/message');
     } else {
       ElMessage.error(response.data.message)
       console.log('失败：', response.data.message)
     }
   } catch (error) {
-    console.error('发送消息失败：', error)
-    ElMessage.error('发送消息失败')
+    console.error('失败：', error)
+    ElMessage.error('失败')
   }
 }
 

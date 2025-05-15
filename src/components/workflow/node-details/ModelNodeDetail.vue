@@ -2,6 +2,7 @@
 import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
 import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
 import axios from "axios";
+import { ElMessage } from 'element-plus'
 
 interface Input {
   id: number
@@ -198,6 +199,17 @@ defineExpose({
     showRunPanel.value = true
   }
 })
+
+function handleChange(file: File, fileListArr: File[]) {
+  const isLt5M = file.size / 1024 / 1024 < 20
+  if (!isLt5M) {
+    ElMessage.warning("文件大小不能超过 20MB！")
+    fileListArr.splice(fileListArr.indexOf(file), 1)
+    return
+  }
+  // 直接同步 fileList
+  fileList.value = [...fileListArr]
+}
 </script>
 
 <template>
@@ -254,24 +266,6 @@ defineExpose({
       </div>
     </div>
 
-    <!-- 输出信息 -->
-    <div class="section">
-      <div class="section-header">
-        <h4>输出变量</h4>
-      </div>
-      
-      <div class="output-info">
-        <div class="info-item">
-          <label>变量名称:</label>
-          <span>text</span>
-        </div>
-        <div class="info-item">
-          <label>变量类型:</label>
-          <span>string</span>
-        </div>
-      </div>
-    </div>
-
     <!-- 模型配置 -->
     <div class="section">
       <div class="section-header">
@@ -295,6 +289,24 @@ defineExpose({
           />
         </el-select>
       </div>
+
+    <!-- 输出信息 -->
+    <div class="section">
+      <div class="section-header">
+        <h4>输出变量</h4>
+      </div>
+      
+      <div class="output-info">
+        <div class="info-item">
+          <label>变量名称:</label>
+          <span>text</span>
+        </div>
+        <div class="info-item">
+          <label>变量类型:</label>
+          <span>string</span>
+        </div>
+      </div>
+    </div>
     </div>
 
     <!-- 运行面板 -->

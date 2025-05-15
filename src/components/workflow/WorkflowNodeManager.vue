@@ -488,9 +488,6 @@ onMounted(async () => {
           <div class="node-header">
             <img :src="node.image" :alt="node.label" class="node-type-icon">
             <span class="node-title">{{ node.name || node.label }}</span>
-<!--            <button class="run-btn" @click.stop="runNode(node)" title="运行节点">-->
-<!--              <img src="https://api.iconify.design/material-symbols:play-circle.svg" alt="运行" class="run-icon">-->
-<!--            </button>-->
           </div>
           <div class="node-description" v-if="node.description">
             {{ node.description }}

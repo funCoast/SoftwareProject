@@ -3,7 +3,8 @@ import { ref, onMounted, inject, type Ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { Document, Search, Close, Plus } from '@element-plus/icons-vue'
+import { Document, Search, Close, Plus, ArrowDown } from '@element-plus/icons-vue'
+import { marked } from 'marked'
 
 const userAvatar = inject('avatar') as Ref
 const route = useRoute()
@@ -74,6 +75,9 @@ interface Comment {
 const newComment = ref('')
 const comments = ref<Comment[]>([])
 
+// 添加加载状态
+const isLoading = ref(false)
+
 // 获取智能体基本信息
 async function fetchAgentInfo() {
   try {
@@ -96,12 +100,17 @@ async function fetchAgentInfo() {
   }
 }
 
+// 修改 Message 接口
 interface Message {
   sender: 'user' | 'assistant'
-  content: string
+  content: {
+    thinking_chain: string
+    response: string
+  }
   time: string
   files?: string[]
   search?: boolean
+  showThinking?: boolean
 }
 
 // 聊天相关
@@ -153,17 +162,22 @@ const handleEnter = (e: KeyboardEvent) => {
   }
 }
 
-// 发送消息
+// 修改发送消息函数
 const trySendMessage = () => {
   if (!messageInput.value.trim() && fileList.value.length === 0) return
   
+  isLoading.value = true
   sendMessage()
   chatHistory.value.push({
     sender: 'user',
-    content: messageInput.value,
+    content: {
+      thinking_chain: '',
+      response: messageInput.value
+    },
     time: new Date().toISOString().replace('T', ' ').slice(0, 19),
     files: fileList.value.map(file => file.name),
-    search: enableSearch.value
+    search: enableSearch.value,
+    showThinking: true
   })
 
   messageInput.value = ''
@@ -171,6 +185,7 @@ const trySendMessage = () => {
   enableSearch.value = false
 }
 
+// 修改发送消息到服务器的函数
 async function sendMessage() {
   try {
     const formData = new FormData()
@@ -180,16 +195,13 @@ async function sendMessage() {
     formData.append('search', enableSearch.value.toString())
     
     for (const file of fileList.value) {
-      formData.append('file', file)
+      formData.append('file', file.raw)
     }
 
     const response = await axios({
       method: 'post',
       url: 'agent/sendAgentMessage',
-      data: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+      data: formData
     })
     
     if (response.data.code === 0) {
@@ -197,6 +209,7 @@ async function sendMessage() {
         sender: 'assistant',
         content: response.data.content,
         time: response.data.time,
+        showThinking: true
       })
       console.log('信息发送成功')
     } else {
@@ -204,9 +217,19 @@ async function sendMessage() {
     }
   } catch (error) {
     console.error('信息发送失败:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
+// 添加折叠控制函数
+function toggleThinkingChain(index: number) {
+  if (chatHistory.value[index]) {
+    chatHistory.value[index].showThinking = !chatHistory.value[index].showThinking
+  }
+}
+
+// 修改获取历史消息函数
 async function fetchMessage() {
   try {
     const response = await axios({
@@ -218,14 +241,23 @@ async function fetchMessage() {
       }
     })
     if (response.data.code === 0) {
-      chatHistory.value = response.data.chatHistory
-      console.log('历史信息发送成功')
+      // 为每条消息添加默认的折叠状态
+      chatHistory.value = response.data.chatHistory.map((msg: Message) => ({
+        ...msg,
+        showThinking: true
+      }))
+      console.log('历史信息获取成功')
     } else {
       console.log(response.data.message)
     }
   } catch (error) {
     console.error('获取历史消息失败:', error)
   }
+}
+
+// 添加渲染Markdown的函数
+function renderedMarkdown(content: string) {
+  return marked(content)
 }
 
 // 获取用户操作状态
@@ -468,7 +500,7 @@ onMounted(() => {
 
           <!-- 遍历消息 -->
           <div
-            v-for="message in chatHistory"
+            v-for="(message, index) in chatHistory"
             :class="['message', message.sender]"
           >
             <!-- 用户消息 -->
@@ -477,7 +509,7 @@ onMounted(() => {
                 <img :src="userAvatar" alt="用户头像" />
               </div>
               <div class="message-content">
-                <div class="message-text">{{ message.content }}</div>
+                <div class="message-text">{{ message.content.response }}</div>
                 <div v-if="message.files && message.files.length > 0" class="message-files">
                   <div v-for="file in message.files" :key="file" class="message-file">
                     <el-icon><Document /></el-icon>
@@ -498,10 +530,37 @@ onMounted(() => {
                 <img :src="'http://122.9.33.84:8000' + agentInfo.icon" alt="助手头像" />
               </div>
               <div class="message-content">
-                <div class="message-text">{{ message.content }}</div>
+                <div class="message-text">
+                  <div v-if="message.content.thinking_chain" class="thinking-chain">
+                    <div class="thinking-header" @click="toggleThinkingChain(index)">
+                      <span>思考过程</span>
+                      <el-icon :class="{ 'is-active': !message.showThinking }">
+                        <ArrowDown />
+                      </el-icon>
+                    </div>
+                    <div v-show="message.showThinking" class="thinking-content" v-html="renderedMarkdown(message.content.thinking_chain)"></div>
+                  </div>
+                  <div class="response" v-html="renderedMarkdown(message.content.response)"></div>
+                </div>
               </div>
               <div class="message-time">{{ message.time }}</div>
             </template>
+          </div>
+
+          <!-- 在消息列表的最后添加加载动画 -->
+          <div v-if="isLoading" class="message assistant">
+            <div class="message-avatar">
+              <img :src="'http://122.9.33.84:8000' + agentInfo.icon" alt="助手头像" />
+            </div>
+            <div class="message-content">
+              <div class="message-text">
+                <div class="typing-indicator">
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                  <div class="typing-dot"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -969,7 +1028,7 @@ onMounted(() => {
 .typing-dot {
   width: 8px;
   height: 8px;
-  background: #666;
+  background: #2c3e50;
   border-radius: 50%;
   animation: typing 1s infinite ease-in-out;
 }
@@ -1628,5 +1687,41 @@ onMounted(() => {
   height: 1px;
   background: #eee;
   margin: 0;
+}
+
+.thinking-chain {
+  background: #f8f9fa;
+  border-left: 3px solid #409EFF;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+}
+
+.thinking-header .el-icon {
+  transition: transform 0.3s;
+}
+
+.thinking-header .el-icon.is-active {
+  transform: rotate(-90deg);
+}
+
+.thinking-content {
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+
+.response {
+  color: #2c3e50;
 }
 </style>
