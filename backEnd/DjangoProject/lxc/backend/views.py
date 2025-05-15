@@ -18,6 +18,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from pycparser import parse_file
+from typing import Optional
 
 from api.core.workflow.executor import Executor
 from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord,Contact
@@ -36,7 +37,6 @@ import os
 from django.utils.crypto import get_random_string
 from backend.utils.parser import extract_text_from_file
 from backend.utils.chunker import split_text
-from .utils.segmenter import auto_clean_and_split, custom_split, split_by_headings
 from .utils.tree import build_chunk_tree
 from .utils.qa import ask_llm
 from .utils.segmenter import (
@@ -953,7 +953,7 @@ def get_kb_files(request):
         "texts": file_list
     })
 
-def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: int | None = None):
+def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Optional[int] = None):
     raw_text = extract_text_from_file(file_obj.file.path) or ""
     kb = file_obj.kb
 
