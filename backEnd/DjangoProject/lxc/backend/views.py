@@ -1032,8 +1032,7 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
 @csrf_exempt
 def get_text_content(request):
     """
-    hierarchical 模式按 level 构建嵌套 JSON
-    其他模式平铺返回
+    返回平铺列表，只用 level 表示层级，不要 children 嵌套
     """
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
@@ -1054,50 +1053,19 @@ def get_text_content(request):
 
     chunks = KnowledgeChunk.objects.filter(file=file_obj).order_by('order')
 
-    if file_obj.segment_mode == 'hierarchical':
-        # ---------- 按 level 构建树 ----------
-        stack = []
-        root = []
+    # ✅ 直接平铺返回，level 表示层级，没有 children 嵌套
+    content_list = [{
+        "id": ck.chunk_id,
+        "level": ck.level,
+        "content": ck.content
+    } for ck in chunks]
 
-        for ck in chunks:
-            node = {
-                "id": ck.chunk_id,
-                "level": ck.level,
-                "content": ck.content,
-                "children": []
-            }
-
-            while stack and stack[-1]['level'] >= ck.level:
-                stack.pop()
-
-            if stack:
-                stack[-1]['children'].append(node)
-            else:
-                root.append(node)
-
-            stack.append(node)
-
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "mode": "hierarchical",
-            "content": root,
-        })
-
-    else:
-        # ---------- 平铺 ----------
-        content_list = [{
-            "id": ck.chunk_id,
-            "level": ck.level,
-            "content": ck.content
-        } for ck in chunks]
-
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "mode": file_obj.segment_mode,
-            "content": content_list
-        })
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "mode": file_obj.segment_mode,
+        "content": content_list
+    })
 
 @csrf_exempt
 def get_text_tree(request):
