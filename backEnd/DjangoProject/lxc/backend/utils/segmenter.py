@@ -1,5 +1,6 @@
 import re
 from textwrap import wrap
+from typing import List, Tuple
 
 __all__ = [
     "auto_clean_and_split",
@@ -7,7 +8,7 @@ __all__ = [
     "split_by_headings",
 ]
 
-def auto_clean_and_split(text: str, blank_lines: int = 1) -> list[str]:
+def auto_clean_and_split(text: str, blank_lines: int = 1) -> List[str]:
     """按连续空行 / 换行符自动分段，过滤空白行"""
     paragraphs, buf = [], []
     for line in text.splitlines():
@@ -22,7 +23,7 @@ def auto_clean_and_split(text: str, blank_lines: int = 1) -> list[str]:
     return paragraphs
 
 
-def custom_split(text: str, chunk_size: int = 200) -> list[str]:
+def custom_split(text: str, chunk_size: int = 200) -> List[str]:
     """
     近似按“词数/字数”固定长度切片，兼容中英文：
     - 先按自然段落粗划分，再 wrap 到固定宽度
@@ -39,7 +40,7 @@ def custom_split(text: str, chunk_size: int = 200) -> list[str]:
 
 _HD = re.compile(r"^\s*(#+)\s+(.*)$")
 
-def split_by_headings(text: str) -> list[tuple[int, str]]:
+def split_by_headings(text: str) -> List[Tuple[int, str]]:
     """
     读取 Markdown，返回 (level, text) 列表，按原顺序。
     level = 1 对应 '# '，level = 2 对应 '## '……
