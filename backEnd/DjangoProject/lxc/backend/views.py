@@ -931,7 +931,6 @@ def get_kb_files(request):
 
     uid = request.GET.get('uid')
     kb_id = request.GET.get('kb_id')
-    file_id = request.GET.get('file_id') or request.GET.get('text_id')  # 兼容旧参数名
 
     if not uid or not kb_id:
         return JsonResponse({"code": -1, "message": "缺少 uid 或 kb_id 参数"})
@@ -946,55 +945,14 @@ def get_kb_files(request):
     except KnowledgeBase.DoesNotExist:
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
-    # 获取文件列表
-    if not file_id:
-        files = kb.files.all().values('id', 'name', 'segment_mode')
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "texts": list(files)
-        })
+    files = kb.files.all().values('id', 'name')
+    file_list = list(files)
 
-    # 获取单个文件及其切片内容
-    try:
-        file_obj = KnowledgeFile.objects.get(pk=file_id, kb=kb)
-    except KnowledgeFile.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "文件不存在"})
-
-    chunks = KnowledgeChunk.objects.filter(file=file_obj).order_by('order')
-
-    if file_obj.segment_mode == 'hierarchical':
-        # 返回树形结构
-        id2node = {}
-        root = []
-        for ck in chunks:
-            node = {"id": ck.chunk_id, "level": ck.level, "content": ck.content, "children": []}
-            id2node[ck.chunk_id] = node
-            if ck.parent_id:
-                parent_node = id2node.get(ck.parent_id)
-                (parent_node["children"] if parent_node else root).append(node)
-            else:
-                root.append(node)
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "mode": "hierarchical",
-            "content": root
-        })
-    else:
-        # 返回普通列表
-        content_list = [{
-            "id": ck.chunk_id,
-            "level": ck.level,
-            "content": ck.content
-        } for ck in chunks]
-
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "mode": file_obj.segment_mode,
-            "content": content_list
-        })
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "texts": file_list
+    })
 
 def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Optional[int] = 200):
     """
