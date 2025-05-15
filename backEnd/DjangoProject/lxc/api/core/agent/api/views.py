@@ -2,6 +2,7 @@ import json
 import os
 import time
 import uuid
+from email.policy import default
 from re import search
 
 from django.http import JsonResponse
@@ -81,7 +82,7 @@ def send_agent_message(request):
         session_history = get_limited_session_history(session, max_messages=10)
 
         # 保存用户消息
-        save_message(session, message, True, get_uploaded_filenames(request), "", can_search)
+        save_message(session, message, True, get_uploaded_filenames(files), "", can_search)
 
         response = gen_response(user_id, agent_id, message, files, can_search, session_history)
         if not ('thinking_chain' in response):
@@ -258,7 +259,7 @@ class AgentUpdateView(View):
         system_prompt = data.get('system_prompt')
         selected_kbs = data.get('selectedKbs', [])
         selected_workflows = data.get('selectedWorkflows', [])
-        selected_model = data.get('selectedModel', [])
+        selected_model = data.get('selectedModel', "")
         opening_line = data.get('opening_line', "")
 
         if not agent_id:
