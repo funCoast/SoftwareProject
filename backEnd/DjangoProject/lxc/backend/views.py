@@ -960,10 +960,14 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     向量索引不接入，仅做数据库存储。
     """
     try:
-        with file_obj.file.open('r', encoding='utf-8') as f:
-            text = f.read()
+        with file_obj.file.open('rb') as f:
+            text = f.read().decode('utf-8')
     except Exception as e:
         print(f"[ERROR] 文件读取失败: {e}")
+        return
+
+    if not text.strip():
+        print("[WARN] 文件内容为空")
         return
 
     kb = file_obj.kb
