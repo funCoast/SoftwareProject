@@ -969,7 +969,6 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     kb = file_obj.kb
     KnowledgeChunk.objects.filter(file=file_obj).delete()
 
-    # 切分逻辑
     if segment_mode == "auto":
         lvl_info = [(0, p) for p in auto_clean_and_split(text)]
     elif segment_mode == "custom":
@@ -986,13 +985,12 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     print(f"[INFO] 开始切分: {len(lvl_info)} 段, 模式: {segment_mode}")
 
     order = 0
-    chunk_objs = []
 
-    # 第一次：不挂 parent
-    with transaction.atomic():
+    if segment_mode != "hierarchical":
+        # ✅ auto / custom 直接 bulk_create
+        chunk_objs = []
         for level, content in lvl_info:
             embedding = get_tongyi_embedding(content)
-
             chunk_obj = KnowledgeChunk(
                 kb=kb,
                 file=file_obj,
@@ -1004,28 +1002,32 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
             chunk_objs.append(chunk_obj)
             order += 1
 
-        created_chunks = KnowledgeChunk.objects.bulk_create(chunk_objs, batch_size=1000)
+        KnowledgeChunk.objects.bulk_create(chunk_objs, batch_size=1000)
 
-    # 第二次：hierarchical 模式挂 parent
-    if segment_mode == "hierarchical":
+    else:
+        # ✅ hierarchical：parent依赖递归，只能一条一条 save
         stack = []
-        updates = []
-
-        for chunk in created_chunks:
-            while stack and stack[-1].level >= chunk.level:
+        for level, content in lvl_info:
+            while stack and stack[-1].level >= level:
                 stack.pop()
 
             parent = stack[-1] if stack else None
-            if parent:
-                chunk.parent = parent
-                updates.append(chunk)
 
-            stack.append(chunk)
+            embedding = get_tongyi_embedding(content)
+            chunk_obj = KnowledgeChunk(
+                kb=kb,
+                file=file_obj,
+                content=content,
+                order=order,
+                level=level,
+                parent=parent,
+                embedding=json.dumps(embedding) if embedding else None
+            )
+            chunk_obj.save()  # ✅ 确保 parent_id 关联有效
+            stack.append(chunk_obj)
+            order += 1
 
-        if updates:
-            KnowledgeChunk.objects.bulk_update(updates, ['parent'], batch_size=500)
-
-    print(f"[INFO] 切分完成，共写入 {len(created_chunks)} chunks")
+    print(f"[INFO] 切分完成，共写入 {order} chunks")
 
 @csrf_exempt
 def get_text_content(request):
