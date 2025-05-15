@@ -146,6 +146,17 @@ class AgentFetchAgentMessageView(View):
                 return JsonResponse({"status": "error", "message": error}, status=500)
 
             chat_history = []
+            if agent.opening_line != "":
+                chat_history.append({
+                    "sender": "assistant",
+                    "content": {
+                        "response": agent.opening_line,
+                        "thinking_chain": "",
+                    },
+                    "time": agent.publish_time,
+                    "file": [],
+                    "search": False,
+                })
             messages = Message.objects.filter(conversation=session).order_by('timestamp')
             for msg in messages:
                 chat_history.append({
@@ -249,6 +260,7 @@ class AgentUpdateView(View):
         selected_kbs = data.get('selectedKbs', [])
         selected_workflows = data.get('selectedWorkflows', [])
         selected_model = data.get('selectedModel', [])
+        opening_line = data.get('opening_line', "")
 
         if not agent_id:
             return JsonResponse({"code": -1, "message": "缺少 agent_id 参数"}, status=400)
@@ -260,6 +272,7 @@ class AgentUpdateView(View):
 
         agent.persona = system_prompt
         agent.llm = selected_model
+        agent.opening_line = opening_line
         agent.save()
 
         AgentKnowledgeEntry.objects.filter(agent=agent).delete()
@@ -308,14 +321,12 @@ class AgentCreateView(View):
             uid = data.get("uid")
             name = data.get("name")
             description = data.get("description", "")
-            open_line = data.get("open_line", "")
             icon = None
         else:
             uid = request.POST.get("uid")
             name = request.POST.get("name")
             description = request.POST.get("description", "")
             icon = request.FILES.get("icon")
-            open_line = request.POST.get("open_line") or ""
 
         if not uid:
             return JsonResponse(
@@ -366,7 +377,6 @@ class AgentCreateView(View):
                 user=user,
                 status='private',
                 is_modifiable=True,
-                open_line=open_line,
             )
         except Exception as e:
             return JsonResponse(

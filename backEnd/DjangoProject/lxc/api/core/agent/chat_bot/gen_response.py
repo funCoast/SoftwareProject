@@ -71,12 +71,6 @@ def upload_and_process_file(uploaded_file, session_id, message):
         # 处理
         result = FileAnalyse().analyze(save_path, message)
 
-        # 无论成功与否，最终删除文件
-        if os.path.exists(save_path):
-            try:
-                os.remove(save_path)
-            except Exception as e:
-                print(f"文件删除失败：{str(e)}")
 
         return result
 
@@ -153,6 +147,12 @@ def gen_response(user_id, agent_id, message, files, can_search, session_history)
                 "content": agent.persona
             },
         ]
+
+        if agent.opening_line != "":
+            messages.append({
+                "role": "assistant",
+                "content": agent.opening_line
+            })
 
         for msg in session_history:
             cur_message = {}
