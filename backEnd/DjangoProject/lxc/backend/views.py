@@ -925,7 +925,7 @@ def get_tongyi_embedding(text):
         return None
 
 @csrf_exempt
-def get_kb_files_with_chunks(request):
+def get_kb_files(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
