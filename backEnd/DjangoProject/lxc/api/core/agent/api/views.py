@@ -146,6 +146,17 @@ class AgentFetchAgentMessageView(View):
                 return JsonResponse({"status": "error", "message": error}, status=500)
 
             chat_history = []
+            if agent.opening_line != "":
+                chat_history.append({
+                    "sender": "assistant",
+                    "content": {
+                        "response": agent.opening_line,
+                        "thinking_chain": "",
+                    },
+                    "time": agent.publish_time,
+                    "file": [],
+                    "search": False,
+                })
             messages = Message.objects.filter(conversation=session).order_by('timestamp')
             for msg in messages:
                 chat_history.append({
