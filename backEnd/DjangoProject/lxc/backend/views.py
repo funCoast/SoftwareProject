@@ -1032,9 +1032,8 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
 @csrf_exempt
 def get_text_content(request):
     """
-    根据文件 segment_mode 返回：
-    - hierarchical 模式返回树形结构
-    - 其他模式返回平铺列表
+    hierarchical 模式按 level 构建嵌套 JSON
+    其他模式平铺返回
     """
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
@@ -1048,33 +1047,35 @@ def get_text_content(request):
 
     try:
         user = User.objects.get(user_id=uid)
-    except User.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "用户不存在"})
-
-    try:
         kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
-    except KnowledgeBase.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
-
-    try:
         file_obj = KnowledgeFile.objects.get(id=file_id, kb=kb)
-    except KnowledgeFile.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "文件不存在或无权限"})
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist, KnowledgeFile.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或文件不存在或无权限"}, status=404)
 
     chunks = KnowledgeChunk.objects.filter(file=file_obj).order_by('order')
 
     if file_obj.segment_mode == 'hierarchical':
-        # ---------- 树形结构 ----------
-        id2node = {}
+        # ---------- 按 level 构建树 ----------
+        stack = []
         root = []
+
         for ck in chunks:
-            node = {"id": ck.chunk_id, "level": ck.level, "content": ck.content, "children": []}
-            id2node[ck.chunk_id] = node
-            if ck.parent_id:
-                parent_node = id2node.get(ck.parent_id)
-                (parent_node["children"] if parent_node else root).append(node)
+            node = {
+                "id": ck.chunk_id,
+                "level": ck.level,
+                "content": ck.content,
+                "children": []
+            }
+
+            while stack and stack[-1]['level'] >= ck.level:
+                stack.pop()
+
+            if stack:
+                stack[-1]['children'].append(node)
             else:
                 root.append(node)
+
+            stack.append(node)
 
         return JsonResponse({
             "code": 0,
@@ -1084,7 +1085,7 @@ def get_text_content(request):
         })
 
     else:
-        # ---------- 平铺结构 ----------
+        # ---------- 平铺 ----------
         content_list = [{
             "id": ck.chunk_id,
             "level": ck.level,
