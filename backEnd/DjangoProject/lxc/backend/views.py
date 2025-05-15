@@ -1029,15 +1029,20 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
 
 @csrf_exempt
 def get_text_content(request):
+    """
+    根据文件 segment_mode 返回：
+    - hierarchical 模式返回树形结构
+    - 其他模式返回平铺列表
+    """
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
     uid = request.GET.get('uid')
     kb_id = request.GET.get('kb_id')
-    text_id = request.GET.get('text_id')
+    file_id = request.GET.get('file_id') or request.GET.get('text_id')
 
-    if not uid or not kb_id or not text_id:
-        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 text_id 参数"})
+    if not uid or not kb_id or not file_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file_id 参数"})
 
     try:
         user = User.objects.get(user_id=uid)
@@ -1050,27 +1055,46 @@ def get_text_content(request):
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
     try:
-        file = KnowledgeFile.objects.get(id=text_id, kb=kb)
+        file_obj = KnowledgeFile.objects.get(id=file_id, kb=kb)
     except KnowledgeFile.DoesNotExist:
         return JsonResponse({"code": -1, "message": "文件不存在或无权限"})
 
-    chunks = KnowledgeChunk.objects.filter(file=file).order_by('order')
+    chunks = KnowledgeChunk.objects.filter(file=file_obj).order_by('order')
 
-    content_list = []
+    if file_obj.segment_mode == 'hierarchical':
+        # ---------- 树形结构 ----------
+        id2node = {}
+        root = []
+        for ck in chunks:
+            node = {"id": ck.chunk_id, "level": ck.level, "content": ck.content, "children": []}
+            id2node[ck.chunk_id] = node
+            if ck.parent_id:
+                parent_node = id2node.get(ck.parent_id)
+                (parent_node["children"] if parent_node else root).append(node)
+            else:
+                root.append(node)
 
-    for chunk in chunks:
-        level = chunk.level
-        content_list.append({
-            "id": chunk.chunk_id,
-            "level": level,
-            "content": chunk.content
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "mode": "hierarchical",
+            "content": root,
         })
 
-    return JsonResponse({
-        "code": 0,
-        "message": "获取成功",
-        "content": content_list
-    })
+    else:
+        # ---------- 平铺结构 ----------
+        content_list = [{
+            "id": ck.chunk_id,
+            "level": ck.level,
+            "content": ck.content
+        } for ck in chunks]
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "mode": file_obj.segment_mode,
+            "content": content_list
+        })
 
 @csrf_exempt
 def get_text_tree(request):
