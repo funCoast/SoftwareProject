@@ -952,7 +952,7 @@ def get_kb_files(request):
         return JsonResponse({
             "code": 0,
             "message": "获取成功",
-            "files": list(files)
+            "texts": list(files)
         })
 
     # 获取单个文件及其切片内容
