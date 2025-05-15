@@ -842,28 +842,31 @@ def upload_kb_file(request):
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"}, status=400)
 
     uid = request.POST.get('uid')
-    kb_id = request.POST.get('kb_id')
+    kb_id_raw = request.POST.get('kb_id')
     segment_mode = request.POST.get('segment_mode', 'auto').lower()
-    chunk_size = request.POST.get('chunk_size')          # 字符串，稍后校验
+    chunk_size = request.POST.get('chunk_size')
     upload_file = request.FILES.get('file')
 
-    if not uid or not kb_id or not upload_file:
+    if not uid or not kb_id_raw or not upload_file:
         return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file 参数"}, status=400)
+
+    try:
+        kb_id = int(kb_id_raw)
+    except ValueError:
+        return JsonResponse({"code": -1, "message": "kb_id 参数无效"}, status=400)
 
     if segment_mode not in ('auto', 'custom', 'hierarchical'):
         return JsonResponse({"code": -1, "message": "segment_mode 参数无效"}, status=400)
 
     ext = os.path.splitext(upload_file.name)[-1].lower()
+    ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
+
     if ext not in ALLOWED_EXTENSIONS:
         return JsonResponse({"code": -1, "message": "不支持的文件类型"}, status=400)
 
-    # 分层级分段仅允许 markdown
     if segment_mode == 'hierarchical' and ext != '.md':
-        return JsonResponse({"code": -1,
-                             "message": "hierarchical 模式目前仅支持 Markdown (.md) 文件"},
-                            status=400)
+        return JsonResponse({"code": -1, "message": "hierarchical 模式仅支持 Markdown (.md) 文件"}, status=400)
 
-    # 自定义分段参数校验
     if segment_mode == 'custom':
         try:
             chunk_size = int(chunk_size) if chunk_size else 200
@@ -871,31 +874,27 @@ def upload_kb_file(request):
         except (ValueError, AssertionError):
             return JsonResponse({"code": -1, "message": "chunk_size 必须为正整数"}, status=400)
     else:
-        chunk_size = None   # auto / hierarchical 不使用
+        chunk_size = None
 
-    # ---------- 数据库对象 ----------
     try:
         user = User.objects.get(user_id=uid)
-        kb   = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
     except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
         return JsonResponse({"code": -1, "message": "用户或知识库不存在"}, status=404)
 
     saved_file = KnowledgeFile.objects.create(
-        kb = kb,
-        file = upload_file,
-        name = upload_file.name,
-        segment_mode = segment_mode
+        kb=kb,
+        file=upload_file,
+        name=upload_file.name,
+        segment_mode=segment_mode
     )
 
-    # 更新知识库时间戳
     kb.updated_at = timezone.now()
     kb.save(update_fields=['updated_at'])
 
-    # ---------- 切分 + 嵌入 ----------
     try:
         segment_file_and_save_chunks(saved_file, segment_mode, chunk_size)
     except Exception as e:
-        # 可按需记录日志 logger.exception(e)
         return JsonResponse({"code": -1, "message": f"切分失败：{e}"}, status=500)
 
     return JsonResponse({"code": 0, "message": "上传并切分成功"})
@@ -954,25 +953,20 @@ def get_kb_files(request):
         "texts": file_list
     })
 
+from backend.utils.parser import extract_text_from_file
+
 def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Optional[int] = 200):
-    """
-    文件切分（auto / custom / hierarchical），写入 KnowledgeChunk 并生成 embedding。
-    向量索引不接入，仅做数据库存储。
-    """
     try:
-        with file_obj.file.open('r', encoding='utf-8') as f:
-            text = f.read()
+        text = extract_text_from_file(file_obj.file.path)
     except Exception as e:
         print(f"[ERROR] 文件读取失败: {e}")
         return
-
-    kb = file_obj.kb
 
     if not text.strip():
         print("[WARN] 文件内容为空")
         return
 
-    # 清空旧数据
+    kb = file_obj.kb
     KnowledgeChunk.objects.filter(file=file_obj).delete()
 
     # 切分逻辑
@@ -981,7 +975,7 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     elif segment_mode == "custom":
         lvl_info = [(0, p) for p in custom_split(text, chunk_size or 200)]
     elif segment_mode == "hierarchical":
-        lvl_info = split_by_headings(text)  # [(level, text)]
+        lvl_info = split_by_headings(text)
     else:
         raise ValueError(f"不支持的 segment_mode: {segment_mode}")
 
@@ -991,9 +985,7 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
 
     new_chunks = []
     order = 0
-    stack = []  # hierarchical 模式才用
-
-    print(f"[INFO] 开始切分: {len(lvl_info)} 个段落, 模式: {segment_mode}")
+    stack = []
 
     with transaction.atomic():
         for level, content in lvl_info:
@@ -1022,22 +1014,24 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
 
             order += 1
 
-        # 批量插入数据库
         KnowledgeChunk.objects.bulk_create(new_chunks, batch_size=1000)
-
-    print(f"[INFO] 切分完成，共写入 {len(new_chunks)} 个 KnowledgeChunk")
 
 @csrf_exempt
 def get_text_content(request):
+    """
+    根据文件 segment_mode 返回：
+    - hierarchical 模式返回树形结构
+    - 其他模式返回平铺列表
+    """
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
     uid = request.GET.get('uid')
     kb_id = request.GET.get('kb_id')
-    text_id = request.GET.get('text_id')
+    file_id = request.GET.get('file_id') or request.GET.get('text_id')
 
-    if not uid or not kb_id or not text_id:
-        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 text_id 参数"})
+    if not uid or not kb_id or not file_id:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file_id 参数"})
 
     try:
         user = User.objects.get(user_id=uid)
@@ -1050,27 +1044,46 @@ def get_text_content(request):
         return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
 
     try:
-        file = KnowledgeFile.objects.get(id=text_id, kb=kb)
+        file_obj = KnowledgeFile.objects.get(id=file_id, kb=kb)
     except KnowledgeFile.DoesNotExist:
         return JsonResponse({"code": -1, "message": "文件不存在或无权限"})
 
-    chunks = KnowledgeChunk.objects.filter(file=file).order_by('order')
+    chunks = KnowledgeChunk.objects.filter(file=file_obj).order_by('order')
 
-    content_list = []
+    if file_obj.segment_mode == 'hierarchical':
+        # ---------- 树形结构 ----------
+        id2node = {}
+        root = []
+        for ck in chunks:
+            node = {"id": ck.chunk_id, "level": ck.level, "content": ck.content, "children": []}
+            id2node[ck.chunk_id] = node
+            if ck.parent_id:
+                parent_node = id2node.get(ck.parent_id)
+                (parent_node["children"] if parent_node else root).append(node)
+            else:
+                root.append(node)
 
-    for chunk in chunks:
-        level = chunk.level
-        content_list.append({
-            "id": chunk.chunk_id,
-            "level": level,
-            "content": chunk.content
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "mode": "hierarchical",
+            "content": root,
         })
 
-    return JsonResponse({
-        "code": 0,
-        "message": "获取成功",
-        "content": content_list
-    })
+    else:
+        # ---------- 平铺结构 ----------
+        content_list = [{
+            "id": ck.chunk_id,
+            "level": ck.level,
+            "content": ck.content
+        } for ck in chunks]
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "mode": file_obj.segment_mode,
+            "content": content_list
+        })
 
 @csrf_exempt
 def get_text_tree(request):
