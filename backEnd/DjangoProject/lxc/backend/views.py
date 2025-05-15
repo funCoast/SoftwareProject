@@ -983,19 +983,14 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
         print("[WARN] 切分后无内容")
         return
 
-    new_chunks = []
-    order = 0
-    stack = []
+    print(f"[INFO] 开始切分: {len(lvl_info)} 段, 模式: {segment_mode}")
 
+    order = 0
+    chunk_objs = []
+
+    # 第一次：不挂 parent
     with transaction.atomic():
         for level, content in lvl_info:
-            if segment_mode == "hierarchical":
-                while stack and stack[-1][0] >= level:
-                    stack.pop()
-                parent = stack[-1][1] if stack else None
-            else:
-                parent = None
-
             embedding = get_tongyi_embedding(content)
 
             chunk_obj = KnowledgeChunk(
@@ -1003,18 +998,34 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
                 file=file_obj,
                 content=content,
                 order=order,
-                parent=parent,
                 level=level,
                 embedding=json.dumps(embedding) if embedding else None
             )
-            new_chunks.append(chunk_obj)
-
-            if segment_mode == "hierarchical":
-                stack.append((level, chunk_obj))
-
+            chunk_objs.append(chunk_obj)
             order += 1
 
-        KnowledgeChunk.objects.bulk_create(new_chunks, batch_size=1000)
+        created_chunks = KnowledgeChunk.objects.bulk_create(chunk_objs, batch_size=1000)
+
+    # 第二次：hierarchical 模式挂 parent
+    if segment_mode == "hierarchical":
+        stack = []
+        updates = []
+
+        for chunk in created_chunks:
+            while stack and stack[-1].level >= chunk.level:
+                stack.pop()
+
+            parent = stack[-1] if stack else None
+            if parent:
+                chunk.parent = parent
+                updates.append(chunk)
+
+            stack.append(chunk)
+
+        if updates:
+            KnowledgeChunk.objects.bulk_update(updates, ['parent'], batch_size=500)
+
+    print(f"[INFO] 切分完成，共写入 {len(created_chunks)} chunks")
 
 @csrf_exempt
 def get_text_content(request):
