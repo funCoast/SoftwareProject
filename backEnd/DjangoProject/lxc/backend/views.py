@@ -21,7 +21,8 @@ from pycparser import parse_file
 from typing import Optional
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord,Contact
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow, \
+    Agent, UserInteraction, FollowRelationship, Comment, SensitiveWord, Contact, UserLog
 from django.db.models import Q, ExpressionWrapper, F, IntegerField
 import base64
 import json
@@ -207,6 +208,11 @@ def user_login_by_code(request):
         token = str(uuid.uuid4())
         redis_client.setex(f'token_{user.user_id}', 1800, token)
 
+        UserLog.objects.create(
+            user=user,
+            type='login',
+        )
+
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
@@ -255,6 +261,11 @@ def user_login_by_password(request):
 
         token = str(uuid.uuid4())
         redis_client.setex(f'token_{user.user_id}', 1800, token)
+
+        UserLog.objects.create(
+            user=user,
+            type='login',
+        )
 
         return JsonResponse({
             'code': 0,
@@ -2525,6 +2536,10 @@ def community_agent_handle_like(request):
             interaction.is_liked = True
             agent.likes_count += 1
             message = "点赞成功"
+            UserLog.objects.create(
+                user=user,
+                type='like',
+            )
 
         interaction.save()
         agent.save()
@@ -2578,6 +2593,10 @@ def community_agent_handle_Favorite(request):
             interaction.is_favorited = True
             agent.favorites_count += 1
             message = "收藏成功"
+            UserLog.objects.create(
+                user=user,
+                type='favorite',
+            )
 
         interaction.save()
         agent.save()

@@ -16,7 +16,8 @@ from api.core.agent.chat_bot.session import get_or_create_session, save_message,
     generate_prompt_with_context
 from api.core.agent.skill.plugin_call.plugin_call import plugin_call
 from api.core.agent.skill.workflow_call import workflows_call
-from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation, KnowledgeBase, Workflow, Message
+from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation, KnowledgeBase, Workflow, Message, \
+    UserLog
 from backend.utils.queryKB import query_kb
 from lxc import settings
 
@@ -95,6 +96,11 @@ def send_agent_message(request):
 
         # 保存智能体响应
         save_message(session, response['response'], False, [], response['thinking_chain'], False)
+
+        UserLog.objects.create(
+            user=User.objects.get(user_id=user_id),
+            type='use',
+        )
 
         return JsonResponse({
             "code": 0,
@@ -379,6 +385,12 @@ class AgentCreateView(View):
                 status='private',
                 is_modifiable=True,
             )
+
+            UserLog.objects.create(
+                user=user,
+                type='create',
+            )
+
         except Exception as e:
             return JsonResponse(
                 {"code": -1, "message": f"创建失败：{str(e)}"},
