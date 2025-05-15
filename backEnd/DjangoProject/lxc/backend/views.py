@@ -423,8 +423,9 @@ def user_get_avatar(request):
         return JsonResponse({"code": -1, "message": "用户不存在", "avatar": ""})
 
 def user_contact_request(request):
-    uid = request.POST.get("uid")
-    target_uid = request.POST.get("target_uid")
+    data = json.loads(request.body)
+    uid = data.get("uid")
+    target_uid = data.get("target_uid")
 
     # 参数校验
     if not uid or not target_uid:
@@ -440,7 +441,7 @@ def user_contact_request(request):
         return JsonResponse({"code": -1, "message": "用户不存在"})
 
     # 保证 user1.id < user2.id（实现对称）
-    if user1.id > user2.id:
+    if user1.user_id > user2.user_id:
         user1, user2 = user2, user1
 
     # 判断是否已经存在关系
@@ -953,53 +954,78 @@ def get_kb_files(request):
         "texts": file_list
     })
 
-def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Optional[int] = None):
-    raw_text = extract_text_from_file(file_obj.file.path) or ""
+def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Optional[int] = 200):
+    """
+    文件切分（auto / custom / hierarchical），写入 KnowledgeChunk 并生成 embedding。
+    向量索引不接入，仅做数据库存储。
+    """
+    try:
+        with file_obj.file.open('r', encoding='utf-8') as f:
+            text = f.read()
+    except Exception as e:
+        print(f"[ERROR] 文件读取失败: {e}")
+        return
+
     kb = file_obj.kb
 
-    # 先清空旧数据
+    if not text.strip():
+        print("[WARN] 文件内容为空")
+        return
+
+    # 清空旧数据
     KnowledgeChunk.objects.filter(file=file_obj).delete()
 
-    # ---------- 统一分段 ----------
+    # 切分逻辑
     if segment_mode == "auto":
-        segments = auto_clean_and_split(raw_text)
-        lvl_info = [(0, seg) for seg in segments]
+        lvl_info = [(0, p) for p in auto_clean_and_split(text)]
     elif segment_mode == "custom":
-        segments = custom_split(raw_text, chunk_size or 200)
-        lvl_info = [(0, seg) for seg in segments]
+        lvl_info = [(0, p) for p in custom_split(text, chunk_size or 200)]
     elif segment_mode == "hierarchical":
-        lvl_info = split_by_headings(raw_text)  # [(level, text)]
+        lvl_info = split_by_headings(text)  # [(level, text)]
     else:
-        raise ValueError(f"未知 segment_mode: {segment_mode}")
+        raise ValueError(f"不支持的 segment_mode: {segment_mode}")
 
-    # ---------- 批量落库 ----------
+    if not lvl_info:
+        print("[WARN] 切分后无内容")
+        return
+
     new_chunks = []
     order = 0
-    stack: list[tuple[int, KnowledgeChunk]] = []  # (level, obj)
+    stack = []  # hierarchical 模式才用
 
-    for level, text in lvl_info:
-        # 计算 parent
-        while stack and stack[-1][0] >= level:
-            stack.pop()
-        parent = stack[-1][1] if stack else None
+    print(f"[INFO] 开始切分: {len(lvl_info)} 个段落, 模式: {segment_mode}")
 
-        new_chunks.append(
-            KnowledgeChunk(
+    with transaction.atomic():
+        for level, content in lvl_info:
+            if segment_mode == "hierarchical":
+                while stack and stack[-1][0] >= level:
+                    stack.pop()
+                parent = stack[-1][1] if stack else None
+            else:
+                parent = None
+
+            embedding = get_tongyi_embedding(content)
+
+            chunk_obj = KnowledgeChunk(
                 kb=kb,
                 file=file_obj,
-                content=text,
+                content=content,
                 order=order,
                 parent=parent,
                 level=level,
+                embedding=json.dumps(embedding) if embedding else None
             )
-        )
+            new_chunks.append(chunk_obj)
 
-        order += 1
-        # 只有 hierarchical 需要维护栈
-        if segment_mode == "hierarchical":
-            stack.append((level, new_chunks[-1]))
+            if segment_mode == "hierarchical":
+                stack.append((level, chunk_obj))
 
-    created_objs = KnowledgeChunk.objects.bulk_create(new_chunks, batch_size=1000)
+            order += 1
+
+        # 批量插入数据库
+        KnowledgeChunk.objects.bulk_create(new_chunks, batch_size=1000)
+
+    print(f"[INFO] 切分完成，共写入 {len(new_chunks)} 个 KnowledgeChunk")
 
 @csrf_exempt
 def get_text_content(request):
