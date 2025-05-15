@@ -327,3 +327,14 @@ class Contact(models.Model):
     def __str__(self):
         return f"{self.user1.username} <-> {self.user2.username} ({self.status})"
 
+class UserLog(models.Model):
+    STATUS_CHOICES = [
+        ('login', '登陆'),
+        ('create', '创建'),
+        ('use', '使用'),
+        ('favorite', '收藏'),
+        ('like', '点赞')
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    date = models.DateTimeField(auto_now_add=True)
+    type = models.CharField(max_length=10, choices=STATUS_CHOICES)
