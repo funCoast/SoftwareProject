@@ -1,5 +1,4 @@
 from openai import OpenAI
-from api.core.agent.chat_bot.gen_response import call_agent
 from ...registry import register_node
 
 @register_node("agent")
@@ -11,6 +10,7 @@ def run_llm_node(node, inputs):
     """
     text = inputs[0].get("value", "")
     agent_id = node.get("data", {}).get("agent_id", "")
+    from api.core.agent.chat_bot.gen_response import call_agent
     result = call_agent(agent_id,text)
 
     # 自动生成 outputs（按输出定义）
