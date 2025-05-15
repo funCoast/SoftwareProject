@@ -2215,7 +2215,9 @@ def agent_fetch_all(request):
                 "name": agent.agent_name,
                 "description": agent.description,
                 "status": status,
-                "publishedTime": agent.registered_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(agent, 'registered_at') and agent.registered_at else None
+                "publishedTime": agent.registered_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(agent, 'registered_at') and agent.registered_at else None,
+                "createTime": agent.created_time,
+                "modifyTime": agent.updated_time,
             })
 
         return JsonResponse({
