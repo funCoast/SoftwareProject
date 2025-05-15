@@ -6,7 +6,6 @@ from django.core.files.storage import default_storage
 from api.core.agent.chat_bot.llm_integration import LLMClient
 from api.core.agent.skill.file_analyse.file_analyse import FileAnalyse
 from api.core.agent.skill.plugin_call.plugin_call import plugin_call
-from api.core.agent.skill.workflow_call import workflows_call
 from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation
 from backend.utils.queryKB import query_kb
 from lxc import settings
@@ -27,6 +26,7 @@ def call_plugin(message):
 def call_workflow(agent: Agent, message):
     entries = AgentWorkflowRelation.objects.filter(agent=agent)
     workflow_ids = [entry.workflow_id for entry in entries]
+    from api.core.agent.skill.workflow_call import workflows_call
     workflow_response = workflows_call(message, workflow_ids)
     return f"\t- 调用工作流得到结果：{workflow_response}\n"
 
