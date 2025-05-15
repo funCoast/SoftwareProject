@@ -959,7 +959,13 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     文件切分（auto / custom / hierarchical），写入 KnowledgeChunk 并生成 embedding。
     向量索引不接入，仅做数据库存储。
     """
-    text = file_obj.text or ""
+    try:
+        with file_obj.file.open('r', encoding='utf-8') as f:
+            text = f.read()
+    except Exception as e:
+        print(f"[ERROR] 文件读取失败: {e}")
+        return
+
     kb = file_obj.kb
 
     if not text.strip():
