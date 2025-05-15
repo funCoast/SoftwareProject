@@ -314,7 +314,7 @@ class Contact(models.Model):
             raise ValidationError("不能添加自己为联系人")
 
         # 强制 user1 的 id 小于 user2，实现对称存储
-        if self.user1.id > self.user2.id:
+        if self.user1.user_id > self.user2.user_id:
             self.user1, self.user2 = self.user2, self.user1
 
     def save(self, *args, **kwargs):

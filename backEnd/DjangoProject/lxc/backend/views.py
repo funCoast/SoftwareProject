@@ -423,8 +423,9 @@ def user_get_avatar(request):
         return JsonResponse({"code": -1, "message": "用户不存在", "avatar": ""})
 
 def user_contact_request(request):
-    uid = request.POST.get("uid")
-    target_uid = request.POST.get("target_uid")
+    data = json.loads(request.body)
+    uid = data.get("uid")
+    target_uid = data.get("target_uid")
 
     # 参数校验
     if not uid or not target_uid:
@@ -440,7 +441,7 @@ def user_contact_request(request):
         return JsonResponse({"code": -1, "message": "用户不存在"})
 
     # 保证 user1.id < user2.id（实现对称）
-    if user1.id > user2.id:
+    if user1.user_id > user2.user_id:
         user1, user2 = user2, user1
 
     # 判断是否已经存在关系
