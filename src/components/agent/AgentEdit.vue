@@ -52,7 +52,7 @@ onMounted(() => {
 
 onBeforeMount(() => {
   uid.value = route.query.uid as string
-  currentUid.value = sessionStorage.getItem('uid') || ''
+  currentUid.value = localStorage.getItem('LingXi_uid') || ''
   fetchUserInfo()
 })
 

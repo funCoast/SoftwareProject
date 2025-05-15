@@ -71,8 +71,8 @@ function login() {
   }).then(function (response) {
     if (response.data.code === 0) {
       // 将 token,character,name,uid 存入 sessionStorage
-      sessionStorage.setItem('token', response.data.token);
-      sessionStorage.setItem('uid', response.data.id);
+      localStorage.setItem('LingXi_token', response.data.token);
+      localStorage.setItem('LingXi_uid', response.data.id);
       console.log(sessionStorage)
       if(response.data.is_new_user) {
         router.push('/editProfile');

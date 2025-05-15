@@ -143,7 +143,7 @@ router.beforeEach((to, from, next) => {
 
   // 检查是否需要登录
   if (to.meta.authReq === true) {
-    if (sessionStorage.getItem("token")) {
+    if (localStorage.getItem("LingXi_token")) {
       next();
     } else {
       next({ name: "Login" });

@@ -10,7 +10,7 @@ const userAvatar = inject('avatar') as Ref
 const route = useRoute()
 const router = useRouter()
 const agent_id = route.params.id
-const uid = Number(sessionStorage.getItem('uid'))
+const uid = Number(localStorage.getItem('LingXi_uid'))
 const baseImageUrl = "http://122.9.33.84:8000"
 
 // 智能体基本信息
@@ -189,7 +189,7 @@ const trySendMessage = () => {
 async function sendMessage() {
   try {
     const formData = new FormData()
-    formData.append('uid', sessionStorage.getItem('uid') as string)
+    formData.append('uid', localStorage.getItem('LingXi_uid') as string)
     formData.append('content', messageInput.value)
     formData.append('agent_id', agent_id as string)
     formData.append('search', enableSearch.value.toString())
@@ -236,7 +236,7 @@ async function fetchMessage() {
       method: 'get',
       url: 'agent/fetchAgentMessage',
       params: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id,
       }
     })
@@ -268,7 +268,7 @@ async function fetchUserActions() {
       url: `community/agentFetchUserActions`,
       params: {
         agent_id: agent_id,
-        uid: sessionStorage.getItem('uid')
+        uid: localStorage.getItem('LingXi_uid')
       }
     })
     if (response.data.code === 0) {
@@ -309,7 +309,7 @@ async function handleLike() {
       method: 'post',
       url: `community/agentHandleLike`,
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id
       }
     })
@@ -337,7 +337,7 @@ async function handleFavorite() {
       method: 'post',
       url: `community/agentHandleFavorite`,
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id
       }
     })
@@ -365,7 +365,7 @@ async function handleFollow() {
       method: 'post',
       url: `community/agentHandleFollow`,
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         author_id: agentInfo.value.author.id
       }
     })
@@ -392,7 +392,7 @@ async function handleCopy() {
       method: 'post',
       url: `community/agentHandleCopy`,
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id
       }
     })
@@ -414,7 +414,7 @@ async function handleReport() {
       method: 'post',
       url: `community/agentHandleReport`,
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id
       }
     })
@@ -440,7 +440,7 @@ async function publishComment() {
       method: 'post',
       url: `community/agentSendComment`,
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id,
         comment: newComment.value
       }

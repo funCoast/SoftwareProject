@@ -60,7 +60,7 @@ function getKnowledgeBases() {
     method: 'get',
     url: '/rl/getKnowledgeBases',
     params: {
-      uid: sessionStorage.getItem('uid')
+      uid: localStorage.getItem('LingXi_uid')
     },
   }).then(function (response) {
     if (response.data.code === 0) {
@@ -99,7 +99,7 @@ function handleIconChange(event: Event) {
 // 提交表单
 function submitKB() {
   const formData = new FormData()
-  formData.append("uid", sessionStorage.getItem("uid") as string)
+  formData.append("uid", localStorage.getItem('LingXi_uid') as string)
   formData.append("kb_type", baseInfo.value.type)
   formData.append("kb_name", baseInfo.value.name)
   formData.append("kb_description", baseInfo.value.description)
@@ -129,7 +129,7 @@ function goToResource(resource: resource) {
   router.push({
     path: `/workspace/${resource.type}/${resource.id}`,
     query: {
-      uid: sessionStorage.getItem('uid'),
+      uid: localStorage.getItem('LingXi_uid'),
     }
   })
 }
@@ -170,7 +170,7 @@ async function submitWorkflow() {
   }
   formData.append('description', workflowForm.value.description)
   formData.append('name', workflowForm.value.name)
-  formData.append('uid', sessionStorage.getItem('uid') as string)
+  formData.append('uid', localStorage.getItem('LingXi_uid') as string)
   try {
     const response = await axios({
       method: 'post',
@@ -189,7 +189,7 @@ async function submitWorkflow() {
       await router.push({
         path: `/workspace/workflow/${workflow_id}`,
         query: {
-          uid: sessionStorage.getItem('uid'),
+          uid: localStorage.getItem('LingXi_uid'),
         }
       })
     } else {
@@ -203,7 +203,7 @@ async function submitWorkflow() {
 // 获取所有工作流
 async function getWorkflows() {
   try {
-    const uid = sessionStorage.getItem('uid')
+    const uid = localStorage.getItem('LingXi_uid')
     if (!uid) {
       console.error('用户ID不存在')
       return
@@ -252,7 +252,7 @@ function handleDelete() {
     method: "post",
     url: "/rl/delete",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       resource_id: deleteTarget.value.id,
       resource_type: deleteTarget.value.type,
     },

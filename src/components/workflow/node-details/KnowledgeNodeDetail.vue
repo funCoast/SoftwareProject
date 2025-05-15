@@ -143,7 +143,7 @@ function updateNode() {
       type: 'string'
     }],
     data: {
-      uid: Number(sessionStorage.getItem('uid')),
+      uid: Number(localStorage.getItem('LingXi_uid')),
       kbs: selectedKbs.value.map(id => ({ id }))
     }
   })

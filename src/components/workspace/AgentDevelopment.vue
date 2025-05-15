@@ -68,7 +68,7 @@ async function fetchAgents() {
       method: 'get',
       url: 'agent/fetchAll',
       params: {
-        uid: sessionStorage.getItem('uid')
+        uid: localStorage.getItem('LingXi_uid')
       }
     })
     if (response.data.code === 0) {
@@ -94,7 +94,7 @@ async function createAgent() {
   }
   formData.append('name', agentForm.value.name)
   formData.append('description', agentForm.value.description)
-  formData.append('uid', sessionStorage.getItem('uid') as string)
+  formData.append('uid', localStorage.getItem('LingXi_uid') as string)
   try {
     const response = await axios({
       method: 'post',
@@ -132,7 +132,7 @@ function handleDelete() {
     method: "post",
     url: "/agent/delete",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       agent_id: deleteTarget.value.id,
     },
   }).then(function (response) {
@@ -157,7 +157,7 @@ function goToAgentEdit(id: number) {
   router.push({
     path: `/agentEdit/${id}`,
     query: {
-      uid: Number(sessionStorage.getItem('uid')),
+      uid: Number(localStorage.getItem('LingXi_uid')),
     }
   })
 }

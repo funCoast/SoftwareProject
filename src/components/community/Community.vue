@@ -28,7 +28,7 @@ const agents = ref<agent[]> ([
 
 async function fetchAllAgents() {
   try {
-    const uid = sessionStorage.getItem('uid')
+    const uid = localStorage.getItem('LingXi_uid')
     if (!uid) {
       console.error('用户ID不存在')
       return

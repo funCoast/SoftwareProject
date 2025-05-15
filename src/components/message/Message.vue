@@ -190,7 +190,7 @@ function formatMessageTime(time: string) {
   }
 }
 onMounted(() => {
-  personID.value = sessionStorage.getItem('uid') || ''
+  personID.value = localStorage.getItem('LingXi_uid') || ''
   fetchContacts()
   startAutoRefresh()
   //sendHelloTo9()

@@ -15,7 +15,7 @@ function getAvatar() {
     method: 'get',
     url: 'user/getAvatar',
     params: {
-      uid: sessionStorage.getItem('uid')
+      uid: localStorage.getItem('LingXi_uid')
     }
   }).then(function (response) {
     if (response.data.code === 0) {
@@ -73,7 +73,7 @@ const navItems = ref<NavItem[]>([
 
 // 根据用户角色过滤导航项
 const filteredNavItems = computed(() => {
-  const uid = sessionStorage.getItem('uid')
+  const uid = localStorage.getItem('LingXi_uid')
   if (uid === '3' || uid === '4') {
     return navItems.value.filter(item =>
         item.path !== '/workspace'
@@ -97,7 +97,7 @@ function handleNavigation(path: string) {
 }
 
 function handleProfileNavigation() {
-  router.push(`/profile/${sessionStorage.getItem('uid')}`)
+  router.push(`/profile/${localStorage.getItem('LingXi_uid')}`)
 }
 function toMessage() {
   router.push('/message')

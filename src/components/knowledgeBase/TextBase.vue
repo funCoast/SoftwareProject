@@ -38,7 +38,7 @@ function getTexts() {
     method: 'get',
     url: '/kb/getTexts',
     params: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
     },
   }).then(function (response) {
@@ -61,7 +61,7 @@ function getTextContent(id: number) {
     method: 'get',
     url: '/kb/getTextContent',
     params: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       text_id: id
     },
@@ -91,7 +91,7 @@ function confirmDelete() {
     method: "post",
     url: "/kb/deleteText",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       text_id: selectedText.value.id,
     },

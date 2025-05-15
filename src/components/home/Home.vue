@@ -89,7 +89,7 @@ async function fetchAnnouncement() {
     method: 'get',
     url: 'anno/get',
     params: {
-      uid: sessionStorage.getItem('uid')
+      uid: localStorage.getItem('LingXi_uid')
     }
   }).then(function (response) {
     if(response.data.code === 0) {
@@ -103,7 +103,7 @@ async function fetchHot() {
     method: 'get',
     url: 'user/fetchHot',
     params: {
-      uid: sessionStorage.getItem('uid')
+      uid: localStorage.getItem('LingXi_uid')
     }
   }).then(function (response) {
     if(response.data.code === 0) {
@@ -118,7 +118,7 @@ async function fetchFavorites() {
     method: 'get',
     url: 'user/fetchFavorites',
     params: {
-      uid: sessionStorage.getItem('uid')
+      uid: localStorage.getItem('LingXi_uid')
     }
   }).then(function (response) {
     if(response.data.code === 0) {
@@ -132,7 +132,7 @@ async function fetchFollowing() {
     method: 'get',
     url: 'user/fetchFollowWorks',
     params: {
-      uid: sessionStorage.getItem('uid')
+      uid: localStorage.getItem('LingXi_uid')
     }
   }).then(function (response) {
     if(response.data.code === 0) {
