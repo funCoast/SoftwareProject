@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 const avatar = ref<string>('')
 const baseImageUrl = 'http://122.9.33.84:8000'
 
-const currentTab = ref('likes')
+const currentTab = ref('works')
 const tabs = ref([
   { id: 'works', name: '作品' },
   { id: 'likes', name: '喜欢' },
