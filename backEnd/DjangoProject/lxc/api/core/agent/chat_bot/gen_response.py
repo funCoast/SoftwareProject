@@ -154,6 +154,12 @@ def gen_response(user_id, agent_id, message, files, can_search, session_history)
             },
         ]
 
+        if agent.opening_line != "":
+            messages.append({
+                "role": "assistant",
+                "content": agent.opening_line
+            })
+
         for msg in session_history:
             cur_message = {}
             if msg.is_user:
