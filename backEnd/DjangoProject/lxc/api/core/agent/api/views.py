@@ -150,10 +150,12 @@ class AgentFetchAgentMessageView(View):
             for msg in messages:
                 chat_history.append({
                     "sender": "user" if msg.is_user else "assistant",
-                    "content": msg.content,
+                    "content": {
+                        "response": msg.content,
+                        "thinking_chain": msg.thinking_chain,
+                    },
                     "time": msg.timestamp,
                     "file": msg.files_name,
-                    "thinking_chain": msg.thinking_chain,
                     "search": msg.search,
                 })
 
@@ -306,12 +308,14 @@ class AgentCreateView(View):
             uid = data.get("uid")
             name = data.get("name")
             description = data.get("description", "")
+            open_line = data.get("open_line", "")
             icon = None
         else:
             uid = request.POST.get("uid")
             name = request.POST.get("name")
             description = request.POST.get("description", "")
             icon = request.FILES.get("icon")
+            open_line = request.POST.get("open_line") or ""
 
         if not uid:
             return JsonResponse(
@@ -362,6 +366,7 @@ class AgentCreateView(View):
                 user=user,
                 status='private',
                 is_modifiable=True,
+                open_line=open_line,
             )
         except Exception as e:
             return JsonResponse(
