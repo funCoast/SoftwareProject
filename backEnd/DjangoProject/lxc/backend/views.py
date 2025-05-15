@@ -6,6 +6,8 @@ from openai import OpenAI
 import dashscope
 from http import HTTPStatus
 from smtplib import SMTPException
+import re
+from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.core.validators import validate_email
@@ -36,10 +38,12 @@ from backend.utils.parser import extract_text_from_file
 from backend.utils.chunker import split_text
 from .utils.segmenter import auto_clean_and_split, custom_split, split_by_headings
 from .utils.tree import build_chunk_tree
-
-from .utils.vector_store import search_agent_chunks
 from .utils.qa import ask_llm
-from .utils.vector_store import add_chunks_to_agent_index
+from .utils.segmenter import (
+    auto_clean_and_split,
+    custom_split,
+    split_by_headings,
+)
 from .models import Announcement, AgentReport, Administrator
 import pandas as pd
 import requests
@@ -834,52 +838,66 @@ ALLOWED_EXTENSIONS = ['.txt', '.pdf', '.docx', '.md']
 @csrf_exempt
 def upload_kb_file(request):
     if request.method != 'POST':
-        return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"}, status=400)
 
     uid = request.POST.get('uid')
     kb_id = request.POST.get('kb_id')
-    segment_mode = request.POST.get('segment_mode', 'auto')
-    file = request.FILES.get('file')
+    segment_mode = request.POST.get('segment_mode', 'auto').lower()
+    chunk_size = request.POST.get('chunk_size')          # 字符串，稍后校验
+    upload_file = request.FILES.get('file')
 
-    if not uid or not kb_id or not file:
-        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file"})
+    if not uid or not kb_id or not upload_file:
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file 参数"}, status=400)
 
-    ext = os.path.splitext(file.name)[-1].lower()
+    if segment_mode not in ('auto', 'custom', 'hierarchical'):
+        return JsonResponse({"code": -1, "message": "segment_mode 参数无效"}, status=400)
+
+    ext = os.path.splitext(upload_file.name)[-1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        return JsonResponse({"code": -1, "message": "不支持的文件类型"})
+        return JsonResponse({"code": -1, "message": "不支持的文件类型"}, status=400)
 
+    # 分层级分段仅允许 markdown
+    if segment_mode == 'hierarchical' and ext != '.md':
+        return JsonResponse({"code": -1,
+                             "message": "hierarchical 模式目前仅支持 Markdown (.md) 文件"},
+                            status=400)
+
+    # 自定义分段参数校验
+    if segment_mode == 'custom':
+        try:
+            chunk_size = int(chunk_size) if chunk_size else 200
+            assert chunk_size > 0
+        except (ValueError, AssertionError):
+            return JsonResponse({"code": -1, "message": "chunk_size 必须为正整数"}, status=400)
+    else:
+        chunk_size = None   # auto / hierarchical 不使用
+
+    # ---------- 数据库对象 ----------
     try:
         user = User.objects.get(user_id=uid)
-    except User.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "用户不存在"})
-
-    try:
-        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
-    except KnowledgeBase.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+        kb   = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或知识库不存在"}, status=404)
 
     saved_file = KnowledgeFile.objects.create(
-        kb=kb,
-        file=file,
-        name=file.name,
-        segment_mode=segment_mode
+        kb = kb,
+        file = upload_file,
+        name = upload_file.name,
+        segment_mode = segment_mode
     )
 
+    # 更新知识库时间戳
     kb.updated_at = timezone.now()
-    kb.save()
+    kb.save(update_fields=['updated_at'])
 
+    # ---------- 切分 + 嵌入 ----------
     try:
-        segment_file_and_save_chunks(saved_file, segment_mode)
+        segment_file_and_save_chunks(saved_file, segment_mode, chunk_size)
     except Exception as e:
-        return JsonResponse({
-            "code": -1,
-            "message": f"上传成功但处理失败: {str(e)}"
-        })
+        # 可按需记录日志 logger.exception(e)
+        return JsonResponse({"code": -1, "message": f"切分失败：{e}"}, status=500)
 
-    return JsonResponse({
-        "code": 0,
-        "message": "上传成功"
-    })
+    return JsonResponse({"code": 0, "message": "上传并切分成功"})
 
 def get_tongyi_embedding(text):
     # 从 settings 中获取 API KEY
@@ -935,68 +953,53 @@ def get_kb_files(request):
         "texts": file_list
     })
 
-def segment_file_and_save_chunks(file_obj, segment_mode, max_length=200):
-    text = extract_text_from_file(file_obj.file.path)
+def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: int | None = None):
+    raw_text = extract_text_from_file(file_obj.file.path) or ""
     kb = file_obj.kb
 
+    # 先清空旧数据
     KnowledgeChunk.objects.filter(file=file_obj).delete()
 
-    if segment_mode == 'auto':
-        paragraphs = [p.strip() for p in text.split('\n') if p.strip()]
-        for i, para in enumerate(paragraphs):
-            embedding = get_tongyi_embedding(para)
-            KnowledgeChunk.objects.create(
-                kb=kb,
-                file=file_obj,
-                content=para,
-                embedding=json.dumps(embedding) if embedding else None,
-                order=i
-            )
-
-    elif segment_mode == 'custom':
-        words = text.split()
-        i = 0
-        order = 0
-        while i < len(words):
-            chunk_text = ' '.join(words[i:i + max_length])
-            embedding = get_tongyi_embedding(chunk_text)
-            KnowledgeChunk.objects.create(
-                kb=kb,
-                file=file_obj,
-                content=chunk_text,
-                embedding=json.dumps(embedding) if embedding else None,
-                order=order
-            )
-            i += max_length
-            order += 1
-
-    elif segment_mode == 'hierarchical':
-        lines = text.splitlines()
-        current_parent = None
-        order = 0
-        for line in lines:
-            if line.startswith("#"):
-                embedding = get_tongyi_embedding(line.strip())
-                current_parent = KnowledgeChunk.objects.create(
-                    kb=kb,
-                    file=file_obj,
-                    content=line.strip(),
-                    embedding=json.dumps(embedding) if embedding else None,
-                    order=order
-                )
-            elif line.strip():
-                embedding = get_tongyi_embedding(line.strip())
-                KnowledgeChunk.objects.create(
-                    kb=kb,
-                    file=file_obj,
-                    content=line.strip(),
-                    embedding=json.dumps(embedding) if embedding else None,
-                    order=order,
-                    parent=current_parent
-                )
-            order += 1
+    # ---------- 统一分段 ----------
+    if segment_mode == "auto":
+        segments = auto_clean_and_split(raw_text)
+        lvl_info = [(0, seg) for seg in segments]
+    elif segment_mode == "custom":
+        segments = custom_split(raw_text, chunk_size or 200)
+        lvl_info = [(0, seg) for seg in segments]
+    elif segment_mode == "hierarchical":
+        lvl_info = split_by_headings(raw_text)  # [(level, text)]
     else:
-        raise ValueError("不支持的分段方式")
+        raise ValueError(f"未知 segment_mode: {segment_mode}")
+
+    # ---------- 批量落库 ----------
+    new_chunks = []
+    order = 0
+    stack: list[tuple[int, KnowledgeChunk]] = []  # (level, obj)
+
+    for level, text in lvl_info:
+        # 计算 parent
+        while stack and stack[-1][0] >= level:
+            stack.pop()
+        parent = stack[-1][1] if stack else None
+
+        new_chunks.append(
+            KnowledgeChunk(
+                kb=kb,
+                file=file_obj,
+                content=text,
+                order=order,
+                parent=parent,
+                level=level,
+            )
+        )
+
+        order += 1
+        # 只有 hierarchical 需要维护栈
+        if segment_mode == "hierarchical":
+            stack.append((level, new_chunks[-1]))
+
+    created_objs = KnowledgeChunk.objects.bulk_create(new_chunks, batch_size=1000)
 
 @csrf_exempt
 def get_text_content(request):
@@ -1029,15 +1032,8 @@ def get_text_content(request):
 
     content_list = []
 
-    # 直接通过 parent 字段确定层级
     for chunk in chunks:
-        if chunk.parent:
-            # 如果有父级，则level为父级的order + 1
-            level = chunk.parent.order + 1
-        else:
-            # 第一层的level是0
-            level = 0
-
+        level = chunk.level
         content_list.append({
             "id": chunk.chunk_id,
             "level": level,
@@ -1050,6 +1046,58 @@ def get_text_content(request):
         "content": content_list
     })
 
+@csrf_exempt
+def get_text_tree(request):
+    """仅在 hierarchical 模式下调用；返回可嵌套 JSON"""
+    if request.method != "GET":
+        return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
+
+    uid = request.GET.get("uid")
+    kb_id = request.GET.get("kb_id")
+    file_id = request.GET.get("file_id") or request.GET.get("text_id")  # 兼容旧参数名
+
+    # ---------- 参数校验 ----------
+    if not (uid and kb_id and file_id):
+        return JsonResponse({"code": -1, "message": "缺少 uid、kb_id 或 file_id 参数"})
+
+    try:
+        user = User.objects.get(pk=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
+
+    try:
+        file_obj = KnowledgeFile.objects.get(pk=file_id, kb=kb)
+    except KnowledgeFile.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "文件不存在"})
+
+    if file_obj.segment_mode != "hierarchical":
+        return JsonResponse({"code": -1, "message": "该文件并非分层级分段模式"})
+
+    # ---------- 查询并构树 ----------
+    chunks = KnowledgeChunk.objects.filter(file=file_obj).order_by("order")
+
+    # 构建树
+    id2node = {}
+    root = []
+    for ck in chunks:
+        node = {"id": ck.chunk_id, "level": ck.level, "content": ck.content, "children": []}
+        id2node[ck.chunk_id] = node
+        if ck.parent_id:
+            parent_node = id2node.get(ck.parent_id)
+            (parent_node["children"] if parent_node else root).append(node)
+        else:
+            root.append(node)
+
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "content": root,
+    })
 
 def get_knowledge_bases(request):
     if request.method != 'GET':

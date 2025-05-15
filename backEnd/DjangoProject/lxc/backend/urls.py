@@ -49,6 +49,7 @@ urlpatterns = [
     path('kb/updateTable', views.update_table, name='update_table'),
     path('kb/addTableRow', views.add_table_row, name='add_table_row'),
     path('kb/deleteTableRows', views.delete_table_rows, name='delete_table_rows'),
+    path('kb/getTextTree',    views.get_text_tree,    name='get_text_tree'),
 
     # 工作流
     path('workflow/run',views.workflow_run, name='workflow_run'),
@@ -64,7 +65,6 @@ urlpatterns = [
     path('sensitive/add', views.add_sensitive_word, name='add_sensitive_word'),
     path('sensitive/delete', views.delete_sensitive_word, name='delete_sensitive_word'),
     path('sensitive/list', views.list_sensitive_words, name='list_sensitive_words'),
-    path('workflow/delete',views.workflow_delete, name='workflow_delete'),
     path('admin/fetchPendingAgents', views.fetch_pending_agents, name='fetch_pending_agents'),
     path('admin/reviewAgent', views.review_agent, name='review_agent'),
     path('admin/fetchUser', views.fetch_user, name='fetch_user'),

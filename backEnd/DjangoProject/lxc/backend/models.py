@@ -158,6 +158,7 @@ class KnowledgeChunk(models.Model):
     content = models.TextField()
     order = models.IntegerField(default=0)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)  # 层级结构支持
+    level = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     embedding = models.TextField(null=True, blank=True)  # 存为 JSON 字符串
 
