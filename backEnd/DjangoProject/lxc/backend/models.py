@@ -112,6 +112,7 @@ class Workflow(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     icon_url = models.URLField(max_length=500, null=True, blank=True)
+    created_time = models.DateTimeField(default=timezone.now)
     update_time = models.DateTimeField(auto_now=True)
     def __str__(self):
         return f"Workflow {self.workflow_id}"
@@ -200,6 +201,8 @@ class Agent(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='private')
     publish_time = models.DateTimeField(default=timezone.now)
     llm = models.TextField(null=True, blank=True, default="qwen-plus")
+    created_time = models.DateTimeField(default=timezone.now)
+    updated_time = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.agent_name
@@ -324,3 +327,14 @@ class Contact(models.Model):
     def __str__(self):
         return f"{self.user1.username} <-> {self.user2.username} ({self.status})"
 
+class UserLog(models.Model):
+    STATUS_CHOICES = [
+        ('login', '登陆'),
+        ('create', '创建'),
+        ('use', '使用'),
+        ('favorite', '收藏'),
+        ('like', '点赞')
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    date = models.DateTimeField(auto_now_add=True)
+    type = models.CharField(max_length=10, choices=STATUS_CHOICES)

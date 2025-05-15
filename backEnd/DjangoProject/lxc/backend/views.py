@@ -969,7 +969,6 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     kb = file_obj.kb
     KnowledgeChunk.objects.filter(file=file_obj).delete()
 
-    # 切分逻辑
     if segment_mode == "auto":
         lvl_info = [(0, p) for p in auto_clean_and_split(text)]
     elif segment_mode == "custom":
@@ -986,13 +985,12 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     print(f"[INFO] 开始切分: {len(lvl_info)} 段, 模式: {segment_mode}")
 
     order = 0
-    chunk_objs = []
 
-    # 第一次：不挂 parent
-    with transaction.atomic():
+    if segment_mode != "hierarchical":
+        # ✅ auto / custom 直接 bulk_create
+        chunk_objs = []
         for level, content in lvl_info:
             embedding = get_tongyi_embedding(content)
-
             chunk_obj = KnowledgeChunk(
                 kb=kb,
                 file=file_obj,
@@ -1004,35 +1002,37 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
             chunk_objs.append(chunk_obj)
             order += 1
 
-        created_chunks = KnowledgeChunk.objects.bulk_create(chunk_objs, batch_size=1000)
+        KnowledgeChunk.objects.bulk_create(chunk_objs, batch_size=1000)
 
-    # 第二次：hierarchical 模式挂 parent
-    if segment_mode == "hierarchical":
+    else:
+        # ✅ hierarchical：parent依赖递归，只能一条一条 save
         stack = []
-        updates = []
-
-        for chunk in created_chunks:
-            while stack and stack[-1].level >= chunk.level:
+        for level, content in lvl_info:
+            while stack and stack[-1].level >= level:
                 stack.pop()
 
             parent = stack[-1] if stack else None
-            if parent:
-                chunk.parent = parent
-                updates.append(chunk)
 
-            stack.append(chunk)
+            embedding = get_tongyi_embedding(content)
+            chunk_obj = KnowledgeChunk(
+                kb=kb,
+                file=file_obj,
+                content=content,
+                order=order,
+                level=level,
+                parent=parent,
+                embedding=json.dumps(embedding) if embedding else None
+            )
+            chunk_obj.save()  # ✅ 确保 parent_id 关联有效
+            stack.append(chunk_obj)
+            order += 1
 
-        if updates:
-            KnowledgeChunk.objects.bulk_update(updates, ['parent'], batch_size=500)
-
-    print(f"[INFO] 切分完成，共写入 {len(created_chunks)} chunks")
+    print(f"[INFO] 切分完成，共写入 {order} chunks")
 
 @csrf_exempt
 def get_text_content(request):
     """
-    根据文件 segment_mode 返回：
-    - hierarchical 模式返回树形结构
-    - 其他模式返回平铺列表
+    返回平铺列表，只用 level 表示层级，不要 children 嵌套
     """
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
@@ -1046,55 +1046,26 @@ def get_text_content(request):
 
     try:
         user = User.objects.get(user_id=uid)
-    except User.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "用户不存在"})
-
-    try:
         kb = KnowledgeBase.objects.get(kb_id=kb_id, user=user)
-    except KnowledgeBase.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
-
-    try:
         file_obj = KnowledgeFile.objects.get(id=file_id, kb=kb)
-    except KnowledgeFile.DoesNotExist:
-        return JsonResponse({"code": -1, "message": "文件不存在或无权限"})
+    except (User.DoesNotExist, KnowledgeBase.DoesNotExist, KnowledgeFile.DoesNotExist):
+        return JsonResponse({"code": -1, "message": "用户或文件不存在或无权限"}, status=404)
 
     chunks = KnowledgeChunk.objects.filter(file=file_obj).order_by('order')
 
-    if file_obj.segment_mode == 'hierarchical':
-        # ---------- 树形结构 ----------
-        id2node = {}
-        root = []
-        for ck in chunks:
-            node = {"id": ck.chunk_id, "level": ck.level, "content": ck.content, "children": []}
-            id2node[ck.chunk_id] = node
-            if ck.parent_id:
-                parent_node = id2node.get(ck.parent_id)
-                (parent_node["children"] if parent_node else root).append(node)
-            else:
-                root.append(node)
+    # ✅ 直接平铺返回，level 表示层级，没有 children 嵌套
+    content_list = [{
+        "id": ck.chunk_id,
+        "level": ck.level,
+        "content": ck.content
+    } for ck in chunks]
 
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "mode": "hierarchical",
-            "content": root,
-        })
-
-    else:
-        # ---------- 平铺结构 ----------
-        content_list = [{
-            "id": ck.chunk_id,
-            "level": ck.level,
-            "content": ck.content
-        } for ck in chunks]
-
-        return JsonResponse({
-            "code": 0,
-            "message": "获取成功",
-            "mode": file_obj.segment_mode,
-            "content": content_list
-        })
+    return JsonResponse({
+        "code": 0,
+        "message": "获取成功",
+        "mode": file_obj.segment_mode,
+        "content": content_list
+    })
 
 @csrf_exempt
 def get_text_tree(request):
@@ -2244,7 +2215,9 @@ def agent_fetch_all(request):
                 "name": agent.agent_name,
                 "description": agent.description,
                 "status": status,
-                "publishedTime": agent.registered_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(agent, 'registered_at') and agent.registered_at else None
+                "publishedTime": agent.registered_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(agent, 'registered_at') and agent.registered_at else None,
+                "createTime": agent.created_time,
+                "modifyTime": agent.updated_time,
             })
 
         return JsonResponse({

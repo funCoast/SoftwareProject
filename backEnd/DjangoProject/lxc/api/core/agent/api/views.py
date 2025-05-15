@@ -31,7 +31,7 @@ def temp_send_message(request):
         files = request.FILES.getlist('file') or []
         can_search = request.POST.get('search') == 'true'
 
-        response = gen_response_temp(user_id, agent_id, message, files, can_search)
+        response = gen_response_temp(agent_id, message, files, can_search)
 
         if not ('thinking_chain' in response):
             return JsonResponse({
@@ -224,6 +224,7 @@ class AgentInfoView(View):
             "selectedKbs": kb_ids,
             "selectedWorkflows": workflow_ids,
             "selectedModel": agent.llm,
+            "opening_line": agent.opening_line,
         }
 
         if agent.status=='published':
@@ -245,7 +246,6 @@ class AgentInfoView(View):
             "icon": icon_url,
             "description": agent.description or "",
             "status": status,
-            "opening_line": agent.opening_line,
         }
         return JsonResponse(data, json_dumps_params={'ensure_ascii': False})
 
