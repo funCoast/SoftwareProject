@@ -66,9 +66,8 @@ def send_agent_message(request):
         user_id = request.POST.get('uid')
         message = request.POST.get('content')
         agent_id = request.POST.get('agent_id')
-        files = request.FILES.get('file') or []
+        files = request.FILES.getlist('file') or []
         can_search = request.POST.get('search') == 'true'
-
         # 获取或创建会话
         session, error = get_or_create_session(User.objects.get(user_id=user_id), agent_id)
         if not session:
