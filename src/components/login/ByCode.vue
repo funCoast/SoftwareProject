@@ -53,6 +53,8 @@ function sendCode() {
   }).then(function (response) {
       if(response.data.code === 0) {
         ElMessage.success("验证码已发送")
+      } else {
+        ElMessage.error(response.data.message)
       }
       count(60)
   })

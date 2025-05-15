@@ -5,7 +5,8 @@ import axios from 'axios'
 import {useRoute} from "vue-router";
 import { marked } from 'marked'
 import router from "../../router.ts";
-import {Close, Document, Plus, Search} from "@element-plus/icons-vue";
+import {Close, Document, Plus, Search, ArrowDown} from "@element-plus/icons-vue";
+import type { UploadInstance } from 'element-plus'
 
 const route = useRoute()
 const agent_id = route.params.id
@@ -345,28 +346,33 @@ interface Message {
   time: string
   files?: string[]
   search?: boolean
+  showThinking?: boolean
 }
 
 // 聊天相关
 const messageInput = ref('')
 const chatHistory = ref<Message[]>([])
+const uploadRef = ref<UploadInstance>()
 const fileList = ref<File[]>([])
 const enableSearch = ref(false)
 
 // 添加加载状态
 const isLoading = ref(false)
 
-// 文件上传相关
-const handleFileUpload = (file: File) => {
-  if (enableSearch.value) {
-    ElMessage.warning('请先关闭联网搜索')
-    return false
+// 文件上传前的钩子，用于校验文件类型和大小
+function handleChange(file: File) {
+  const isLt5M = file.size / 1024 / 1024 < 20
+  if (!isLt5M) {
+    ElMessage.warning("文件大小不能超过 20MB！")
+    fileList.value.splice(fileList.value.indexOf(file), 1)
+    return
   }
+  // 将文件添加到fileList中
   fileList.value.push(file)
-  return false // 阻止自动上传
+  console.log('fileList:', fileList.value)
 }
 
-const removeFile = (file: File) => {
+function handleFileRemove(file: File) {
   const index = fileList.value.indexOf(file)
   if (index !== -1) {
     fileList.value.splice(index, 1)
@@ -382,10 +388,17 @@ const toggleSearch = () => {
   enableSearch.value = !enableSearch.value
 }
 
-// 修改发送消息函数
+// 添加折叠控制函数
+function toggleThinkingChain(index: number) {
+  if (chatHistory.value[index]) {
+    chatHistory.value[index].showThinking = !chatHistory.value[index].showThinking
+  }
+}
+
+// 修改发送消息函数，添加默认折叠状态
 const sendMessage = () => {
   if (!messageInput.value.trim() && fileList.value.length === 0) return
-  
+
   isLoading.value = true
   sendsendMessage()
   chatHistory.value.push({
@@ -396,7 +409,8 @@ const sendMessage = () => {
     },
     time: new Date().toISOString().replace('T', ' ').slice(0, 19),
     files: fileList.value.map(file => file.name),
-    search: enableSearch.value
+    search: enableSearch.value,
+    showThinking: true
   })
 
   messageInput.value = ''
@@ -404,7 +418,7 @@ const sendMessage = () => {
   enableSearch.value = false
 }
 
-// 修改sendsendMessage函数
+// 修改sendsendMessage函数，添加默认折叠状态
 async function sendsendMessage() {
   try {
     const formData = new FormData()
@@ -414,23 +428,24 @@ async function sendsendMessage() {
     formData.append('search', enableSearch.value.toString())
 
     for (const file of fileList.value) {
-      formData.append('file', file)
+      console.log('file:', file)
+      formData.append('file', file.raw)
     }
-
+    for (const [key, value] of formData.entries()) {
+      console.log(key, value)
+    }
     const response = await axios({
       method: 'post',
       url: 'agent/sendMessage',
-      data: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+      data: formData
     })
-    
+
     if (response.data.code === 0) {
       chatHistory.value.push({
         sender: 'assistant',
         content: response.data.content,
         time: response.data.time,
+        showThinking: true
       })
       console.log('信息发送成功')
     } else {
@@ -496,6 +511,22 @@ function renderedMarkdown(content: string) {
     <div class="main-content">
       <!-- 左侧配置面板 -->
       <div class="left-panel">
+        <div class="config-section">
+          <h3>大模型配置</h3>
+          <el-select
+              v-model="agentInfo.config.selectedModel"
+              placeholder="请选择大模型"
+              class="full-width"
+          >
+            <el-option
+                v-for="option in modelOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+            />
+          </el-select>
+        </div>
+
         <div class="config-section">
           <h3>知识库配置</h3>
           <el-select
@@ -579,22 +610,6 @@ function renderedMarkdown(content: string) {
         </div>
 
         <div class="config-section">
-          <h3>大模型配置</h3>
-          <el-select
-            v-model="agentInfo.config.selectedModel"
-            placeholder="请选择大模型"
-            class="full-width"
-          >
-            <el-option
-              v-for="option in modelOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-        </div>
-
-        <div class="config-section">
           <h3>人物设定</h3>
           <el-input
             v-model="agentInfo.config.system_prompt"
@@ -612,7 +627,7 @@ function renderedMarkdown(content: string) {
       <!-- 右侧聊天面板 -->
       <div class="chat-panel">
         <div class="chat-messages" ref="chatMessages">
-          <div v-for="(message, index) in chatHistory" :key="index" 
+          <div v-for="(message, index) in chatHistory" :key="index"
                :class="['message', message.sender]">
             <template v-if="message.sender === 'user'">
               <div class="message-content user-message">
@@ -642,13 +657,21 @@ function renderedMarkdown(content: string) {
                   <span class="message-time">{{ message.time }}</span>
                 </div>
                 <div class="message-text">
-                  <div v-if="message.content.thinking_chain" class="thinking-chain" v-html="renderedMarkdown(message.content.thinking_chain)"></div>
+                  <div v-if="message.content.thinking_chain" class="thinking-chain">
+                    <div class="thinking-header" @click="toggleThinkingChain(index)">
+                      <span>思考过程</span>
+                      <el-icon :class="{ 'is-active': !message.showThinking }">
+                        <ArrowDown />
+                      </el-icon>
+                    </div>
+                    <div v-show="message.showThinking" class="thinking-content" v-html="renderedMarkdown(message.content.thinking_chain)"></div>
+                  </div>
                   <div class="response" v-html="renderedMarkdown(message.content.response)"></div>
                 </div>
               </div>
             </template>
           </div>
-          
+
           <!-- 添加加载提示 -->
           <div v-if="isLoading" class="message assistant">
             <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
@@ -675,13 +698,13 @@ function renderedMarkdown(content: string) {
                   <div v-for="file in fileList" :key="file.name" class="file-item">
                     <el-icon><Document /></el-icon>
                     <span class="file-name">{{ file.name }}</span>
-                    <el-button type="text" class="remove-file" @click="removeFile(file)">
+                    <el-button type="text" class="remove-file" @click="handleFileRemove(file)">
                       <el-icon><Close /></el-icon>
                     </el-button>
                   </div>
                 </div>
               </div>
-              
+
               <div class="input-area">
                 <el-input
                   v-model="messageInput"
@@ -692,13 +715,17 @@ function renderedMarkdown(content: string) {
                   resize="none"
                   class="message-input"
                 />
-                
+
                 <div class="input-actions">
                   <el-upload
+                    ref="uploadRef"
                     class="upload-button"
+                    action=""
+                    accept=".txt,.pdf,.doc,.docx,.md,.xls,.xlsx"
                     :auto-upload="false"
                     :show-file-list="false"
-                    :on-change="handleFileUpload"
+                    :on-change="handleChange"
+                    :on-remove="handleFileRemove"
                     :disabled="enableSearch"
                   >
                     <el-button type="text" class="upload-icon" :class="{ 'disabled': enableSearch }">
@@ -971,6 +998,27 @@ function renderedMarkdown(content: string) {
   border-radius: 0 4px 4px 0;
   font-size: 13px;
   color: #666;
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+}
+
+.thinking-header .el-icon {
+  transition: transform 0.3s;
+}
+
+.thinking-header .el-icon.is-active {
+  transform: rotate(-90deg);
+}
+
+.thinking-content {
+  margin-top: 8px;
   white-space: pre-wrap;
 }
 

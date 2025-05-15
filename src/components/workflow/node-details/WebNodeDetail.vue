@@ -27,9 +27,6 @@ const props = defineProps<{
     name: string
     inputs: Input[]
     outputs: Output[]
-    data: {
-      model?: string
-    }
   }
   allNodes: any[]
   workflow_id: string
@@ -67,9 +64,6 @@ const modelOptions = [
   { label: '智谱AI', value: 'chatglm-6b-v2' }
 ]
 
-// 选中的模型
-const selectedModel = ref(props.node.data?.model || 'qwen-plus')
-
 // 更新节点
 function updateNode() {
   emit('update:node', {
@@ -79,10 +73,7 @@ function updateNode() {
       id: 0,
       name: 'text',
       type: 'string'
-    }],
-    data: {
-      model: selectedModel.value
-    }
+    }]
   })
 }
 
@@ -174,32 +165,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
-
-    <!-- 模型配置 -->
-    <div class="section">
-      <div class="section-header">
-        <h4>模型配置</h4>
-      </div>
-      
-      <div class="form-group">
-        <label>选择模型</label>
-        <el-select
-          v-model="selectedModel"
-          placeholder="请选择模型"
-          size="small"
-          class="model-select"
-          @change="updateNode"
-        >
-          <el-option
-            v-for="option in modelOptions"
-            :key="option.value"
-            :label="option.label"
-            :value="option.value"
-          />
-        </el-select>
-      </div>
-    </div>
-
     <!-- 输出信息 -->
     <div class="section">
       <div class="section-header">

@@ -23,14 +23,11 @@ const emit = defineEmits<{
   (e: 'update:node', node: any): void
 }>()
 
-// 可选的输出类型
 const outputTypes = [
   { label: '字符串', value: 'string' },
   { label: '数字', value: 'number' },
-  // { label: '文件数组', value: 'Array[File]' }
 ]
 
-// 初始化输出列表
 const outputs = ref<Output[]>(props.node.outputs || [])
 
 // 监听输出变化并更新节点
@@ -67,13 +64,13 @@ function removeOutput(id: number) {
   <div class="start-node-detail">
     <div class="outputs-section">
       <div class="section-header">
-        <h4>输出变量</h4>
+        <h4>输入变量</h4>
         <el-button type="primary" size="small" @click="addOutput">
           添加变量
         </el-button>
       </div>
       <div v-if="outputs.length === 0" class="empty-state">
-        <p>暂无输出变量，点击"添加变量"创建</p>
+        <p>暂无输入变量，点击"添加变量"创建</p>
       </div>
       <div v-else class="output-list">
         <div v-for="output in outputs" :key="output.id" class="output-item">
