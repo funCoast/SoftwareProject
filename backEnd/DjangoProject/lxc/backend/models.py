@@ -323,3 +323,4 @@ class Contact(models.Model):
 
     def __str__(self):
         return f"{self.user1.username} <-> {self.user2.username} ({self.status})"
+
