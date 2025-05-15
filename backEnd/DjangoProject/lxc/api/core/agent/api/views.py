@@ -245,6 +245,7 @@ class AgentInfoView(View):
             "icon": icon_url,
             "description": agent.description or "",
             "status": status,
+            "opening_line": agent.opening_line,
         }
         return JsonResponse(data, json_dumps_params={'ensure_ascii': False})
 
