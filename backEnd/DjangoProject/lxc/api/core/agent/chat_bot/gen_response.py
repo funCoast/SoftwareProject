@@ -80,6 +80,9 @@ def upload_and_process_file(uploaded_file, session_id, message):
     except Exception as e:
         return False
 
+def call_agent(agent_id, message):
+    return gen_response_temp(agent_id, message, [], False)
+
 def gen_response(user_id, agent_id, message, files, can_search, session_history):
     try:
         user = User.objects.get(user_id=user_id)
@@ -184,9 +187,8 @@ def gen_response(user_id, agent_id, message, files, can_search, session_history)
             'response': str(e),
         }
 
-def gen_response_temp(user_id, agent_id, message, files, can_search):
+def gen_response_temp(agent_id, message, files, can_search):
     try:
-        user = User.objects.get(user_id=user_id)
         agent = Agent.objects.get(agent_id=agent_id)
 
         # 文件读取

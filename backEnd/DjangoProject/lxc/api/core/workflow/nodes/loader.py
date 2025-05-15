@@ -10,3 +10,4 @@ import api.core.workflow.nodes.kbRetrieval.node
 import api.core.workflow.nodes.weather.node
 import api.core.workflow.nodes.web.node
 import api.core.workflow.nodes.paraExtractor.node
+import api.core.workflow.nodes.agent.node
