@@ -22,7 +22,8 @@ from typing import Optional
 
 from api.core.workflow.executor import Executor
 from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow, \
-    Agent, UserInteraction, FollowRelationship, Comment, SensitiveWord, Contact, UserLog
+    Agent, UserInteraction, FollowRelationship, Comment, SensitiveWord, Contact, UserLog, AgentWorkflowRelation, \
+    AgentKnowledgeEntry
 from django.db.models import Q, ExpressionWrapper, F, IntegerField
 import base64
 import json
@@ -38,6 +39,7 @@ import os
 from django.utils.crypto import get_random_string
 from backend.utils.parser import extract_text_from_file
 from backend.utils.chunker import split_text
+from .utils.copyKB import clone_knowledge_base
 from .utils.tree import build_chunk_tree
 from .utils.qa import ask_llm
 from .utils.segmenter import (
@@ -2706,7 +2708,21 @@ def community_agent_handle_Follow(request):
             "message": "用户不存在"
         })
 
+
 def community_agent_handle_copy(request):
+    def copy_workflow(user, original_workflow):
+        new_workflow = Workflow.objects.create(
+            nodes=original_workflow.nodes,
+            edges=original_workflow.edges,
+            user=user,
+            is_builtin=False,
+            view_points=original_workflow.view_points,
+            name=original_workflow.name,
+            description=original_workflow.description,
+            icon_url=original_workflow.icon_url,
+        )
+        return new_workflow
+
     try:
         data = json.loads(request.body)
         uid = data.get('uid')
@@ -2728,20 +2744,36 @@ def community_agent_handle_copy(request):
         original_agent = Agent.objects.get(agent_id=agent_id)
 
         copied_agent = Agent.objects.create(
-            agent_name=original_agent.agent_name + " - 副本",
+            agent_name=original_agent.agent_name + "-copy",
             description=original_agent.description,
             opening_line=original_agent.opening_line,
             prompt=original_agent.prompt,
             persona=original_agent.persona,
             category=original_agent.category,
+            likes_count=0,
+            favorites_count=0,
+            is_modifiable=original_agent.is_modifiable,
             icon_url=original_agent.icon_url,
             user=user,
             status='private',
-            is_modifiable=True,
-            likes_count=0,
-            favorites_count=0
+            llm=original_agent.llm,
         )
-        copied_agent.save()
+
+        workflows = AgentWorkflowRelation.objects.filter(agent=original_agent)
+        for workflow in workflows:
+            new_workflow = copy_workflow(user, original_workflow=workflow)
+            AgentWorkflowRelation.objects.create(
+                agent=copied_agent,
+                workflow=new_workflow
+            )
+
+        kbs = AgentKnowledgeEntry.objects.filter(agent=original_agent)
+        for kb in kbs:
+            new_kb_id = clone_knowledge_base(kb.kb_id)
+            AgentKnowledgeEntry.objects.create(
+                agent=copied_agent,
+                kb=KnowledgeBase.objects.get(kb=new_kb_id)
+            )
 
         return JsonResponse({
             "code": 0,
@@ -2757,6 +2789,16 @@ def community_agent_handle_copy(request):
         return JsonResponse({
             "code": -1,
             "message": "原始智能体不存在"
+        })
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "知识库迁移失败"
+        })
+    except Workflow.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "工作流复制失败"
         })
 
 def community_agent_send_comment(request):
