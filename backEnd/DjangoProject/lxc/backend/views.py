@@ -1043,6 +1043,7 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
 
     print(f"[INFO] 切分完成，共写入 {order} chunks")
 
+from typing import List, Optional
 def pdf_merge_lines(text: str, max_chars: int = 200) -> List[str]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     paragraphs = []
