@@ -25,17 +25,19 @@ def auto_clean_and_split(text: str, blank_lines: int = 1) -> List[str]:
 
 def custom_split(text: str, chunk_size: int = 200) -> List[str]:
     """
-    近似按“词数/字数”固定长度切片，兼容中英文：
-    - 先按自然段落粗划分，再 wrap 到固定宽度
-    - 对中文使用每个汉字作为计数单位
+    优先按自然段落切分（空行分段），再在段内做 wrap 切片。
+    中文、英文都统一按字符宽度估算。
     """
     segments = []
-    for para in auto_clean_and_split(text):
-        # 中文 + 英文统一按字符宽度估算
-        segments.extend(wrap(para, width=chunk_size,
-                             replace_whitespace=False,
-                             drop_whitespace=False))
-    return [seg.strip() for seg in segments if seg.strip()]
+    # 先按自然段落粗切
+    paragraphs = auto_clean_and_split(text, blank_lines=1)
+
+    for para in paragraphs:
+        # 段内再按 chunk_size wrap 切片
+        wrapped_chunks = wrap(para, width=chunk_size, replace_whitespace=False, drop_whitespace=False)
+        segments.extend([chunk.strip() for chunk in wrapped_chunks if chunk.strip()])
+
+    return segments
 
 
 _HD = re.compile(r"^\s*(#+)\s+(.*)$")
