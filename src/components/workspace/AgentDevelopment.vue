@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
+import {onMounted, ref, computed} from 'vue'
 import { useRouter } from 'vue-router';
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
@@ -10,15 +10,53 @@ interface agent {
   description: string
   icon: string
   status: number
+  createTime: string
+  modifyTime: string
   publishedTime: string
   hover?: boolean
 }
+
 const agents = ref<agent[]> ([])
 const isCreateAgentVisible = ref(false)
 const router = useRouter();
 const baseImageUrl = "http://122.9.33.84:8000"
 const deleteDialog = ref(false);
 const deleteTarget = ref<{ id: number, name: string } | null>(null);
+
+const filterCriteria = ref({
+  sortBy: 'create-time', // create-time | name | modify-time
+  status: 'all',         // all | published | unpublished
+  search: ''
+})
+
+const filteredAgents = computed(() => {
+  let result = [...agents.value]
+  // 状态筛选
+  if (filterCriteria.value.status !== 'all') {
+    result = result.filter(agent => {
+      if (filterCriteria.value.status === 'published') return agent.status === 2
+      if (filterCriteria.value.status === 'unpublished') return agent.status != 2
+      return true
+    })
+  }
+  // 搜索
+  if (filterCriteria.value.search.trim() !== '') {
+    result = result.filter(agent =>
+      agent.name.includes(filterCriteria.value.search.trim()) ||
+      agent.description.includes(filterCriteria.value.search.trim())
+    )
+  }
+  // 排序
+  if (filterCriteria.value.sortBy === 'name') {
+    result.sort((a, b) => a.name.localeCompare(b.name))
+  } else if (filterCriteria.value.sortBy === 'create-time') {
+    result.sort((a, b) => new Date(b.publishedTime).getTime() - new Date(a.publishedTime).getTime())
+  } else if (filterCriteria.value.sortBy === 'modify-time') {
+    // 假设有 modifyTime 字段，否则可忽略
+    result.sort((a, b) => new Date(b.modifyTime || b.publishedTime).getTime() - new Date(a.modifyTime || a.publishedTime).getTime())
+  }
+  return result
+})
 
 // 表单数据
 const agentForm = ref({
@@ -178,12 +216,12 @@ function goToAgentEdit(id: number) {
 
     <!-- 筛选栏 -->
     <div class="filter-bar">
-      <select class="filter-select">
+      <select class="filter-select" v-model="filterCriteria.sortBy">
         <option value="create-time">按创建时间排序</option>
         <option value="name">按名称排序</option>
         <option value="modify-time">按修改时间排序</option>
       </select>
-      <select class="filter-select">
+      <select class="filter-select" v-model="filterCriteria.status">
         <option value="all">默认</option>
         <option value="published">已发布</option>
         <option value="unpublished">未发布</option>
@@ -192,14 +230,14 @@ function goToAgentEdit(id: number) {
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="搜索智能体...">
+        <input type="text" placeholder="搜索智能体..." v-model="filterCriteria.search">
       </div>
     </div>
 
     <!-- 智能体列表 -->
     <div class="agent-list">
       <div
-        v-for="agent in agents"
+        v-for="agent in filteredAgents"
         :key="agent.id"
         class="agent-card"
         @mouseover="agent.hover = true"
