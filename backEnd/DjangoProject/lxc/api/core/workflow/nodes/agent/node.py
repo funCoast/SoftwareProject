@@ -11,7 +11,7 @@ def run_llm_node(node, inputs):
     text = inputs[0].get("value", "")
     agent_id = node.get("data", {}).get("agent_id", "")
     from api.core.agent.chat_bot.gen_response import call_agent
-    result = call_agent(agent_id,text)
+    result = call_agent(agent_id,text).get("response")
 
     # 自动生成 outputs（按输出定义）
     outputs = {}

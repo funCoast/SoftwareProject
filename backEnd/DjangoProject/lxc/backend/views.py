@@ -980,12 +980,27 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     kb = file_obj.kb
     KnowledgeChunk.objects.filter(file=file_obj).delete()
 
+    ext = os.path.splitext(file_obj.file.name)[-1].lower()
+
+    # ✅ 自动分段根据文件类型智能选择
     if segment_mode == "auto":
-        lvl_info = [(0, p) for p in auto_clean_and_split(text)]
+        if ext in ['.txt', '.md']:
+            lvl_info = [(0, p) for p in auto_clean_and_split(text, blank_lines=1)]
+        elif ext == '.docx':
+            # docx 已经是段落，直接按段落切
+            lvl_info = [(0, p.strip()) for p in text.split('\n') if p.strip()]
+        elif ext == '.pdf':
+            # pdf 行合并成伪段落
+            lvl_info = [(0, p) for p in pdf_merge_lines(text, max_chars=200)]
+        else:
+            raise ValueError(f"auto 模式暂不支持文件类型: {ext}")
+
     elif segment_mode == "custom":
         lvl_info = [(0, p) for p in custom_split(text, chunk_size or 200)]
+
     elif segment_mode == "hierarchical":
         lvl_info = split_by_headings(text)
+
     else:
         raise ValueError(f"不支持的 segment_mode: {segment_mode}")
 
@@ -998,7 +1013,6 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
     order = 0
 
     if segment_mode != "hierarchical":
-        # ✅ auto / custom 直接 bulk_create
         chunk_objs = []
         for level, content in lvl_info:
             embedding = get_tongyi_embedding(content)
@@ -1016,7 +1030,7 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
         KnowledgeChunk.objects.bulk_create(chunk_objs, batch_size=1000)
 
     else:
-        # ✅ hierarchical：parent依赖递归，只能一条一条 save
+        # hierarchical 逐个 save 以挂 parent
         stack = []
         for level, content in lvl_info:
             while stack and stack[-1].level >= level:
@@ -1034,11 +1048,29 @@ def segment_file_and_save_chunks(file_obj, segment_mode: str, chunk_size: Option
                 parent=parent,
                 embedding=json.dumps(embedding) if embedding else None
             )
-            chunk_obj.save()  # ✅ 确保 parent_id 关联有效
+            chunk_obj.save()
             stack.append(chunk_obj)
             order += 1
 
     print(f"[INFO] 切分完成，共写入 {order} chunks")
+
+from typing import List, Optional
+def pdf_merge_lines(text: str, max_chars: int = 200) -> List[str]:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    paragraphs = []
+    buf = ""
+
+    for line in lines:
+        if len(buf) + len(line) > max_chars:
+            paragraphs.append(buf.strip())
+            buf = line
+        else:
+            buf += " " + line
+
+    if buf:
+        paragraphs.append(buf.strip())
+
+    return paragraphs
 
 @csrf_exempt
 def get_text_content(request):
