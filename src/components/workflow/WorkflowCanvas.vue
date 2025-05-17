@@ -24,6 +24,7 @@ const uid = ref<string>('')
 const name = ref('')
 const description = ref('')
 const icon = ref('')
+const isLoading = ref(true)
 
 interface nodeType {
   type: string
@@ -220,6 +221,8 @@ onMounted(async () => {
     }
   } catch (err) {
     console.error('请求失败', err)
+  } finally {
+    isLoading.value = false
   }
 })
 
@@ -287,14 +290,14 @@ function handleCanvasMouseMove(e: MouseEvent) {
   if (isDraggingCanvas.value) {
     const deltaX = e.clientX - lastMousePosition.value.x
     const deltaY = e.clientY - lastMousePosition.value.y
-    
+
     // 获取当前transform
     const currentTransform = new DOMMatrix(getComputedStyle(canvasEl.value!).transform)
     const newTransform = currentTransform.translate(deltaX, deltaY)
-    
+
     // 直接应用新的transform
     canvasEl.value!.style.transform = newTransform.toString()
-    
+
     // 更新所有节点的位置以保持连线同步
     const translateX = newTransform.e - currentTransform.e
     const translateY = newTransform.f - currentTransform.f
@@ -303,7 +306,7 @@ function handleCanvasMouseMove(e: MouseEvent) {
       x: node.x + translateX / zoom.value,
       y: node.y + translateY / zoom.value
     }))
-    
+
     lastMousePosition.value = {
       x: e.clientX,
       y: e.clientY
@@ -517,7 +520,10 @@ const clearWorkflowCacheAndGoBack = () => {
 </script>
 
 <template>
-  <div class="workflow-container">
+  <div v-if="isLoading">
+    加载中...
+  </div>
+  <div v-if="!isLoading" class="workflow-container">
     <!-- 上侧导航栏 -->
     <div class="top-navbar">
       <button class="back-btn" @click="clearWorkflowCacheAndGoBack">
@@ -622,27 +628,27 @@ const clearWorkflowCacheAndGoBack = () => {
       <div class="node-detail-header">
         <h3>{{ selectedNode.label }}</h3>
         <div class="header-actions">
-          <button 
-            class="action-btn run-btn" 
+          <button
+            class="action-btn run-btn"
             @click="runSelectedNode"
             v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end' && selectedNode.type !== 'if_else' && selectedNode.type !== 'code'"
             title="运行节点">
-            <img 
+            <img
               src="https://api.iconify.design/material-symbols:play-circle.svg"
-              alt="运行" 
+              alt="运行"
               class="action-icon">
           </button>
           <button @click="closeDetailPanel" class="action-btn close-btn" title="关闭">×</button>
         </div>
       </div>
-      
+
       <div class="node-detail-content">
         <!-- 添加名称和描述编辑区域 -->
         <div class="edit-section">
           <div class="edit-item">
             <label>节点名称</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               v-model="selectedNode.name"
               @input="updateNode(selectedNode)"
               placeholder="请输入节点名称"
@@ -651,7 +657,7 @@ const clearWorkflowCacheAndGoBack = () => {
           </div>
           <div class="edit-item">
             <label>节点描述</label>
-            <textarea 
+            <textarea
               v-model="selectedNode.description"
               @input="updateNode(selectedNode)"
               placeholder="请输入节点描述"
@@ -660,7 +666,7 @@ const clearWorkflowCacheAndGoBack = () => {
             ></textarea>
           </div>
         </div>
-        
+
         <component
           :is="getNodeDetailComponent(selectedNode.type)"
           :node="selectedNode"
@@ -727,7 +733,7 @@ const clearWorkflowCacheAndGoBack = () => {
           <div class="run-result-header">
             <h4>运行结果</h4>
             <span :class="['status-badge', runStatus]">
-              {{ runStatus === 'running' ? '运行中' : 
+              {{ runStatus === 'running' ? '运行中' :
                  runStatus === 'success' ? '成功' : '失败' }}
             </span>
           </div>

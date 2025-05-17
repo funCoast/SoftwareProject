@@ -10,6 +10,12 @@ const routes = [
     component: () => import("./components/login/Login.vue"),
   },
   {
+    path: "/document",
+    name: "Document",
+    meta: { authReq: authRequired },
+    component: () => import("./components/document/Document.vue")
+  },
+  {
     path: "/",
     name: "Main",
     redirect: "/home",
