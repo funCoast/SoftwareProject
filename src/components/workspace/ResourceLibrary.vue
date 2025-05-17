@@ -17,43 +17,43 @@ interface resource {
 const resources = ref<resource[]> ([])
 const KBDialog = ref(false) // 控制弹窗显示
 const workflowDialogVisible = ref(false); // 控制工作流弹窗显示
+const editDialogVisible = ref(false); // 控制编辑弹窗显示
 
-const baseInfo = ref({
+const KBForm = ref({
   type: "text", // 默认类型
   name: "",
   description: "",
-  icon: null as File | null, // 存储图标文件
+  icon: null as File | null,
+  iconPreview: ''
 })
-const iconUploader = ref<HTMLInputElement | null>(null) // 文件输入框引用
-const iconUpload = ref('') // 图标预览 URL
+
+const WFForm = ref({
+  name: '',
+  description: '',
+  icon: null as File | null,
+  iconPreview: ''
+})
+
+const editForm = ref({
+  id: 0,
+  type: '',
+  name: '',
+  description: '',
+  icon: null as File | null,
+  iconPreview: ''
+})
 
 const defaultIcons = {
   text: 'http://122.9.33.84:8000/media/kb_icons/Text.svg', // 文本知识库默认图标
   table: 'http://122.9.33.84:8000/media/kb_icons/Table.svg', // 表格知识库默认图标
   picture: 'http://122.9.33.84:8000/media/kb_icons/Picture.svg', // 图像知识库默认图标
+  workflow: 'http://122.9.33.84:8000/media/workflow_icons/defaultWorkFlow.svg'
 }
-
-// 计算图标预览 URL
-const iconPreview = computed(() => {
-  return iconUpload.value || defaultIcons[baseInfo.value.type as keyof typeof defaultIcons]
-})
-
-const workflowForm = ref({
-  name: '',
-  description: '',
-  icon: ''
-});
-let uploadedFile: File | null = null
 
 onMounted(() => {
   getKnowledgeBases()
   getWorkflows()
 })
-
-// 打开弹窗
-function createKB() {
-  KBDialog.value = true
-}
 
 function getKnowledgeBases() {
   axios({
@@ -71,136 +71,6 @@ function getKnowledgeBases() {
   })
 }
 
-function triggerFileInput() {
-  iconUploader.value?.click()
-}
-
-// 处理图标上传
-function handleIconChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  if (input.files && input.files[0]) {
-    const file = input.files[0]
-
-    // 验证文件大小和类型
-    if (file.size > 5 * 1024 * 1024) {
-      ElMessage.warning("图片大小不能超过5MB")
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      iconUpload.value = e.target?.result as string // 设置预览 URL
-    }
-    baseInfo.value.icon = input.files[0] // 将文件存储到 baseInfo.icon
-    reader.readAsDataURL(file) // 读取文件内容
-  }
-}
-
-// 提交表单
-function submitKB() {
-  const formData = new FormData()
-  formData.append("uid", localStorage.getItem('LingXi_uid') as string)
-  formData.append("kb_type", baseInfo.value.type)
-  formData.append("kb_name", baseInfo.value.name)
-  formData.append("kb_description", baseInfo.value.description)
-  if (baseInfo.value.icon) {
-    formData.append("kb_icon", baseInfo.value.icon)
-  }
-
-  axios({
-    method: "post",
-    url: "/kb/create",
-    data: formData,
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  }).then(function (response) {
-    if (response.data.code === 0) {
-      ElMessage.success(response.data.message)
-      router.push("/workspace/" + baseInfo.value.type + 'Base/' +response.data.kb_id)
-    } else {
-      ElMessage.error(response.data.message)
-    }
-  })
-  KBDialog.value = false // 关闭弹窗
-}
-
-function goToResource(resource: resource) {
-  router.push({
-    path: `/workspace/${resource.type}/${resource.id}`,
-    query: {
-      uid: localStorage.getItem('LingXi_uid'),
-    }
-  })
-}
-
-// 打开工作流弹窗
-function createWorkflow() {
-  workflowDialogVisible.value = true;
-}
-
-// 处理图片上传
-function handleImageUpload(event: Event) {
-  const input = event.target as HTMLInputElement
-  if (input.files && input.files[0]) {
-    const file = input.files[0]
-    // 验证文件大小和类型
-    if (file.size > 2 * 1024 * 1024) {
-      ElMessage.warning('图片大小不能超过2MB')
-      return;
-    }
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      workflowForm.value.icon = e.target?.result as string
-    }
-    uploadedFile = file
-    reader.readAsDataURL(file)
-  }
-}
-
-// 提交工作流表单并跳转
-async function submitWorkflow() {
-  if (!workflowForm.value.name) {
-    ElMessage.warning('请输入工作流名称')
-    return
-  }
-  const formData = new FormData()
-  if (uploadedFile) {
-    formData.append('icon', uploadedFile)
-  }
-  formData.append('description', workflowForm.value.description)
-  formData.append('name', workflowForm.value.name)
-  formData.append('uid', localStorage.getItem('LingXi_uid') as string)
-  try {
-    const response = await axios({
-      method: 'post',
-      url: 'workflow/create',
-      data: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      }
-    })
-    if (response.data.code === 0) {
-      console.log(response.data)
-      const workflow_id = response.data.workflow_id
-      localStorage.removeItem('workflowNodes')
-      localStorage.removeItem('connections')
-      uploadedFile = null
-      await router.push({
-        path: `/workspace/workflow/${workflow_id}`,
-        query: {
-          uid: localStorage.getItem('LingXi_uid'),
-        }
-      })
-    } else {
-      console.log(response.data.message)
-    }
-  } catch (error) {
-    console.error("Error:", error)
-  }
-}
-
-// 获取所有工作流
 async function getWorkflows() {
   try {
     const uid = localStorage.getItem('LingXi_uid')
@@ -235,11 +105,139 @@ async function getWorkflows() {
   }
 }
 
+function createKB() {
+  KBDialog.value = true
+  if (!KBForm.value.iconPreview) {
+    KBForm.value.iconPreview = defaultIcons[KBForm.value.type as keyof typeof defaultIcons]
+  }
+}
+
+function handleKBIcon(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+
+    // 验证文件大小和类型
+    if (file.size > 5 * 1024 * 1024) {
+      ElMessage.warning("图片大小不能超过5MB")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      KBForm.value.iconPreview = e.target?.result as string // 设置预览 URL
+    }
+    KBForm.value.icon = file // 将文件存储到 baseInfo.icon
+    reader.readAsDataURL(file) // 读取文件内容
+  }
+}
+
+function submitKB() {
+  const formData = new FormData()
+  formData.append("uid", localStorage.getItem('LingXi_uid') as string)
+  formData.append("kb_type", KBForm.value.type)
+  formData.append("kb_name", KBForm.value.name)
+  formData.append("kb_description", KBForm.value.description)
+  if (KBForm.value.icon) {
+    formData.append("kb_icon", KBForm.value.icon)
+  }
+
+  axios({
+    method: "post",
+    url: "/kb/create",
+    data: formData,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      ElMessage.success(response.data.message)
+      router.push("/workspace/" + KBForm.value.type + 'Base/' +response.data.kb_id)
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  })
+  KBDialog.value = false // 关闭弹窗
+}
+
+function goToResource(resource: resource) {
+  router.push({
+    path: `/workspace/${resource.type}/${resource.id}`,
+    query: {
+      uid: localStorage.getItem('LingXi_uid'),
+    }
+  })
+}
+
+function createWF() {
+  WFForm.value.iconPreview = defaultIcons.workflow
+  workflowDialogVisible.value = true;
+}
+
+function handleWFIcon(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+    // 验证文件大小和类型
+    if (file.size > 2 * 1024 * 1024) {
+      ElMessage.warning('图片大小不能超过2MB')
+      return;
+    }
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      WFForm.value.iconPreview = e.target?.result as string
+    }
+    WFForm.value.icon = file
+    reader.readAsDataURL(file)
+  }
+}
+
+async function submitWF() {
+  if (!WFForm.value.name) {
+    ElMessage.warning('请输入工作流名称')
+    return
+  }
+  const formData = new FormData()
+  if (WFForm.value.icon) {
+    formData.append('icon', WFForm.value.icon)
+  }
+  formData.append('description', WFForm.value.description)
+  formData.append('name', WFForm.value.name)
+  formData.append('uid', localStorage.getItem('LingXi_uid') as string)
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'workflow/create',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    })
+    if (response.data.code === 0) {
+      console.log(response.data)
+      const workflow_id = response.data.workflow_id
+      localStorage.removeItem('workflowNodes')
+      localStorage.removeItem('connections')
+      WFForm.value.icon = null
+      await router.push({
+        path: `/workspace/workflow/${workflow_id}`,
+        query: {
+          uid: localStorage.getItem('LingXi_uid'),
+        }
+      })
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error("Error:", error)
+  }
+}
+
 const deleteDialog = ref(false); // 控制删除确认弹窗显示
 const deleteTarget = ref<{ id: number; type: string , name: string} | null>(null); // 待删除的资源信息
 
 // 打开删除确认弹窗
-function tryDelete(id: number, resourceType: string) {
+function openDeleteDialog(id: number, resourceType: string) {
   deleteTarget.value = { id, type: resourceType, name: resources.value.find(resource => resource.id === id)?.name || '' };
   deleteDialog.value = true;
 }
@@ -272,11 +270,75 @@ function handleDelete() {
   })
 }
 
+// 打开编辑弹窗
+function openEditDialog(resource: resource) {
+  editForm.value.id = resource.id;
+  editForm.value.type = resource.type;
+  editForm.value.name = resource.name;
+  editForm.value.description = resource.description;
+  editForm.value.iconPreview = 'http://122.9.33.84:8000' + resource.icon;
+  editForm.value.icon = null;
+  editDialogVisible.value = true;
+}
+
+// 处理编辑图标上传
+function handleEditIcon(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+
+    // 验证文件大小和类型
+    if (file.size > 5 * 1024 * 1024) {
+      ElMessage.warning("图片大小不能超过5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      editForm.value.iconPreview = e.target?.result as string; // 设置预览 URL
+    };
+    editForm.value.icon = file; // 将文件存储到 editForm.icon
+    reader.readAsDataURL(file); // 读取文件内容
+  }
+}
+
+// 提交编辑表单
+function submitEdit() {
+  const formData = new FormData();
+  formData.append("uid", localStorage.getItem('LingXi_uid') as string);
+  formData.append("resource_id", editForm.value.id.toString());
+  formData.append("resource_type", resources.value.find(resource => resource.id === editForm.value.id)?.type || '');
+  formData.append("name", editForm.value.name);
+  formData.append("description", editForm.value.description);
+  if (editForm.value.icon) {
+    formData.append("icon", editForm.value.icon);
+  }
+
+  axios({
+    method: "post",
+    url: "/rl/edit",
+    data: formData,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      ElMessage.success(response.data.message);
+      resources.value = [];
+      getKnowledgeBases();
+      getWorkflows();
+      editDialogVisible.value = false;
+    } else {
+      ElMessage.error(response.data.message);
+    }
+  });
+}
+
 const filterCriteria = ref({
   sortBy: "name", // 排序方式
   type: "all", // 资源类型
   search: "", // 搜索关键字
-});
+})
 
 // 筛选资源
 const filteredResources = computed(() => {
@@ -315,7 +377,7 @@ const filteredResources = computed(() => {
   }
 
   return filtered;
-});
+})
 </script>
 
 <template>
@@ -333,7 +395,7 @@ const filteredResources = computed(() => {
         <template #dropdown>
           <el-dropdown-menu>
             <div>
-              <el-dropdown-item class="dropdown-item" @click="createWorkflow">
+              <el-dropdown-item class="dropdown-item" @click="createWF">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
                 </svg>
@@ -395,11 +457,23 @@ const filteredResources = computed(() => {
             </span>
           </div>
         </div>
-        <!-- 删除图标 -->
+        <!-- 编辑按钮 -->
+        <div
+          v-if="resource.hover"
+          class="edit-icon"
+          @click.stop="openEditDialog(resource)"
+          title="编辑"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+          </svg>
+        </div>
+        <!-- 删除按钮 -->
         <div
             v-if="resource.hover"
             class="delete-icon"
-            @click.stop="tryDelete(resource.id, resource.type)"
+            @click.stop="openDeleteDialog(resource.id, resource.type)"
+            title="删除"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
             <path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1M18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/>
@@ -414,7 +488,7 @@ const filteredResources = computed(() => {
         <!-- 类型 -->
         <div class="form-row">
           <label class="form-label">类型</label>
-          <el-select v-model="baseInfo.type" placeholder="请选择类型" class="form-input">
+          <el-select v-model="KBForm.type" placeholder="请选择类型" class="form-input">
             <el-option label="文本" value="text"></el-option>
             <el-option label="表格" value="table"></el-option>
             <el-option label="图像" value="picture"></el-option>
@@ -424,27 +498,38 @@ const filteredResources = computed(() => {
         <!-- 名称 -->
         <div class="form-row">
           <label class="form-label">名称</label>
-          <el-input v-model="baseInfo.name" placeholder="请输入知识库名称" class="form-input" />
+          <el-input v-model="KBForm.name" placeholder="请输入知识库名称" class="form-input" />
+          <span class="char-count">{{ KBForm.name.length }}/20</span>
         </div>
 
         <!-- 描述 -->
         <div class="form-row">
           <label class="form-label">描述</label>
           <el-input
-              v-model="baseInfo.description"
+              v-model="KBForm.description"
               type="textarea"
               placeholder="请输入知识库描述"
               rows="4"
+              maxlength="200"
+              show-word-limit
               class="form-input"
           />
         </div>
 
         <!-- 上传图标 -->
         <div class="form-row">
-          <label class="form-label">图标（点击可本地上传）</label>
-          <div class="icon-upload">
-            <img :src="iconPreview" alt="图标预览" class="icon-preview" @click="triggerFileInput"/>
-            <input type="file" ref="iconUploader" style="display: none" accept="image/*" @change="handleIconChange"/>
+          <label class="form-label">图标</label>
+          <div class="image-upload">
+            <div class="upload-preview" v-if="KBForm.iconPreview">
+              <img :src="KBForm.iconPreview" alt="预览图" />
+            </div>
+            <div class="upload-button" :class="{ 'has-image': WFForm.icon }">
+              <input type="file" accept="image/*" @change="handleKBIcon" class="file-input" />
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
+              </svg>
+              <span>更换图标</span>
+            </div>
           </div>
         </div>
       </div>
@@ -461,37 +546,37 @@ const filteredResources = computed(() => {
         <!-- 名称 -->
         <div class="form-row">
           <label class="form-label">名称 <span class="required">*</span></label>
-          <el-input v-model="workflowForm.name" placeholder="给工作流起一个独一无二的名字" maxlength="20" class="form-input" />
-          <span class="char-count">{{ workflowForm.name.length }}/20</span>
+          <el-input v-model="WFForm.name" placeholder="给工作流起一个独一无二的名字" maxlength="20" class="form-input" />
+          <span class="char-count">{{ WFForm.name.length }}/20</span>
         </div>
 
         <!-- 描述 -->
         <div class="form-row">
           <label class="form-label">功能介绍</label>
           <el-input
-            v-model="workflowForm.description"
+            v-model="WFForm.description"
             type="textarea"
             placeholder="介绍工作流的功能，将会展示给工作流的用户"
-            maxlength="500"
+            maxlength="200"
+            show-word-limit
             :rows="4"
             class="form-input"
           />
-          <span class="char-count">{{ workflowForm.description.length }}/500</span>
         </div>
 
         <!-- 图片上传 -->
         <div class="form-row">
           <label class="form-label">图标</label>
           <div class="image-upload">
-            <div class="upload-preview" v-if="workflowForm.icon">
-              <img :src="workflowForm.icon" alt="预览图" />
+            <div class="upload-preview" v-if="WFForm.iconPreview">
+              <img :src="WFForm.iconPreview" alt="预览图" />
             </div>
-            <div class="upload-button" :class="{ 'has-image': workflowForm.icon }">
-              <input type="file" accept="image/*" @change="handleImageUpload" class="file-input" />
+            <div class="upload-button" :class="{ 'has-image': WFForm.icon }">
+              <input type="file" accept="image/*" @change="handleWFIcon" class="file-input" />
               <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                 <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
               </svg>
-              <span>{{ workflowForm.icon ? '更换图片' : '上传图片' }}</span>
+              <span>更换图标</span>
             </div>
           </div>
         </div>
@@ -499,7 +584,7 @@ const filteredResources = computed(() => {
 
       <template #footer>
         <el-button @click="workflowDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitWorkflow">创建</el-button>
+        <el-button type="primary" @click="submitWF">创建</el-button>
       </template>
     </el-dialog>
 
@@ -511,6 +596,48 @@ const filteredResources = computed(() => {
       <template #footer>
         <el-button @click="deleteDialog = false">取消</el-button>
         <el-button type="danger" @click="handleDelete">删除</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑资源弹窗 -->
+    <el-dialog v-model="editDialogVisible" title="编辑资源" width="500px" class="custom-dialog">
+      <div class="dialog-body">
+        <div class="form-row">
+          <label class="form-label">名称 <span class="required">*</span></label>
+          <el-input v-model="editForm.name" placeholder="请输入资源名称" maxlength="20" class="form-input" />
+          <span class="char-count">{{ editForm.name.length }}/20</span>
+        </div>
+        <div class="form-row">
+          <label class="form-label">描述</label>
+          <el-input
+            v-model="editForm.description"
+            type="textarea"
+            placeholder="请输入资源描述"
+            maxlength="200"
+            show-word-limit
+            rows="4"
+            class="form-input"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">图标</label>
+          <div class="image-upload">
+            <div class="upload-preview" v-if="editForm.iconPreview">
+              <img :src="editForm.iconPreview" alt="图标预览" />
+            </div>
+            <div class="upload-button" :class="{ 'has-image': editForm.iconPreview }">
+              <input type="file" accept="image/*" @change="handleEditIcon" class="file-input"/>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
+              </svg>
+              <span>更换图标</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitEdit">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -691,6 +818,22 @@ const filteredResources = computed(() => {
   background: #f5f5f5;
 }
 
+.edit-icon {
+  position: absolute;
+  bottom: 8px;
+  right: 40px;
+  background: white;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-icon:hover {
+  background: #f5f5f5;
+}
+
 /* 自定义弹窗样式 */
 .custom-dialog {
   border-radius: 12px;
@@ -823,5 +966,15 @@ const filteredResources = computed(() => {
   margin-top: 4px;
   font-size: 12px;
   color: #95a5a6;
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 </style>

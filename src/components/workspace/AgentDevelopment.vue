@@ -22,6 +22,14 @@ const router = useRouter();
 const baseImageUrl = "http://122.9.33.84:8000"
 const deleteDialog = ref(false);
 const deleteTarget = ref<{ id: number, name: string } | null>(null);
+const editDialogVisible = ref(false);
+const editForm = ref({
+  id: 0,
+  name: '',
+  description: '',
+  icon: '',
+  iconPreview: ''
+});
 
 const filterCriteria = ref({
   sortBy: 'create-time', // create-time | name | modify-time
@@ -187,6 +195,70 @@ function handleDelete() {
   })
 }
 
+function openEditDialog(agent: agent) {
+  editForm.value = {
+    id: agent.id,
+    name: agent.name,
+    description: agent.description,
+    icon: agent.icon,
+    iconPreview: baseImageUrl + agent.icon
+  };
+  editDialogVisible.value = true;
+}
+
+function handleEditImageUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    if (file.size > 2 * 1024 * 1024) {
+      ElMessage.error('图片大小不能超过2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      editForm.value.iconPreview = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+async function submitEdit() {
+  if (!editForm.value.name) {
+    ElMessage.error('请输入智能体名称');
+    return;
+  }
+  const formData = new FormData();
+  if (editForm.value.iconPreview !== baseImageUrl + editForm.value.icon) {
+    const response = await fetch(editForm.value.iconPreview);
+    const blob = await response.blob();
+    formData.append('icon', new File([blob], 'icon.png', { type: blob.type }));
+  }
+  formData.append('name', editForm.value.name);
+  formData.append('description', editForm.value.description);
+  formData.append('uid', localStorage.getItem('LingXi_uid') as string);
+  formData.append('agent_id', editForm.value.id.toString());
+  try {
+    const response = await axios({
+      method: 'post',
+      url: '/agent/update',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    });
+    if (response.data.code === 0) {
+      ElMessage.success('更新成功！');
+      editDialogVisible.value = false;
+      fetchAgents();
+    } else {
+      ElMessage.error(response.data.message);
+    }
+  } catch (error) {
+    console.error('更新智能体失败:', error);
+    ElMessage.error('更新失败');
+  }
+}
+
 onMounted(() => {
   fetchAgents()
 })
@@ -257,11 +329,19 @@ function goToAgentEdit(id: number) {
         <div class="agent-info">
           <h3>{{ agent.name }}</h3>
           <p>{{ agent.description }}</p>
-<!--          <div class="agent-meta">-->
-<!--            <span v-if="agent.status === 2">发布时间：{{ agent.publishedTime }}</span>-->
-<!--          </div>-->
         </div>
-        <!-- 删除图标 -->
+        <!-- 编辑按钮 -->
+        <div
+          v-if="agent.hover"
+          class="edit-icon"
+          @click.stop="openEditDialog(agent)"
+          title="编辑"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+          </svg>
+        </div>
+        <!-- 删除按钮 -->
         <div
           v-if="agent.hover"
           class="delete-icon"
@@ -291,11 +371,11 @@ function goToAgentEdit(id: number) {
             v-model="agentForm.description"
             type="textarea"
             placeholder="介绍智能体的功能，将会展示给智能体的用户"
-            maxlength="500"
+            maxlength="200"
+            show-word-limit
             :rows="4"
             class="form-input"
           />
-          <span class="char-count">{{ agentForm.description.length }}/500</span>
         </div>
 
         <!-- 图片上传 -->
@@ -310,7 +390,7 @@ function goToAgentEdit(id: number) {
               <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                 <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
               </svg>
-              <span>{{ agentForm.icon ? '更换图片' : '上传图片' }}</span>
+              <span>更换图标</span>
             </div>
           </div>
         </div>
@@ -330,6 +410,48 @@ function goToAgentEdit(id: number) {
       <template #footer>
         <el-button @click="deleteDialog = false">取消</el-button>
         <el-button type="danger" @click="handleDelete">删除</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑智能体弹窗 -->
+    <el-dialog v-model="editDialogVisible" title="编辑智能体" width="500px" class="custom-dialog">
+      <div class="dialog-body">
+        <div class="form-row">
+          <label class="form-label">名称 <span class="required">*</span></label>
+          <el-input v-model="editForm.name" placeholder="请输入智能体名称" maxlength="20" class="form-input" />
+          <span class="char-count">{{ editForm.name.length }}/20</span>
+        </div>
+        <div class="form-row">
+          <label class="form-label">功能介绍</label>
+          <el-input
+            v-model="editForm.description"
+            type="textarea"
+            placeholder="介绍智能体的功能"
+            maxlength="200"
+            show-word-limit
+            :rows="4"
+            class="form-input"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">图标</label>
+          <div class="image-upload">
+            <div class="upload-preview" v-if="editForm.iconPreview">
+              <img :src="editForm.iconPreview" alt="预览图" />
+            </div>
+            <div class="upload-button" :class="{ 'has-image': editForm.iconPreview }">
+              <input type="file" accept="image/*" @change="handleEditImageUpload" class="file-input" />
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
+              </svg>
+              <span>{{ editForm.iconPreview ? '更换图片' : '上传图片' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitEdit">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -487,6 +609,22 @@ function goToAgentEdit(id: number) {
 }
 
 .delete-icon:hover {
+  background: #f5f5f5;
+}
+
+.edit-icon {
+  position: absolute;
+  bottom: 8px;
+  right: 40px;
+  background: white;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-icon:hover {
   background: #f5f5f5;
 }
 
