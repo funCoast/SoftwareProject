@@ -74,6 +74,9 @@ interface Comment {
 // 评论相关
 const newComment = ref('')
 const comments = ref<Comment[]>([])
+// 举报相关
+const showReportDialog = ref(false)
+const reportDescription = ref('')
 
 // 添加加载状态
 const isLoading = ref(false)
@@ -108,7 +111,7 @@ interface Message {
     response: string
   }
   time: string
-  files?: string[]
+  file?: string[]
   search?: boolean
   showThinking?: boolean
 }
@@ -175,7 +178,7 @@ const trySendMessage = () => {
       response: messageInput.value
     },
     time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    files: fileList.value.map(file => file.name),
+    file: fileList.value.map(file => file.name),
     search: enableSearch.value,
     showThinking: true
   })
@@ -185,7 +188,6 @@ const trySendMessage = () => {
   enableSearch.value = false
 }
 
-// 修改发送消息到服务器的函数
 async function sendMessage() {
   try {
     const formData = new FormData()
@@ -247,6 +249,7 @@ async function fetchMessage() {
         showThinking: true
       }))
       console.log('历史信息获取成功')
+      console.log(response.data.chatHistory)
     } else {
       console.log(response.data.message)
     }
@@ -317,9 +320,9 @@ async function handleLike() {
       userActions.value.isLiked = !userActions.value.isLiked
       agentInfo.value.stats.likes += userActions.value.isLiked ? 1 : -1
       if (userActions.value.isLiked) {
-        alert('点赞成功')
+        ElMessage.success('点赞成功')
       } else {
-        alert('取消点赞成功')
+        ElMessage.success('取消点赞成功')
       }
     } else {
       ElMessage.error(response.data.message)
@@ -345,9 +348,9 @@ async function handleFavorite() {
       userActions.value.isFavorited = !userActions.value.isFavorited
       agentInfo.value.stats.favorites += userActions.value.isFavorited ? 1 : -1
       if (userActions.value.isFavorited) {
-        alert('收藏成功')
+        ElMessage.success('收藏成功')
       } else {
-        alert('取消收藏成功')
+        ElMessage.success('取消收藏成功')
       }
     } else {
       ElMessage.error(response.data.message)
@@ -372,9 +375,9 @@ async function handleFollow() {
     if (response.data.code === 0) {
       userActions.value.isFollowed = !userActions.value.isFollowed
       if (userActions.value.isFollowed) {
-        alert('关注成功')
+        ElMessage.success('关注成功')
       } else {
-        alert('取消关注成功')
+        ElMessage.success('取消关注成功')
       }
     } else {
       ElMessage.error(response.data.message)
@@ -409,13 +412,18 @@ async function handleCopy() {
 
 // 举报操作
 async function handleReport() {
+  if (!reportDescription.value.trim()) {
+    ElMessage.warning('请输入举报描述')
+    return
+  }
   try {
     const response = await axios({
       method: 'post',
       url: `community/agentHandleReport`,
       data: {
         uid: localStorage.getItem('LingXi_uid'),
-        agent_id: agent_id
+        agent_id: agent_id,
+        description: reportDescription.value
       }
     })
     if (response.data.code === 0) {
@@ -510,8 +518,8 @@ onMounted(() => {
               </div>
               <div class="message-content">
                 <div class="message-text">{{ message.content.response }}</div>
-                <div v-if="message.files && message.files.length > 0" class="message-files">
-                  <div v-for="file in message.files" :key="file" class="message-file">
+                <div v-if="message.file && message.file.length > 0" class="message-files">
+                  <div v-for="file in message.file" :key="file" class="message-file">
                     <el-icon><Document /></el-icon>
                     <span class="file-name">{{ file }}</span>
                   </div>
@@ -596,6 +604,7 @@ onMounted(() => {
                     :show-file-list="false"
                     :on-change="handleFileUpload"
                     :disabled="enableSearch"
+                    accept=".txt,.pdf,.doc,.docx,.md,.xls,.xlsx"
                   >
                     <el-button type="text" class="upload-icon" :class="{ 'disabled': enableSearch }">
                       <el-icon><Plus /></el-icon>
@@ -623,9 +632,6 @@ onMounted(() => {
               </div>
             </div>
           </div>
-<!--          <div class="input-tips">-->
-<!--            Shift + Enter 换行 &nbsp;|&nbsp; Enter 发送-->
-<!--          </div>-->
         </div>
       </div>
     </div>
@@ -730,10 +736,16 @@ onMounted(() => {
             >
             <span>{{ userActions.isFavorited ? '已收藏' : '收藏' }}</span>
           </button>
-<!--          <button class="action-btn secondary" @click="handleCopy">-->
-<!--            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">-->
-<!--            <span>复制</span>-->
-<!--          </button>-->
+        </div>
+        <div class="action-buttons">
+          <button class="action-btn secondary" @click="handleCopy">
+            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
+            <span>复制</span>
+          </button>
+          <button class="action-btn secondary" @click="showReportDialog = true">
+            <img src="https://api.iconify.design/material-symbols:report.svg" alt="举报" class="action-icon">
+            <span>举报</span>
+          </button>
         </div>
       </div>
 
@@ -779,6 +791,30 @@ onMounted(() => {
             </button>
           </div>
         </div>
+
+        <!-- 举报弹窗 -->
+        <el-dialog
+            v-model="showReportDialog"
+            title="举报智能体"
+            width="400px"
+            :close-on-click-modal="false"
+        >
+          <div class="report-dialog">
+            <div class="form-group">
+              <label>举报描述</label>
+              <el-input
+                  v-model="reportDescription"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请详细描述举报原因..."
+              />
+            </div>
+          </div>
+          <template #footer>
+            <el-button @click="showReportDialog = false">取消</el-button>
+            <el-button @click="handleReport">确认举报</el-button>
+          </template>
+        </el-dialog>
       </div>
     </div>
   </div>
@@ -1691,7 +1727,7 @@ onMounted(() => {
 
 .thinking-chain {
   background: #f8f9fa;
-  border-left: 3px solid #409EFF;
+  border-left: 3px solid #2c3e50;
   padding: 12px;
   margin-bottom: 12px;
   border-radius: 0 4px 4px 0;
@@ -1723,5 +1759,22 @@ onMounted(() => {
 
 .response {
   color: #2c3e50;
+}
+
+.action-btn.warning:hover .el-icon {
+  color: white;
+}
+
+.report-dialog {
+  padding: 16px 0;
+}
+
+.report-dialog .form-group {
+  margin-bottom: 0;
+}
+
+.report-dialog label {
+  margin-bottom: 8px;
+  color: #606266;
 }
 </style>
