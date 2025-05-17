@@ -3,6 +3,7 @@ import { ref, onMounted, watch,onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import moment from 'moment'
+import {c} from "vite/dist/node/moduleRunnerTransport.d-CXw_Ws6P";
 
 const baseImageUrl = "http://122.9.33.84:8000"
 const personID = ref('')
@@ -234,7 +235,7 @@ onUnmounted(() => {
               {{ contact.lastMessage.text }}
             </div>
           </div>
-          <div class="message-time">
+          <div v-if="contact.lastMessageTime" class="message-time">
             {{ formatMessageTime(contact.lastMessageTime)}}
           </div>
         </div>

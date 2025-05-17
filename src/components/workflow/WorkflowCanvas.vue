@@ -10,8 +10,9 @@ import WorkflowNodeManager from "./WorkflowNodeManager.vue"
 import StartNodeDetail from './node-details/StartNodeDetail.vue'
 import EndNodeDetail from './node-details/EndNodeDetail.vue'
 import WeatherPlugin from "./node-details/WeatherPlugin.vue"
-import ParaNodeDetail from "./node-details/ParaNodeDetail.vue";
-import WebNodeDetail from "./node-details/WebNodeDetail.vue";
+import ParaNodeDetail from "./node-details/ParaNodeDetail.vue"
+import WebNodeDetail from "./node-details/WebNodeDetail.vue"
+import AgentNodeDetail from "./node-details/AgentNodeDetail.vue";
 import {useRouter, useRoute} from "vue-router"
 import axios from "axios"
 
@@ -79,6 +80,12 @@ const nodeTypes = ref<nodeType[]>([
     label: '网页爬取',
     description: '访问网页并提取信息',
     image: 'https://api.iconify.design/material-symbols:language.svg',
+  },
+  {
+    type: 'agent',
+    label: '智能体节点',
+    description: '调用已发布的智能体',
+    image: 'https://api.iconify.design/material-symbols:smart-toy.svg'
   },
   {
     type: 'end',
@@ -491,6 +498,8 @@ function getNodeDetailComponent(type: string) {
       return WeatherPlugin
     case 'paraExtractor':
       return ParaNodeDetail
+    case 'agent':
+      return AgentNodeDetail
     case 'web':
       return WebNodeDetail
     default:

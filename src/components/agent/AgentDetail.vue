@@ -108,7 +108,7 @@ interface Message {
     response: string
   }
   time: string
-  files?: string[]
+  file?: string[]
   search?: boolean
   showThinking?: boolean
 }
@@ -175,7 +175,7 @@ const trySendMessage = () => {
       response: messageInput.value
     },
     time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    files: fileList.value.map(file => file.name),
+    file: fileList.value.map(file => file.name),
     search: enableSearch.value,
     showThinking: true
   })
@@ -185,7 +185,6 @@ const trySendMessage = () => {
   enableSearch.value = false
 }
 
-// 修改发送消息到服务器的函数
 async function sendMessage() {
   try {
     const formData = new FormData()
@@ -247,6 +246,7 @@ async function fetchMessage() {
         showThinking: true
       }))
       console.log('历史信息获取成功')
+      console.log(response.data.chatHistory)
     } else {
       console.log(response.data.message)
     }
@@ -510,8 +510,8 @@ onMounted(() => {
               </div>
               <div class="message-content">
                 <div class="message-text">{{ message.content.response }}</div>
-                <div v-if="message.files && message.files.length > 0" class="message-files">
-                  <div v-for="file in message.files" :key="file" class="message-file">
+                <div v-if="message.file && message.file.length > 0" class="message-files">
+                  <div v-for="file in message.file" :key="file" class="message-file">
                     <el-icon><Document /></el-icon>
                     <span class="file-name">{{ file }}</span>
                   </div>
@@ -596,6 +596,7 @@ onMounted(() => {
                     :show-file-list="false"
                     :on-change="handleFileUpload"
                     :disabled="enableSearch"
+                    accept=".txt,.pdf,.doc,.docx,.md,.xls,.xlsx"
                   >
                     <el-button type="text" class="upload-icon" :class="{ 'disabled': enableSearch }">
                       <el-icon><Plus /></el-icon>
@@ -623,9 +624,6 @@ onMounted(() => {
               </div>
             </div>
           </div>
-<!--          <div class="input-tips">-->
-<!--            Shift + Enter 换行 &nbsp;|&nbsp; Enter 发送-->
-<!--          </div>-->
         </div>
       </div>
     </div>
@@ -730,10 +728,10 @@ onMounted(() => {
             >
             <span>{{ userActions.isFavorited ? '已收藏' : '收藏' }}</span>
           </button>
-<!--          <button class="action-btn secondary" @click="handleCopy">-->
-<!--            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">-->
-<!--            <span>复制</span>-->
-<!--          </button>-->
+          <button class="action-btn secondary" @click="handleCopy">
+            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
+            <span>复制</span>
+          </button>
         </div>
       </div>
 
@@ -1691,7 +1689,7 @@ onMounted(() => {
 
 .thinking-chain {
   background: #f8f9fa;
-  border-left: 3px solid #409EFF;
+  border-left: 3px solid #2c3e50;
   padding: 12px;
   margin-bottom: 12px;
   border-radius: 0 4px 4px 0;

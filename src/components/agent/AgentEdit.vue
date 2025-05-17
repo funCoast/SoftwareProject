@@ -41,6 +41,7 @@ interface AgentInfo {
     selectedPlugins: number[]
     selectedWorkflows: number[]
     selectedModel: string
+    opening_line: string
   }
 }
 
@@ -67,7 +68,8 @@ const agentInfo = ref<AgentInfo>({
     selectedKbs: [],
     selectedPlugins: [],
     selectedWorkflows: [],
-    selectedModel: 'qwen-plus'
+    selectedModel: 'qwen-plus',
+    opening_line: ''
   }
 })
 
@@ -276,12 +278,23 @@ async function updateAgentInfo() {
         system_prompt: agentInfo.value.config.system_prompt,
         selectedKbs: agentInfo.value.config.selectedKbs,
         selectedWorkflows: agentInfo.value.config.selectedWorkflows,
-        selectedModel: agentInfo.value.config.selectedModel
+        selectedModel: agentInfo.value.config.selectedModel,
+        opening_line: agentInfo.value.config.opening_line
       }
     })
     if (response.data.code === 0) {
       console.log("配置: ", agentInfo.value.config)
-      alert("保存成功！")
+      if (agentInfo.value.config.opening_line) {
+        chatHistory.value.push({
+          sender: 'assistant',
+          content: {
+            thinking_chain: '',
+            response: agentInfo.value.config.opening_line
+          },
+          time: new Date().toISOString().replace('T', ' ').slice(0, 19)
+        })
+      }
+      ElMessage.success("保存成功！")
     } else {
       ElMessage.error(response.data.message)
     }
@@ -616,6 +629,16 @@ function renderedMarkdown(content: string) {
             type="textarea"
             :rows="6"
             placeholder="请输入智能体的人物设定..."
+          />
+        </div>
+
+        <div class="config-section">
+          <h3>开场白</h3>
+          <el-input
+              v-model="agentInfo.config.opening_line"
+              type="textarea"
+              :rows="6"
+              placeholder="请输入智能体的开场白..."
           />
         </div>
 
