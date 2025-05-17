@@ -320,9 +320,9 @@ async function handleLike() {
       userActions.value.isLiked = !userActions.value.isLiked
       agentInfo.value.stats.likes += userActions.value.isLiked ? 1 : -1
       if (userActions.value.isLiked) {
-        alert('点赞成功')
+        ElMessage.success('点赞成功')
       } else {
-        alert('取消点赞成功')
+        ElMessage.success('取消点赞成功')
       }
     } else {
       ElMessage.error(response.data.message)
@@ -348,9 +348,9 @@ async function handleFavorite() {
       userActions.value.isFavorited = !userActions.value.isFavorited
       agentInfo.value.stats.favorites += userActions.value.isFavorited ? 1 : -1
       if (userActions.value.isFavorited) {
-        alert('收藏成功')
+        ElMessage.success('收藏成功')
       } else {
-        alert('取消收藏成功')
+        ElMessage.success('取消收藏成功')
       }
     } else {
       ElMessage.error(response.data.message)
@@ -375,9 +375,9 @@ async function handleFollow() {
     if (response.data.code === 0) {
       userActions.value.isFollowed = !userActions.value.isFollowed
       if (userActions.value.isFollowed) {
-        alert('关注成功')
+        ElMessage.success('关注成功')
       } else {
-        alert('取消关注成功')
+        ElMessage.success('取消关注成功')
       }
     } else {
       ElMessage.error(response.data.message)
@@ -736,12 +736,14 @@ onMounted(() => {
             >
             <span>{{ userActions.isFavorited ? '已收藏' : '收藏' }}</span>
           </button>
+        </div>
+        <div class="action-buttons">
           <button class="action-btn secondary" @click="handleCopy">
             <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
             <span>复制</span>
           </button>
           <button class="action-btn secondary" @click="showReportDialog = true">
-            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="举报" class="action-icon">
+            <img src="https://api.iconify.design/material-symbols:report.svg" alt="举报" class="action-icon">
             <span>举报</span>
           </button>
         </div>
