@@ -74,6 +74,9 @@ interface Comment {
 // 评论相关
 const newComment = ref('')
 const comments = ref<Comment[]>([])
+// 举报相关
+const showReportDialog = ref(false)
+const reportDescription = ref('')
 
 // 添加加载状态
 const isLoading = ref(false)
@@ -409,13 +412,18 @@ async function handleCopy() {
 
 // 举报操作
 async function handleReport() {
+  if (!reportDescription.value.trim()) {
+    ElMessage.warning('请输入举报描述')
+    return
+  }
   try {
     const response = await axios({
       method: 'post',
       url: `community/agentHandleReport`,
       data: {
         uid: localStorage.getItem('LingXi_uid'),
-        agent_id: agent_id
+        agent_id: agent_id,
+        description: reportDescription.value
       }
     })
     if (response.data.code === 0) {
@@ -732,6 +740,10 @@ onMounted(() => {
             <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
             <span>复制</span>
           </button>
+          <button class="action-btn secondary" @click="showReportDialog = true">
+            <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="举报" class="action-icon">
+            <span>举报</span>
+          </button>
         </div>
       </div>
 
@@ -777,6 +789,30 @@ onMounted(() => {
             </button>
           </div>
         </div>
+
+        <!-- 举报弹窗 -->
+        <el-dialog
+            v-model="showReportDialog"
+            title="举报智能体"
+            width="400px"
+            :close-on-click-modal="false"
+        >
+          <div class="report-dialog">
+            <div class="form-group">
+              <label>举报描述</label>
+              <el-input
+                  v-model="reportDescription"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请详细描述举报原因..."
+              />
+            </div>
+          </div>
+          <template #footer>
+            <el-button @click="showReportDialog = false">取消</el-button>
+            <el-button @click="handleReport">确认举报</el-button>
+          </template>
+        </el-dialog>
       </div>
     </div>
   </div>
@@ -1721,5 +1757,22 @@ onMounted(() => {
 
 .response {
   color: #2c3e50;
+}
+
+.action-btn.warning:hover .el-icon {
+  color: white;
+}
+
+.report-dialog {
+  padding: 16px 0;
+}
+
+.report-dialog .form-group {
+  margin-bottom: 0;
+}
+
+.report-dialog label {
+  margin-bottom: 8px;
+  color: #606266;
 }
 </style>

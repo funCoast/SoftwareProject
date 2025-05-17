@@ -79,9 +79,9 @@ const filteredNavItems = computed(() => {
         item.path !== '/workspace'
     )
   } else {
-    return navItems.value.filter(item => 
-      item.path !== '/publish-anno' &&
-      item.path !== '/review-agent' &&
+    return navItems.value.filter(item =>
+        item.path !== '/publish-anno' &&
+        item.path !== '/review-agent' &&
         item.path !== '/user-manage'
     )
   }
