@@ -1803,72 +1803,69 @@ def delete_resource(request):
         "message": "删除成功"
     })
 
-
 @csrf_exempt
 def edit_resource(request):
-    # -------- 1. 仅支持 POST --------
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"}, status=400)
 
-    # -------- 2. 解析参数 --------
     try:
-        if request.content_type == "application/json":
-            body = json.loads(request.body)
-            uid           = body.get('uid')
-            resource_type = body.get('resource_type')
-            resource_id   = body.get('resource_id')
-            name          = body.get('name')
-            description   = body.get('description')
-            icon          = body.get('icon')   # 可为 None / ""
-        else:  # form-data
-            uid           = request.POST.get('uid')
-            resource_type = request.POST.get('resource_type')
-            resource_id   = request.POST.get('resource_id')
-            name          = request.POST.get('name')
-            description   = request.POST.get('description')
-            icon          = request.POST.get('icon')
+        uid           = request.POST.get('uid')
+        resource_type = request.POST.get('resource_type')
+        resource_id   = request.POST.get('resource_id')
+        name          = request.POST.get('name')
+        description   = request.POST.get('description')
+        icon_file     = request.FILES.get('icon')  # 文件类型
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
 
     if not all([uid, resource_type, resource_id, name]):
         return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、resource_type、resource_id 或 name)"})
 
-    # -------- 3. 用户校验 --------
     try:
         user = User.objects.get(user_id=uid)
     except User.DoesNotExist:
         return JsonResponse({"code": -1, "message": "用户不存在"})
 
-    # -------- 4. 资源类型分支 --------
     try:
         if resource_type == "workflow":
-            try:
-                workflow = Workflow.objects.get(workflow_id=resource_id, user=user)
-            except Workflow.DoesNotExist:
-                return JsonResponse({"code": -1, "message": "未找到对应的工作流"})
+            workflow = Workflow.objects.get(workflow_id=resource_id, user=user)
+            workflow.name = name
+            workflow.description = description or workflow.description
 
-            workflow.name        = name
-            workflow.description = description if description is not None else workflow.description
-            if icon not in (None, ""):
-                workflow.icon_url = icon
-            workflow.save(update_fields=['name', 'description', 'icon_url', 'update_time'])
+            if icon_file:
+                ICON_DIR = os.path.join(settings.MEDIA_ROOT, 'workflow_icons')
+                os.makedirs(ICON_DIR, exist_ok=True)
+                _, ext = os.path.splitext(icon_file.name)
+                filename = f"{uuid.uuid4().hex}{ext}"
+                filepath = os.path.join(ICON_DIR, filename)
+                with open(filepath, 'wb+') as f:
+                    for chunk in icon_file.chunks():
+                        f.write(chunk)
+                workflow.icon_url = f"/media/workflow_icons/{filename}"
+
+            workflow.save()
 
         elif resource_type in ["textBase", "pictureBase", "tableBase"]:
-            try:
-                kb = KnowledgeBase.objects.get(kb_id=resource_id, user=user)
-            except KnowledgeBase.DoesNotExist:
-                return JsonResponse({"code": -1, "message": "知识库不存在或无权限"})
-
-            # 唯一性校验：修改名称时避免重名冲突
+            kb = KnowledgeBase.objects.get(kb_id=resource_id, user=user)
             if kb.kb_name != name and KnowledgeBase.objects.filter(kb_name=name).exclude(kb_id=kb.kb_id).exists():
                 return JsonResponse({"code": -1, "message": "知识库名称已存在"})
 
-            kb.kb_name        = name
-            kb.kb_description = description if description is not None else kb.kb_description
-            if icon not in (None, ""):
-                kb.icon = icon
+            kb.kb_name = name
+            kb.kb_description = description or kb.kb_description
+
+            if icon_file:
+                ICON_DIR = os.path.join(settings.MEDIA_ROOT, 'kb_icons')
+                os.makedirs(ICON_DIR, exist_ok=True)
+                _, ext = os.path.splitext(icon_file.name)
+                filename = f"{kb.kb_id}{ext}"
+                filepath = os.path.join(ICON_DIR, filename)
+                with open(filepath, 'wb+') as f:
+                    for chunk in icon_file.chunks():
+                        f.write(chunk)
+                kb.icon = f"/media/kb_icons/{filename}"
+
             kb.updated_at = timezone.now()
-            kb.save(update_fields=['kb_name', 'kb_description', 'icon', 'updated_at'])
+            kb.save()
 
         else:
             return JsonResponse({"code": -1, "message": f"不支持的资源类型: {resource_type}"})
@@ -1876,75 +1873,51 @@ def edit_resource(request):
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"编辑失败: {str(e)}"})
 
-    # -------- 5. 成功返回 --------
-    return JsonResponse({
-        "code": 0,
-        "message": "编辑成功"
-    })
+    return JsonResponse({"code": 0, "message": "编辑成功"})
 
 @csrf_exempt
 def edit_agent(request):
-    """
-    POST /agent/edit
-
-    请求示例：
-    {
-        "uid":        用户 ID,
-        "agent_id":   智能体 ID,
-        "name":       新名称,
-        "description":功能介绍,
-        "icon":       图标（空则不修改）
-    }
-
-    返回：
-    {
-        "code": 0,
-        "message": "编辑成功"
-    }
-    """
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"}, status=400)
 
     try:
-        if request.content_type == "application/json":
-            body = json.loads(request.body)
-            uid         = body.get('uid')
-            agent_id    = body.get('agent_id')
-            name        = body.get('name')
-            description = body.get('description')
-            icon        = body.get('icon')
-        else:
-            uid         = request.POST.get('uid')
-            agent_id    = request.POST.get('agent_id')
-            name        = request.POST.get('name')
-            description = request.POST.get('description')
-            icon        = request.POST.get('icon')
+        uid         = request.POST.get('uid')
+        agent_id    = request.POST.get('agent_id')
+        name        = request.POST.get('name')
+        description = request.POST.get('description')
+        icon_file   = request.FILES.get('icon')  # 图标为文件
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
 
     if not all([uid, agent_id, name]):
         return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、agent_id 或 name)"})
 
-    # 用户校验
     try:
         user = User.objects.get(user_id=uid)
+        agent = Agent.objects.get(agent_id=agent_id, user=user)
     except User.DoesNotExist:
         return JsonResponse({"code": -1, "message": "用户不存在"})
-
-    # 智能体校验
-    try:
-        agent = Agent.objects.get(agent_id=agent_id, user=user)
     except Agent.DoesNotExist:
         return JsonResponse({"code": -1, "message": "智能体不存在或无权限"})
 
-    # 更新智能体信息
     try:
-        agent.agent_name  = name
-        agent.description = description if description is not None else agent.description
-        if icon not in (None, ""):
-            agent.icon_url = icon
+        agent.agent_name = name
+        agent.description = description or agent.description
+
+        if icon_file:
+            ICON_DIR = os.path.join(settings.MEDIA_ROOT, 'agent_icons')
+            os.makedirs(ICON_DIR, exist_ok=True)
+            _, ext = os.path.splitext(icon_file.name)
+            filename = f"{uuid.uuid4().hex}{ext}"
+            filepath = os.path.join(ICON_DIR, filename)
+            with open(filepath, 'wb+') as f:
+                for chunk in icon_file.chunks():
+                    f.write(chunk)
+            agent.icon_url = f"/media/agent_icons/{filename}"
+
         agent.updated_time = timezone.now()
-        agent.save(update_fields=['agent_name', 'description', 'icon_url', 'updated_time'])
+        agent.save()
+
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"编辑失败: {str(e)}"})
 
