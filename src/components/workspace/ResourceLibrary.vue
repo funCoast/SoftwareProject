@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import router from '../../router'
 import axios from "axios";
 
@@ -16,8 +16,8 @@ interface resource {
 
 const resources = ref<resource[]> ([])
 const KBDialog = ref(false) // 控制弹窗显示
-const workflowDialogVisible = ref(false); // 控制工作流弹窗显示
-const editDialogVisible = ref(false); // 控制编辑弹窗显示
+const WFDialog = ref(false); // 控制工作流弹窗显示
+const editDialog = ref(false); // 控制编辑弹窗显示
 
 const KBForm = ref({
   type: "text", // 默认类型
@@ -112,6 +112,17 @@ function createKB() {
   }
 }
 
+// 监听知识库类型变化，动态设置iconPreview
+watch(
+  () => KBForm.value.type,
+  (newType) => {
+    // 仅当用户未上传图片时才切换预览
+    if (!KBForm.value.icon) {
+      KBForm.value.iconPreview = defaultIcons[newType as keyof typeof defaultIcons]
+    }
+  }
+)
+
 function handleKBIcon(event: Event) {
   const input = event.target as HTMLInputElement
   if (input.files && input.files[0]) {
@@ -133,6 +144,10 @@ function handleKBIcon(event: Event) {
 }
 
 function submitKB() {
+  if (!KBForm.value.name) {
+    ElMessage.warning('知识库名称不能为空')
+    return
+  }
   const formData = new FormData()
   formData.append("uid", localStorage.getItem('LingXi_uid') as string)
   formData.append("kb_type", KBForm.value.type)
@@ -152,7 +167,7 @@ function submitKB() {
   }).then(function (response) {
     if (response.data.code === 0) {
       ElMessage.success(response.data.message)
-      router.push("/workspace/" + KBForm.value.type + 'Base/' +response.data.kb_id)
+      router.push("/workspace/" + KBForm.value.type + 'Base/' + response.data.kb_id)
     } else {
       ElMessage.error(response.data.message)
     }
@@ -171,7 +186,7 @@ function goToResource(resource: resource) {
 
 function createWF() {
   WFForm.value.iconPreview = defaultIcons.workflow
-  workflowDialogVisible.value = true;
+  WFDialog.value = true;
 }
 
 function handleWFIcon(event: Event) {
@@ -194,7 +209,7 @@ function handleWFIcon(event: Event) {
 
 async function submitWF() {
   if (!WFForm.value.name) {
-    ElMessage.warning('请输入工作流名称')
+    ElMessage.warning('工作流名称不能为空')
     return
   }
   const formData = new FormData()
@@ -278,7 +293,7 @@ function openEditDialog(resource: resource) {
   editForm.value.description = resource.description;
   editForm.value.iconPreview = 'http://122.9.33.84:8000' + resource.icon;
   editForm.value.icon = null;
-  editDialogVisible.value = true;
+  editDialog.value = true;
 }
 
 // 处理编辑图标上传
@@ -313,7 +328,6 @@ function submitEdit() {
   if (editForm.value.icon) {
     formData.append("icon", editForm.value.icon);
   }
-
   axios({
     method: "post",
     url: "/rl/edit",
@@ -327,7 +341,7 @@ function submitEdit() {
       resources.value = [];
       getKnowledgeBases();
       getWorkflows();
-      editDialogVisible.value = false;
+      editDialog.value = false;
     } else {
       ElMessage.error(response.data.message);
     }
@@ -371,7 +385,7 @@ const filteredResources = computed(() => {
   if (filterCriteria.value.sortBy === "updateTime") {
     filtered.sort((a, b) => new Date(b.updateTime).getTime() - new Date(a.updateTime).getTime());
   } else if (filterCriteria.value.sortBy === "createTime") {
-    filtered.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime());
+    filtered.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
   } else if (filterCriteria.value.sortBy === "name") {
     filtered.sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -416,9 +430,9 @@ const filteredResources = computed(() => {
     <!-- 筛选栏 -->
     <div class="filter-bar">
       <select class="filter-select" v-model="filterCriteria.sortBy">
+        <option value="name">按名称排序</option>
         <option value="updateTime">按编辑时间排序</option>
         <option value="createTime">按创建时间排序</option>
-        <option value="name">按名称排序</option>
       </select>
       <select class="filter-select" v-model="filterCriteria.type">
         <option value="all">全部</option>
@@ -497,7 +511,7 @@ const filteredResources = computed(() => {
 
         <!-- 名称 -->
         <div class="form-row">
-          <label class="form-label">名称</label>
+          <label class="form-label">名称 <span class="required">*</span></label>
           <el-input v-model="KBForm.name" placeholder="请输入知识库名称" class="form-input" />
           <span class="char-count">{{ KBForm.name.length }}/20</span>
         </div>
@@ -541,7 +555,7 @@ const filteredResources = computed(() => {
     </el-dialog>
 
     <!-- 工作流创建弹窗 -->
-    <el-dialog v-model="workflowDialogVisible" title="创建工作流" width="500px" class="custom-dialog">
+    <el-dialog v-model="WFDialog" title="创建工作流" width="500px" class="custom-dialog">
       <div class="dialog-body">
         <!-- 名称 -->
         <div class="form-row">
@@ -583,7 +597,7 @@ const filteredResources = computed(() => {
       </div>
 
       <template #footer>
-        <el-button @click="workflowDialogVisible = false">取消</el-button>
+        <el-button @click="WFDialog = false">取消</el-button>
         <el-button type="primary" @click="submitWF">创建</el-button>
       </template>
     </el-dialog>
@@ -600,7 +614,7 @@ const filteredResources = computed(() => {
     </el-dialog>
 
     <!-- 编辑资源弹窗 -->
-    <el-dialog v-model="editDialogVisible" title="编辑资源" width="500px" class="custom-dialog">
+    <el-dialog v-model="editDialog" title="编辑资源" width="500px" class="custom-dialog">
       <div class="dialog-body">
         <div class="form-row">
           <label class="form-label">名称 <span class="required">*</span></label>
@@ -636,7 +650,7 @@ const filteredResources = computed(() => {
         </div>
       </div>
       <template #footer>
-        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button @click="editDialog = false">取消</el-button>
         <el-button type="primary" @click="submitEdit">保存</el-button>
       </template>
     </el-dialog>
@@ -721,11 +735,12 @@ const filteredResources = computed(() => {
 
 .resource-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
 
 .resource-card {
+  height: 120px;
   background: white;
   border-radius: 12px;
   padding: 16px;
@@ -735,11 +750,8 @@ const filteredResources = computed(() => {
   gap: 16px;
   cursor: pointer;
   position: relative;
-}
-
-.resource-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  /* 新增：为底部绝对定位留空间 */
+  overflow: visible;
 }
 
 .resource-icon {
@@ -772,6 +784,9 @@ const filteredResources = computed(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  /* 新增：为底部留空间 */
+  position: relative;
+  height: 100%;
 }
 
 .resource-info h3 {
@@ -788,13 +803,21 @@ const filteredResources = computed(() => {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  flex: 1;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 3; /* 限制描述显示三行 */
+  line-clamp: 3; /* Standard property for compatibility */
 }
 
 .resource-meta {
   display: flex;
   justify-content: flex-end;
-  margin-top: 8px;
+  /* 固定在底部 */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin-top: 0;
+  background: transparent;
 }
 
 .update-time {

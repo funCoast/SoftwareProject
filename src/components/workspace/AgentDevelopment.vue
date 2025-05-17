@@ -21,8 +21,9 @@ const isCreateAgentVisible = ref(false)
 const router = useRouter();
 const baseImageUrl = "http://122.9.33.84:8000"
 const deleteDialog = ref(false);
-const deleteTarget = ref<{ id: number, name: string } | null>(null);
-const editDialogVisible = ref(false);
+const deleteTarget = ref<{ id: number, name: string } | null>(null)
+const editDialogVisible = ref(false)
+
 const editForm = ref({
   id: 0,
   name: '',
@@ -32,8 +33,8 @@ const editForm = ref({
 });
 
 const filterCriteria = ref({
-  sortBy: 'create-time', // create-time | name | modify-time
-  status: 'all',         // all | published | unpublished
+  sortBy: 'name', // name | createTime | modifyTime
+  status: 'all',  // all | published | unpublished
   search: ''
 })
 
@@ -57,11 +58,10 @@ const filteredAgents = computed(() => {
   // 排序
   if (filterCriteria.value.sortBy === 'name') {
     result.sort((a, b) => a.name.localeCompare(b.name))
-  } else if (filterCriteria.value.sortBy === 'create-time') {
-    result.sort((a, b) => new Date(b.publishedTime).getTime() - new Date(a.publishedTime).getTime())
-  } else if (filterCriteria.value.sortBy === 'modify-time') {
-    // 假设有 modifyTime 字段，否则可忽略
-    result.sort((a, b) => new Date(b.modifyTime || b.publishedTime).getTime() - new Date(a.modifyTime || a.publishedTime).getTime())
+  } else if (filterCriteria.value.sortBy === 'createTime') {
+    result.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime())
+  } else if (filterCriteria.value.sortBy === 'modifyTime') {
+    result.sort((a, b) => new Date(b.modifyTime).getTime() - new Date(a.modifyTime).getTime())
   }
   return result
 })
@@ -224,32 +224,31 @@ function handleEditImageUpload(event: Event) {
 
 async function submitEdit() {
   if (!editForm.value.name) {
-    ElMessage.error('请输入智能体名称');
+    ElMessage.error('智能体名称不能为空');
     return;
   }
   const formData = new FormData();
-  if (editForm.value.iconPreview !== baseImageUrl + editForm.value.icon) {
-    const response = await fetch(editForm.value.iconPreview);
-    const blob = await response.blob();
-    formData.append('icon', new File([blob], 'icon.png', { type: blob.type }));
-  }
-  formData.append('name', editForm.value.name);
-  formData.append('description', editForm.value.description);
   formData.append('uid', localStorage.getItem('LingXi_uid') as string);
   formData.append('agent_id', editForm.value.id.toString());
+  formData.append('name', editForm.value.name);
+  formData.append('description', editForm.value.description);
+  if (editForm.value.icon) {
+    formData.append("icon", editForm.value.icon);
+  }
   try {
     const response = await axios({
       method: 'post',
-      url: '/agent/update',
+      url: '/agent/edit',
       data: formData,
       headers: {
         'Content-Type': 'multipart/form-data',
       }
     });
     if (response.data.code === 0) {
-      ElMessage.success('更新成功！');
+      ElMessage.success('编辑成功！');
       editDialogVisible.value = false;
       fetchAgents();
+      editDialogVisible.value = false;
     } else {
       ElMessage.error(response.data.message);
     }
@@ -289,9 +288,9 @@ function goToAgentEdit(id: number) {
     <!-- 筛选栏 -->
     <div class="filter-bar">
       <select class="filter-select" v-model="filterCriteria.sortBy">
-        <option value="create-time">按创建时间排序</option>
         <option value="name">按名称排序</option>
-        <option value="modify-time">按修改时间排序</option>
+        <option value="modifyTime">按编辑时间排序</option>
+        <option value="createTime">按创建时间排序</option>
       </select>
       <select class="filter-select" v-model="filterCriteria.status">
         <option value="all">默认</option>
@@ -329,6 +328,12 @@ function goToAgentEdit(id: number) {
         <div class="agent-info">
           <h3>{{ agent.name }}</h3>
           <p>{{ agent.description }}</p>
+          <div class="agent-meta">
+            <span class="edit-time">
+              {{ filterCriteria.sortBy === 'createTime' ? '创建时间：' : '编辑时间：' }}
+              {{ filterCriteria.sortBy === 'createTime' ? agent.createTime : agent.modifyTime }}
+            </span>
+          </div>
         </div>
         <!-- 编辑按钮 -->
         <div
@@ -536,6 +541,7 @@ function goToAgentEdit(id: number) {
 }
 
 .agent-card {
+  height: 120px;
   background: white;
   border-radius: 12px;
   padding: 16px;
@@ -545,6 +551,8 @@ function goToAgentEdit(id: number) {
   gap: 16px;
   cursor: pointer;
   position: relative;
+  /* 新增：为底部绝对定位留空间 */
+  overflow: visible;
 }
 
 .agent-card:hover {
@@ -571,6 +579,9 @@ function goToAgentEdit(id: number) {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  /* 新增：为底部留空间 */
+  position: relative;
+  height: 100%;
 }
 
 .agent-info h3 {
@@ -587,13 +598,26 @@ function goToAgentEdit(id: number) {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  flex: 1;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 3; /* 限制描述显示三行 */
+  line-clamp: 3; /* Standard property for compatibility */
 }
 
 .agent-meta {
   display: flex;
   justify-content: flex-end;
-  margin-top: 8px;
+  /* 固定在底部 */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin-top: 0;
+  background: transparent;
+}
+
+.edit-time {
+  color: #95a5a6;
+  font-size: 11px;
 }
 
 .delete-icon {
