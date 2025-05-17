@@ -2351,6 +2351,7 @@ def list_sensitive_words(request):
     })
 
 
+@csrf_exempt
 def agent_fetch_all(request):
     uid = request.GET.get('uid')
 
@@ -2366,7 +2367,6 @@ def agent_fetch_all(request):
 
         agent_list = []
         for agent in agents:
-            # status 数字：0=private，1=under review，2=public
             if agent.status == 'published':
                 status = 2
             elif agent.status == 'private':
@@ -2380,9 +2380,9 @@ def agent_fetch_all(request):
                 "name": agent.agent_name,
                 "description": agent.description,
                 "status": status,
-                "publishedTime": agent.registered_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(agent, 'registered_at') and agent.registered_at else None,
-                "createTime": agent.created_time,
-                "modifyTime": agent.updated_time,
+                "publishedTime": agent.publish_time.strftime('%Y-%m-%d %H:%M:%S') if agent.publish_time else None,
+                "createTime": localtime(agent.created_time).strftime('%Y-%m-%d %H:%M:%S'),
+                "modifyTime": localtime(agent.updated_time).strftime('%Y-%m-%d %H:%M:%S'),
             })
 
         return JsonResponse({
