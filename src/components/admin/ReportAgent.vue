@@ -17,7 +17,7 @@ const reportList = ref<{
   decision?: string // 用于前端选择处理结果
 }[]>([])
 
-const adminId = sessionStorage.getItem('admin_id')  // 管理员ID
+const adminId = localStorage.getItem('LingXi_uid')  // 管理员ID
 
 const decisionOptions = [
   { value: '举报有效，已处理', label: '举报有效，已处理' },
@@ -47,7 +47,7 @@ async function processReport(reportId: number, result: string) {
     const res = await axios.post('/admin/processAgentReport', {
       report_id: reportId,
       admin_id: adminId,
-      result
+      result: result
     })
     if (res.data.code === 0) {
       ElMessage.success('处理成功')
