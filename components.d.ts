@@ -67,6 +67,7 @@ declare module 'vue' {
     PictureBase: typeof import('./src/components/knowledgeBase/PictureBase.vue')['default']
     Profile: typeof import('./src/components/profile/Profile.vue')['default']
     PublishAnno: typeof import('./src/components/admin/PublishAnno.vue')['default']
+    ReportAgent: typeof import('./src/components/admin/reportAgent.vue')['default']
     ResourceLibrary: typeof import('./src/components/workspace/ResourceLibrary.vue')['default']
     ReviewAgent: typeof import('./src/components/admin/ReviewAgent.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
