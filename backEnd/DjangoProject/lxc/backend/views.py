@@ -2903,7 +2903,7 @@ def community_agent_handle_copy(request):
 
         kbs = AgentKnowledgeEntry.objects.filter(agent=original_agent)
         for kb in kbs:
-            new_kb_id = clone_knowledge_base(kb.kb.kb_id)
+            new_kb_id = clone_knowledge_base(kb.kb.kb_id, kb.kb.kb_name + timezone.now())
             AgentKnowledgeEntry.objects.create(
                 agent=copied_agent,
                 kb=KnowledgeBase.objects.get(kb=new_kb_id)
