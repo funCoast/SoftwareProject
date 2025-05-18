@@ -2906,7 +2906,7 @@ def community_agent_handle_copy(request):
             new_kb_id = clone_knowledge_base(kb.kb.kb_id, kb.kb.kb_name + str(timezone.now()))
             AgentKnowledgeEntry.objects.create(
                 agent=copied_agent,
-                kb=KnowledgeBase.objects.get(kb=new_kb_id)
+                kb=KnowledgeBase.objects.get(kb_id=new_kb_id),
             )
 
         return JsonResponse({
