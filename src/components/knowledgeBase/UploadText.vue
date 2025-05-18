@@ -78,12 +78,19 @@ function clear() {
   uploadRef.value!.clearFiles()
   listLength.value = 0
 }
+
+function goBack() {  
+  router.push(router.currentRoute.value.path.replace('/upload', ''));
+}
 </script>
 
 <template>
   <div class="content">
     <div class="upload-container">
-      <h2>上传文件</h2>
+      <div class="topBar">
+        <img src="../../assets/icons/Back.svg" alt="返回" class="backIcon" @click="goBack" />
+        <h2>上传文件</h2>
+      </div>
       <el-upload
         ref="uploadRef"
         class="upload-demo"
@@ -156,16 +163,28 @@ function clear() {
 }
 
 .upload-container {
-  padding: 20px;
+  padding: 10px 20px 20px 20px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.upload-container h2 {
-  margin-bottom: 20px;
+.topBar {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.topBar h2 {
   font-size: 18px;
   color: #333;
+}
+
+.backIcon {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  color: #333;
+  margin: auto 10px auto 0;
 }
 
 .upload-demo {

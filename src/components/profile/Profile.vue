@@ -260,6 +260,8 @@ function goToAgentDetail(agentId: number) {
 // 退出登录
 function logout() {
   sessionStorage.clear()
+  localStorage.removeItem('LingXi_uid')
+  localStorage.removeItem('LingXi_token')
   router.push('/login')
 }
 
