@@ -25,7 +25,7 @@ const userInfo = ref({
 
 const route = useRoute()
 const uid = computed(() => route.params.id)
-const currentUid = sessionStorage.getItem('uid')
+const currentUid = localStorage.getItem('LingXi_uid')
 
 interface agent {
   id: number

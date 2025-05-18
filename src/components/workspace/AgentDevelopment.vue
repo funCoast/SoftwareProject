@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
+import {onMounted, ref, computed} from 'vue'
 import { useRouter } from 'vue-router';
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
@@ -10,15 +10,61 @@ interface agent {
   description: string
   icon: string
   status: number
+  createTime: string
+  modifyTime: string
   publishedTime: string
   hover?: boolean
 }
+
 const agents = ref<agent[]> ([])
 const isCreateAgentVisible = ref(false)
 const router = useRouter();
 const baseImageUrl = "http://122.9.33.84:8000"
 const deleteDialog = ref(false);
-const deleteTarget = ref<{ id: number, name: string } | null>(null);
+const deleteTarget = ref<{ id: number, name: string } | null>(null)
+const editDialogVisible = ref(false)
+
+const editForm = ref({
+  id: 0,
+  name: '',
+  description: '',
+  icon: '',
+  iconPreview: ''
+});
+
+const filterCriteria = ref({
+  sortBy: 'name', // name | createTime | modifyTime
+  status: 'all',  // all | published | unpublished
+  search: ''
+})
+
+const filteredAgents = computed(() => {
+  let result = [...agents.value]
+  // 状态筛选
+  if (filterCriteria.value.status !== 'all') {
+    result = result.filter(agent => {
+      if (filterCriteria.value.status === 'published') return agent.status === 2
+      if (filterCriteria.value.status === 'unpublished') return agent.status != 2
+      return true
+    })
+  }
+  // 搜索
+  if (filterCriteria.value.search.trim() !== '') {
+    result = result.filter(agent =>
+      agent.name.includes(filterCriteria.value.search.trim()) ||
+      agent.description.includes(filterCriteria.value.search.trim())
+    )
+  }
+  // 排序
+  if (filterCriteria.value.sortBy === 'name') {
+    result.sort((a, b) => a.name.localeCompare(b.name))
+  } else if (filterCriteria.value.sortBy === 'createTime') {
+    result.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime())
+  } else if (filterCriteria.value.sortBy === 'modifyTime') {
+    result.sort((a, b) => new Date(b.modifyTime).getTime() - new Date(a.modifyTime).getTime())
+  }
+  return result
+})
 
 // 表单数据
 const agentForm = ref({
@@ -68,7 +114,7 @@ async function fetchAgents() {
       method: 'get',
       url: 'agent/fetchAll',
       params: {
-        uid: sessionStorage.getItem('uid')
+        uid: localStorage.getItem('LingXi_uid')
       }
     })
     if (response.data.code === 0) {
@@ -94,7 +140,7 @@ async function createAgent() {
   }
   formData.append('name', agentForm.value.name)
   formData.append('description', agentForm.value.description)
-  formData.append('uid', sessionStorage.getItem('uid') as string)
+  formData.append('uid', localStorage.getItem('LingXi_uid') as string)
   try {
     const response = await axios({
       method: 'post',
@@ -132,7 +178,7 @@ function handleDelete() {
     method: "post",
     url: "/agent/delete",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       agent_id: deleteTarget.value.id,
     },
   }).then(function (response) {
@@ -149,6 +195,69 @@ function handleDelete() {
   })
 }
 
+function openEditDialog(agent: agent) {
+  editForm.value = {
+    id: agent.id,
+    name: agent.name,
+    description: agent.description,
+    icon: agent.icon,
+    iconPreview: baseImageUrl + agent.icon
+  };
+  editDialogVisible.value = true;
+}
+
+function handleEditImageUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    if (file.size > 2 * 1024 * 1024) {
+      ElMessage.error('图片大小不能超过2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      editForm.value.iconPreview = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+async function submitEdit() {
+  if (!editForm.value.name) {
+    ElMessage.error('智能体名称不能为空');
+    return;
+  }
+  const formData = new FormData();
+  formData.append('uid', localStorage.getItem('LingXi_uid') as string);
+  formData.append('agent_id', editForm.value.id.toString());
+  formData.append('name', editForm.value.name);
+  formData.append('description', editForm.value.description);
+  if (editForm.value.icon) {
+    formData.append("icon", editForm.value.icon);
+  }
+  try {
+    const response = await axios({
+      method: 'post',
+      url: '/agent/edit',
+      data: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    });
+    if (response.data.code === 0) {
+      ElMessage.success('编辑成功！');
+      editDialogVisible.value = false;
+      fetchAgents();
+      editDialogVisible.value = false;
+    } else {
+      ElMessage.error(response.data.message);
+    }
+  } catch (error) {
+    console.error('更新智能体失败:', error);
+    ElMessage.error('更新失败');
+  }
+}
+
 onMounted(() => {
   fetchAgents()
 })
@@ -157,7 +266,7 @@ function goToAgentEdit(id: number) {
   router.push({
     path: `/agentEdit/${id}`,
     query: {
-      uid: Number(sessionStorage.getItem('uid')),
+      uid: Number(localStorage.getItem('LingXi_uid')),
     }
   })
 }
@@ -178,12 +287,12 @@ function goToAgentEdit(id: number) {
 
     <!-- 筛选栏 -->
     <div class="filter-bar">
-      <select class="filter-select">
-        <option value="create-time">按创建时间排序</option>
+      <select class="filter-select" v-model="filterCriteria.sortBy">
         <option value="name">按名称排序</option>
-        <option value="modify-time">按修改时间排序</option>
+        <option value="modifyTime">按编辑时间排序</option>
+        <option value="createTime">按创建时间排序</option>
       </select>
-      <select class="filter-select">
+      <select class="filter-select" v-model="filterCriteria.status">
         <option value="all">默认</option>
         <option value="published">已发布</option>
         <option value="unpublished">未发布</option>
@@ -192,14 +301,14 @@ function goToAgentEdit(id: number) {
         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
           <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
         </svg>
-        <input type="text" placeholder="搜索智能体...">
+        <input type="text" placeholder="搜索智能体..." v-model="filterCriteria.search">
       </div>
     </div>
 
     <!-- 智能体列表 -->
     <div class="agent-list">
       <div
-        v-for="agent in agents"
+        v-for="agent in filteredAgents"
         :key="agent.id"
         class="agent-card"
         @mouseover="agent.hover = true"
@@ -219,11 +328,25 @@ function goToAgentEdit(id: number) {
         <div class="agent-info">
           <h3>{{ agent.name }}</h3>
           <p>{{ agent.description }}</p>
-<!--          <div class="agent-meta">-->
-<!--            <span v-if="agent.status === 2">发布时间：{{ agent.publishedTime }}</span>-->
-<!--          </div>-->
+          <div class="agent-meta">
+            <span class="edit-time">
+              {{ filterCriteria.sortBy === 'createTime' ? '创建时间：' : '编辑时间：' }}
+              {{ filterCriteria.sortBy === 'createTime' ? agent.createTime : agent.modifyTime }}
+            </span>
+          </div>
         </div>
-        <!-- 删除图标 -->
+        <!-- 编辑按钮 -->
+        <div
+          v-if="agent.hover"
+          class="edit-icon"
+          @click.stop="openEditDialog(agent)"
+          title="编辑"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+          </svg>
+        </div>
+        <!-- 删除按钮 -->
         <div
           v-if="agent.hover"
           class="delete-icon"
@@ -253,11 +376,11 @@ function goToAgentEdit(id: number) {
             v-model="agentForm.description"
             type="textarea"
             placeholder="介绍智能体的功能，将会展示给智能体的用户"
-            maxlength="500"
+            maxlength="200"
+            show-word-limit
             :rows="4"
             class="form-input"
           />
-          <span class="char-count">{{ agentForm.description.length }}/500</span>
         </div>
 
         <!-- 图片上传 -->
@@ -272,7 +395,7 @@ function goToAgentEdit(id: number) {
               <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                 <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
               </svg>
-              <span>{{ agentForm.icon ? '更换图片' : '上传图片' }}</span>
+              <span>更换图标</span>
             </div>
           </div>
         </div>
@@ -292,6 +415,48 @@ function goToAgentEdit(id: number) {
       <template #footer>
         <el-button @click="deleteDialog = false">取消</el-button>
         <el-button type="danger" @click="handleDelete">删除</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑智能体弹窗 -->
+    <el-dialog v-model="editDialogVisible" title="编辑智能体" width="500px" class="custom-dialog">
+      <div class="dialog-body">
+        <div class="form-row">
+          <label class="form-label">名称 <span class="required">*</span></label>
+          <el-input v-model="editForm.name" placeholder="请输入智能体名称" maxlength="20" class="form-input" />
+          <span class="char-count">{{ editForm.name.length }}/20</span>
+        </div>
+        <div class="form-row">
+          <label class="form-label">功能介绍</label>
+          <el-input
+            v-model="editForm.description"
+            type="textarea"
+            placeholder="介绍智能体的功能"
+            maxlength="200"
+            show-word-limit
+            :rows="4"
+            class="form-input"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">图标</label>
+          <div class="image-upload">
+            <div class="upload-preview" v-if="editForm.iconPreview">
+              <img :src="editForm.iconPreview" alt="预览图" />
+            </div>
+            <div class="upload-button" :class="{ 'has-image': editForm.iconPreview }">
+              <input type="file" accept="image/*" @change="handleEditImageUpload" class="file-input" />
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z"/>
+              </svg>
+              <span>{{ editForm.iconPreview ? '更换图片' : '上传图片' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitEdit">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -376,6 +541,7 @@ function goToAgentEdit(id: number) {
 }
 
 .agent-card {
+  height: 120px;
   background: white;
   border-radius: 12px;
   padding: 16px;
@@ -385,6 +551,8 @@ function goToAgentEdit(id: number) {
   gap: 16px;
   cursor: pointer;
   position: relative;
+  /* 新增：为底部绝对定位留空间 */
+  overflow: visible;
 }
 
 .agent-card:hover {
@@ -411,6 +579,9 @@ function goToAgentEdit(id: number) {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  /* 新增：为底部留空间 */
+  position: relative;
+  height: 100%;
 }
 
 .agent-info h3 {
@@ -427,13 +598,26 @@ function goToAgentEdit(id: number) {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  flex: 1;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 3; /* 限制描述显示三行 */
+  line-clamp: 3; /* Standard property for compatibility */
 }
 
 .agent-meta {
   display: flex;
   justify-content: flex-end;
-  margin-top: 8px;
+  /* 固定在底部 */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin-top: 0;
+  background: transparent;
+}
+
+.edit-time {
+  color: #95a5a6;
+  font-size: 11px;
 }
 
 .delete-icon {
@@ -449,6 +633,22 @@ function goToAgentEdit(id: number) {
 }
 
 .delete-icon:hover {
+  background: #f5f5f5;
+}
+
+.edit-icon {
+  position: absolute;
+  bottom: 8px;
+  right: 40px;
+  background: white;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-icon:hover {
   background: #f5f5f5;
 }
 

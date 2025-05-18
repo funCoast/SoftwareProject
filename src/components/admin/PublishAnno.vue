@@ -31,7 +31,7 @@ async function fetchAnnouncements() {
       method: 'get',
       url: 'anno/get',
       params: {
-        uid: sessionStorage.getItem('uid')
+        uid: localStorage.getItem('LingXi_uid')
       }
     })
     if (response.data.code === 0) {
@@ -57,7 +57,7 @@ async function publishAnnouncement() {
       method: 'post',
       url: 'anno/add',
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         title: newAnnouncement.value.title,
         content: newAnnouncement.value.content
       }
