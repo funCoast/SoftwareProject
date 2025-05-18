@@ -2882,7 +2882,7 @@ def community_agent_handle_copy(request):
 
         workflows = AgentWorkflowRelation.objects.filter(agent=original_agent)
         for workflow in workflows:
-            new_workflow = copy_workflow(user, original_workflow=workflow)
+            new_workflow = copy_workflow(user, original_workflow=workflow.workflow)
             AgentWorkflowRelation.objects.create(
                 agent=copied_agent,
                 workflow=new_workflow
