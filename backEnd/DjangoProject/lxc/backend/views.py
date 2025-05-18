@@ -1,6 +1,7 @@
 import uuid
 import random
 
+from django.db.models.functions.datetime import TruncDate
 from django.views import View
 from openai import OpenAI
 import dashscope
@@ -24,7 +25,7 @@ from api.core.workflow.executor import Executor
 from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow, \
     Agent, UserInteraction, FollowRelationship, Comment, SensitiveWord, Contact, UserLog, AgentWorkflowRelation, \
     AgentKnowledgeEntry
-from django.db.models import Q, ExpressionWrapper, F, IntegerField
+from django.db.models import Q, ExpressionWrapper, F, IntegerField, Count
 import base64
 import json
 # backend/views.py
@@ -3586,3 +3587,58 @@ def process_agent_report(request):
     report.save()
 
     return JsonResponse({"code": 0, "message": "处理完成"})
+
+
+def cnt_user_info(request):
+    def get_user_log_counts(user):
+        # 查询指定用户的日志，按日期和类型分组统计
+        logs = (
+            UserLog.objects
+            .filter(user=user)
+            .annotate(date=TruncDate('date'))  # 截断日期，保留年月日
+            .values('date', 'type')  # 按日期和类型分组
+            .annotate(count=Count('id'))  # 统计每组的数量
+            .order_by('date', 'type')  # 可选排序
+        )
+
+        # 将结果转换为字典格式：{日期: {类型: 数量, ...}, ...}
+        result = {}
+        for log in logs:
+            date_str = log['date'].strftime('%Y-%m-%d')
+            log_type = log['type']
+            count = log['count']
+
+            if date_str not in result:
+                result[date_str] = {}
+            result[date_str][log_type] = count
+
+        return result
+    try:
+        uid = request.GET.get('uid')
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": "获取用户ID失败",
+        })
+
+    try:
+        user = User.objects.get(user_id=uid)
+        data = get_user_log_counts(user)
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "data": data
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "未找到该用户",
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": str(e)
+        })

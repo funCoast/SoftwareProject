@@ -71,6 +71,7 @@ urlpatterns = [
     path('admin/fetchUser', views.fetch_user, name='fetch_user'),
     path('admin/banUser',   views.ban_user,   name='ban_user'),
     path('admin/unbanUser', views.unban_user, name='unban_user'),
+    path('admin/cntUserInfo', views.cnt_user_info, name='cnt_user_info'),
 
     #智能体
     path('agent/fetchAll',views.agent_fetch_all,name='agent_fetch_all'),
