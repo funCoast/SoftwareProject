@@ -247,9 +247,22 @@ def user_login_by_password(request):
                 return JsonResponse({'code': -1, 'message': '用户不存在'})
         else:
             try:
-                user = User.objects.get(username=account)
-            except User.DoesNotExist:
-                return JsonResponse({'code': -1, 'message': '用户不存在'})
+                admin = Administrator.objects.get(account=account)
+                if admin.password != password:
+                    return JsonResponse({'code': -1, 'message': '密码错误'})
+                token = str(uuid.uuid4())
+                redis_client.setex(f'token_{admin.admin_id}', 1800, token)
+                return JsonResponse({
+                    'code': 0,
+                    'message': '登录成功',
+                    'token': token,
+                    'id': admin.admin_id,
+                })
+            except Administrator.DoesNotExist:
+                try:
+                    user = User.objects.get(username=account)
+                except User.DoesNotExist:
+                    return JsonResponse({'code': -1, 'message': '用户不存在'})
 
         # 检查封禁状态
         ban_message = check_user_ban_status(user)
