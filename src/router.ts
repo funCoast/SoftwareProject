@@ -110,6 +110,11 @@ const routes = [
         component: () => import("./components/admin/ReviewAgent.vue")
       },
       {
+        path: "report-agent",
+        name: "ReportAgent",
+        component: () => import("./components/admin/ReportAgent.vue")
+      },
+      {
         path: "user-manage",
         name: "UserManage",
         component: () => import("./components/admin/UserManage.vue")

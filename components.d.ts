@@ -32,6 +32,8 @@ declare module 'vue' {
     ElFooter: typeof import('element-plus/es')['ElFooter']
     ElForm: typeof import('element-plus/es')['ElForm']
     ElFormItem: typeof import('element-plus/es')['ElFormItem']
+    ElForm: typeof import('element-plus/es')['ElForm']
+    ElFormItem: typeof import('element-plus/es')['ElFormItem']
     ElHeader: typeof import('element-plus/es')['ElHeader']
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElInput: typeof import('element-plus/es')['ElInput']
@@ -60,6 +62,7 @@ declare module 'vue' {
     PictureBase: typeof import('./src/components/knowledgeBase/PictureBase.vue')['default']
     Profile: typeof import('./src/components/profile/Profile.vue')['default']
     PublishAnno: typeof import('./src/components/admin/PublishAnno.vue')['default']
+    ReportAgent: typeof import('./src/components/admin/reportAgent.vue')['default']
     ResourceLibrary: typeof import('./src/components/workspace/ResourceLibrary.vue')['default']
     ReviewAgent: typeof import('./src/components/admin/ReviewAgent.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -80,5 +83,8 @@ declare module 'vue' {
     WorkflowOrchestration: typeof import('./src/components/document/manual/workflow/WorkflowOrchestration.vue')['default']
     WorkflowTest: typeof import('./src/components/document/manual/workflow/WorkflowTest.vue')['default']
     Workspace: typeof import('./src/components/workspace/Workspace.vue')['default']
+  }
+  export interface ComponentCustomProperties {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }
