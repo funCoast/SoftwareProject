@@ -19,6 +19,7 @@ declare module 'vue' {
     ConditionNodeDetail: typeof import('./src/components/workflow/node-details/ConditionNodeDetail.vue')['default']
     EditProfile: typeof import('./src/components/profile/EditProfile.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
+    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCol: typeof import('element-plus/es')['ElCol']
     ElContainer: typeof import('element-plus/es')['ElContainer']
@@ -27,6 +28,8 @@ declare module 'vue' {
     ElDropdownItem: typeof import('element-plus/es')['ElDropdownItem']
     ElDropdownMenu: typeof import('element-plus/es')['ElDropdownMenu']
     ElFooter: typeof import('element-plus/es')['ElFooter']
+    ElForm: typeof import('element-plus/es')['ElForm']
+    ElFormItem: typeof import('element-plus/es')['ElFormItem']
     ElHeader: typeof import('element-plus/es')['ElHeader']
     ElInput: typeof import('element-plus/es')['ElInput']
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
@@ -34,6 +37,9 @@ declare module 'vue' {
     ElOption: typeof import('element-plus/es')['ElOption']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElSelect: typeof import('element-plus/es')['ElSelect']
+    ElTable: typeof import('element-plus/es')['ElTable']
+    ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
+    ElTag: typeof import('element-plus/es')['ElTag']
     ElText: typeof import('element-plus/es')['ElText']
     EndNodeDetail: typeof import('./src/components/workflow/node-details/EndNodeDetail.vue')['default']
     Home: typeof import('./src/components/home/Home.vue')['default']
@@ -46,6 +52,7 @@ declare module 'vue' {
     PictureBase: typeof import('./src/components/knowledgeBase/PictureBase.vue')['default']
     Profile: typeof import('./src/components/profile/Profile.vue')['default']
     PublishAnno: typeof import('./src/components/admin/PublishAnno.vue')['default']
+    ReportAgent: typeof import('./src/components/admin/reportAgent.vue')['default']
     ResourceLibrary: typeof import('./src/components/workspace/ResourceLibrary.vue')['default']
     ReviewAgent: typeof import('./src/components/admin/ReviewAgent.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -62,5 +69,8 @@ declare module 'vue' {
     WorkflowCanvas: typeof import('./src/components/workflow/WorkflowCanvas.vue')['default']
     WorkflowNodeManager: typeof import('./src/components/workflow/WorkflowNodeManager.vue')['default']
     Workspace: typeof import('./src/components/workspace/Workspace.vue')['default']
+  }
+  export interface ComponentCustomProperties {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

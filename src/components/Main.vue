@@ -68,7 +68,12 @@ const navItems = ref<NavItem[]>([
     path: '/review-agent',
     label: '智能体审核',
     icon: 'https://api.iconify.design/material-symbols:check-circle.svg'
-  }
+  },
+  {
+    path: '/report-agent',
+    label: '智能体举报',
+    icon: 'https://api.iconify.design/material-symbols:check-circle.svg'
+  },
 ])
 
 // 根据用户角色过滤导航项
@@ -82,7 +87,8 @@ const filteredNavItems = computed(() => {
     return navItems.value.filter(item => 
       item.path !== '/publish-anno' &&
       item.path !== '/review-agent' &&
-        item.path !== '/user-manage'
+        item.path !== '/user-manage' &&
+        item.path !== '/report-agent'
     )
   }
 })
