@@ -87,8 +87,8 @@ const filteredNavItems = computed(() => {
     return navItems.value.filter(item => 
       item.path !== '/publish-anno' &&
       item.path !== '/review-agent' &&
-        item.path !== '/user-manage' &&
-        item.path !== '/report-agent'
+      item.path !== '/user-manage' &&
+      item.path !== '/report-agent'
     )
   }
 })

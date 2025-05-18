@@ -70,7 +70,7 @@ function login() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      // 将 token,character,name,uid 存入 sessionStorage
+      // 将 token,uid 存入 localStorage
       localStorage.setItem('LingXi_token', response.data.token);
       localStorage.setItem('LingXi_uid', response.data.id);
       console.log(sessionStorage)
