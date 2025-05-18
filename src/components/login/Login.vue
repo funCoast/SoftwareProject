@@ -1,121 +1,118 @@
-<script setup lang="ts">
-import { ref } from 'vue';
-import ByEmail from './ByCode.vue';
-import ByPassword from './ByPassword.vue';
-
-const byEmail = ref(true);
-</script>
-
 <template>
-  <div class="topBar">
-    <img src="../../assets/icons/Agent.svg" class="logo">
-    <el-text class="topFont" type="primary">
-      灵犀
-    </el-text>
-  </div>
+  <div class="login-page">
+    <div class="login-panel">
+      <div class="brand-row">
+        <img src="../../assets/icons/Agent.svg" class="logo" />
+        <h1 class="title">灵犀</h1>
+      </div>
 
-  <div class="box">
-    <el-text class='title' tag="b">
-      灵犀
-    </el-text>
-  </div>
-  <div class="box">
-    <el-text class="subtitle" tag="b">
-      AI智能体低代码开发平台
-    </el-text>
-  </div>
-  <div class="authBox">
-    <el-row style="margin: 30px 0 30px">
-      <el-col :offset="5" :span="7">
-        <div :class="{auth_method_active:byEmail,auth_method:!byEmail}" @click="byEmail=true">
-          <div>验证码登录</div>
-          <div class="underline" v-if="byEmail"></div>  
+      <p class="subtitle">AI智能体低代码开发平台</p>
+
+      <div class="auth-tabs">
+        <div :class="['tab', byEmail ? 'active' : '']" @click="byEmail = true">
+          验证码登录
         </div>
-      </el-col>
-      <el-col :span="7">
-        <div :class="{auth_method_active:!byEmail, auth_method:byEmail}" @click="byEmail=false">
-          <div>密码登录</div>
-          <div class="underline" v-if="!byEmail"></div>
+        <div :class="['tab', !byEmail ? 'active' : '']" @click="byEmail = false">
+          密码登录
         </div>
-      </el-col>
-    </el-row>
-    <component :is='ByEmail' v-if="byEmail"></component>
-    <component :is='ByPassword' v-if="!byEmail"></component>
+      </div>
+
+      <div class="auth-content">
+        <component :is="ByEmail" v-if="byEmail" />
+        <component :is="ByPassword" v-else />
+      </div>
+    </div>
   </div>
 </template>
 
+<script setup lang="ts">
+import { ref } from 'vue'
+import ByEmail from './ByCode.vue'
+import ByPassword from './ByPassword.vue'
+
+const byEmail = ref(true)
+</script>
 
 <style scoped>
-.topBar {
-  padding: 5px;
-  margin-bottom: 50px;
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #f0f4f8, #d9e4f5);
 }
 
-.box {
+.login-panel {
+  background: #ffffff;
+  border-radius: 12px;                 /* ✅ 更柔和的圆角 */
+  padding: 32px 28px;                  /* ✅ 缩小内边距 */
+  width: 360px;                        /* ✅ 从 400px 缩小 */
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);  /* ✅ 更轻柔的阴影 */
   text-align: center;
-  margin: 10px 0 10px;
 }
 
-.authBox {
-  height: 300px;
-  width: 500px;
-  margin: 20px auto 10px;
-  padding: 10px;
-  border: 0.5px solid #8da2bc;
-  border-radius: 16px;
-  box-shadow: 10px 10px 20px rgba(0, 0, 0, .15)
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
 }
 
 .logo {
-  height: 20px;
-  margin-left: 0em;
-  vertical-align: middle;
+  height: 36px; /* 原来24px，放大一档 */
 }
 
-.topFont {
-  font-size: 15px;
-  vertical-align: middle;
-  text-align: center;
-  font-family: 'Microsoft YaHei';
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;  /* ✅ 重点：水平居中 */
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.brand-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #409eff;
 }
 
 .title {
-  font-size: 40px;
-  font-family: 'Microsoft YaHei';
-  color: #03b0fa;
+  font-size: 32px;
+  font-weight: bold;
+  color: #409eff;
+  margin-bottom: 8px;
 }
 
 .subtitle {
-  font-size: 20px;
-  font-family: 'Microsoft YaHei';
-  color: #464c53;
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 24px;
 }
 
-.auth_method {
-  height: 20px;
-  width: 100px;
-  margin: auto;
-  text-align: center;
+
+.auth-tabs {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.tab {
+  font-size: 14px;
+  padding: 6px 16px;
   cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #606266;
 }
 
-.auth_method_active {
-  height: 20px;
-  width: 100px;
-  margin: auto;
-  text-align: center;
-  cursor: pointer;
-  font-weight: bold;
-  color: #02b1fc;
+.tab.active {
+  color: #409eff;
+  font-weight: 600;
+  border-bottom: 2px solid #409eff;
 }
 
-.underline {
-  background-color: #02b1fc;
-  border-top-left-radius: 3px;
-  border-top-right-radius: 3px;
-  height: 3px;
-  
-  left: -5px;
-  right: -5px;
+.auth-content {
+  margin-top: 10px;
 }
 </style>

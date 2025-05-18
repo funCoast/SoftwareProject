@@ -3,9 +3,9 @@ import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import path from 'path'
 
 export default defineConfig({
-  // ...
   plugins: [
     vue(),
     AutoImport({
@@ -15,17 +15,22 @@ export default defineConfig({
       resolvers: [ElementPlusResolver()],
     }),
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'), // ✅ 别名配置
+    },
+  },
   server: {
-    host: '0.0.0.0', // 这个用于启动
-    port: 8080, // 指定启动端口
-    open: true, //启动后是否自动打开浏览器
+    host: '0.0.0.0',
+    port: 8080,
+    open: true,
     proxy: {
       '/api': {
-          target: 'http://122.9.33.84:8000/',
-          // target: 'http://127.0.0.1:8000/',
-          changeOrigin: true,
-          rewrite:(path)=>path.replace(/^\/api/, '/'),
-      }
-    }
-  }
+        target: 'http://122.9.33.84:8000/',
+        // target: 'http://127.0.0.1:8000/',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/'),
+      },
+    },
+  },
 })
