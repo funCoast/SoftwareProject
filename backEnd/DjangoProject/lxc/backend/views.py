@@ -21,7 +21,9 @@ from pycparser import parse_file
 from typing import Optional
 
 from api.core.workflow.executor import Executor
-from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow,Agent,UserInteraction,FollowRelationship,Comment,SensitiveWord,Contact
+from backend.models import User, PrivateMessage, Announcement, KnowledgeFile, KnowledgeBase, KnowledgeChunk, Workflow, \
+    Agent, UserInteraction, FollowRelationship, Comment, SensitiveWord, Contact, UserLog, AgentWorkflowRelation, \
+    AgentKnowledgeEntry
 from django.db.models import Q, ExpressionWrapper, F, IntegerField
 import base64
 import json
@@ -37,6 +39,7 @@ import os
 from django.utils.crypto import get_random_string
 from backend.utils.parser import extract_text_from_file
 from backend.utils.chunker import split_text
+from .utils.copyKB import clone_knowledge_base
 from .utils.tree import build_chunk_tree
 from .utils.qa import ask_llm
 from .utils.segmenter import (
@@ -207,6 +210,11 @@ def user_login_by_code(request):
         token = str(uuid.uuid4())
         redis_client.setex(f'token_{user.user_id}', 1800, token)
 
+        UserLog.objects.create(
+            user=user,
+            type='login',
+        )
+
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
@@ -255,6 +263,11 @@ def user_login_by_password(request):
 
         token = str(uuid.uuid4())
         redis_client.setex(f'token_{user.user_id}', 1800, token)
+
+        UserLog.objects.create(
+            user=user,
+            type='login',
+        )
 
         return JsonResponse({
             'code': 0,
@@ -1791,6 +1804,126 @@ def delete_resource(request):
     })
 
 @csrf_exempt
+def edit_resource(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"}, status=400)
+
+    try:
+        uid           = request.POST.get('uid')
+        resource_type = request.POST.get('resource_type')
+        resource_id   = request.POST.get('resource_id')
+        name          = request.POST.get('name')
+        description   = request.POST.get('description')
+        icon_file     = request.FILES.get('icon')  # 文件类型
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not all([uid, resource_type, resource_id, name]):
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、resource_type、resource_id 或 name)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+
+    try:
+        if resource_type == "workflow":
+            workflow = Workflow.objects.get(workflow_id=resource_id, user=user)
+            workflow.name = name
+            workflow.description = description or workflow.description
+
+            if icon_file:
+                ICON_DIR = os.path.join(settings.MEDIA_ROOT, 'workflow_icons')
+                os.makedirs(ICON_DIR, exist_ok=True)
+                _, ext = os.path.splitext(icon_file.name)
+                filename = f"{uuid.uuid4().hex}{ext}"
+                filepath = os.path.join(ICON_DIR, filename)
+                with open(filepath, 'wb+') as f:
+                    for chunk in icon_file.chunks():
+                        f.write(chunk)
+                workflow.icon_url = f"/media/workflow_icons/{filename}"
+
+            workflow.save()
+
+        elif resource_type in ["textBase", "pictureBase", "tableBase"]:
+            kb = KnowledgeBase.objects.get(kb_id=resource_id, user=user)
+            if kb.kb_name != name and KnowledgeBase.objects.filter(kb_name=name).exclude(kb_id=kb.kb_id).exists():
+                return JsonResponse({"code": -1, "message": "知识库名称已存在"})
+
+            kb.kb_name = name
+            kb.kb_description = description or kb.kb_description
+
+            if icon_file:
+                ICON_DIR = os.path.join(settings.MEDIA_ROOT, 'kb_icons')
+                os.makedirs(ICON_DIR, exist_ok=True)
+                _, ext = os.path.splitext(icon_file.name)
+                filename = f"{kb.kb_id}{ext}"
+                filepath = os.path.join(ICON_DIR, filename)
+                with open(filepath, 'wb+') as f:
+                    for chunk in icon_file.chunks():
+                        f.write(chunk)
+                kb.icon = f"/media/kb_icons/{filename}"
+
+            kb.updated_at = timezone.now()
+            kb.save()
+
+        else:
+            return JsonResponse({"code": -1, "message": f"不支持的资源类型: {resource_type}"})
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"编辑失败: {str(e)}"})
+
+    return JsonResponse({"code": 0, "message": "编辑成功"})
+
+@csrf_exempt
+def edit_agent(request):
+    if request.method != 'POST':
+        return JsonResponse({"code": -1, "message": "只支持 POST 请求"}, status=400)
+
+    try:
+        uid         = request.POST.get('uid')
+        agent_id    = request.POST.get('agent_id')
+        name        = request.POST.get('name')
+        description = request.POST.get('description')
+        icon_file   = request.FILES.get('icon')  # 图标为文件
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"解析请求体失败: {str(e)}"})
+
+    if not all([uid, agent_id, name]):
+        return JsonResponse({"code": -1, "message": "缺少必要参数 (uid、agent_id 或 name)"})
+
+    try:
+        user = User.objects.get(user_id=uid)
+        agent = Agent.objects.get(agent_id=agent_id, user=user)
+    except User.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "用户不存在"})
+    except Agent.DoesNotExist:
+        return JsonResponse({"code": -1, "message": "智能体不存在或无权限"})
+
+    try:
+        agent.agent_name = name
+        agent.description = description or agent.description
+
+        if icon_file:
+            ICON_DIR = os.path.join(settings.MEDIA_ROOT, 'agent_icons')
+            os.makedirs(ICON_DIR, exist_ok=True)
+            _, ext = os.path.splitext(icon_file.name)
+            filename = f"{uuid.uuid4().hex}{ext}"
+            filepath = os.path.join(ICON_DIR, filename)
+            with open(filepath, 'wb+') as f:
+                for chunk in icon_file.chunks():
+                    f.write(chunk)
+            agent.icon_url = f"/media/agent_icons/{filename}"
+
+        agent.updated_time = timezone.now()
+        agent.save()
+
+    except Exception as e:
+        return JsonResponse({"code": -1, "message": f"编辑失败: {str(e)}"})
+
+    return JsonResponse({"code": 0, "message": "编辑成功"})
+
+@csrf_exempt
 def delete_picture(request):
     if request.method != 'POST':
         return JsonResponse({"code": -1, "message": "只支持 POST 请求"})
@@ -2218,6 +2351,7 @@ def list_sensitive_words(request):
     })
 
 
+@csrf_exempt
 def agent_fetch_all(request):
     uid = request.GET.get('uid')
 
@@ -2233,7 +2367,6 @@ def agent_fetch_all(request):
 
         agent_list = []
         for agent in agents:
-            # status 数字：0=private，1=under review，2=public
             if agent.status == 'published':
                 status = 2
             elif agent.status == 'private':
@@ -2247,9 +2380,9 @@ def agent_fetch_all(request):
                 "name": agent.agent_name,
                 "description": agent.description,
                 "status": status,
-                "publishedTime": agent.registered_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(agent, 'registered_at') and agent.registered_at else None,
-                "createTime": agent.created_time,
-                "modifyTime": agent.updated_time,
+                "publishedTime": agent.publish_time.strftime('%Y-%m-%d %H:%M:%S') if agent.publish_time else None,
+                "createTime": localtime(agent.created_time).strftime('%Y-%m-%d %H:%M:%S'),
+                "modifyTime": localtime(agent.updated_time).strftime('%Y-%m-%d %H:%M:%S'),
             })
 
         return JsonResponse({
@@ -2557,6 +2690,10 @@ def community_agent_handle_like(request):
             interaction.is_liked = True
             agent.likes_count += 1
             message = "点赞成功"
+            UserLog.objects.create(
+                user=user,
+                type='like',
+            )
 
         interaction.save()
         agent.save()
@@ -2610,6 +2747,10 @@ def community_agent_handle_Favorite(request):
             interaction.is_favorited = True
             agent.favorites_count += 1
             message = "收藏成功"
+            UserLog.objects.create(
+                user=user,
+                type='favorite',
+            )
 
         interaction.save()
         agent.save()
@@ -2687,7 +2828,21 @@ def community_agent_handle_Follow(request):
             "message": "用户不存在"
         })
 
+
 def community_agent_handle_copy(request):
+    def copy_workflow(user, original_workflow):
+        new_workflow = Workflow.objects.create(
+            nodes=original_workflow.nodes,
+            edges=original_workflow.edges,
+            user=user,
+            is_builtin=False,
+            view_points=original_workflow.view_points,
+            name=original_workflow.name,
+            description=original_workflow.description,
+            icon_url=original_workflow.icon_url,
+        )
+        return new_workflow
+
     try:
         data = json.loads(request.body)
         uid = data.get('uid')
@@ -2709,20 +2864,36 @@ def community_agent_handle_copy(request):
         original_agent = Agent.objects.get(agent_id=agent_id)
 
         copied_agent = Agent.objects.create(
-            agent_name=original_agent.agent_name + " - 副本",
+            agent_name=original_agent.agent_name + "-copy",
             description=original_agent.description,
             opening_line=original_agent.opening_line,
             prompt=original_agent.prompt,
             persona=original_agent.persona,
             category=original_agent.category,
+            likes_count=0,
+            favorites_count=0,
+            is_modifiable=original_agent.is_modifiable,
             icon_url=original_agent.icon_url,
             user=user,
             status='private',
-            is_modifiable=True,
-            likes_count=0,
-            favorites_count=0
+            llm=original_agent.llm,
         )
-        copied_agent.save()
+
+        workflows = AgentWorkflowRelation.objects.filter(agent=original_agent)
+        for workflow in workflows:
+            new_workflow = copy_workflow(user, original_workflow=workflow)
+            AgentWorkflowRelation.objects.create(
+                agent=copied_agent,
+                workflow=new_workflow
+            )
+
+        kbs = AgentKnowledgeEntry.objects.filter(agent=original_agent)
+        for kb in kbs:
+            new_kb_id = clone_knowledge_base(kb.kb_id)
+            AgentKnowledgeEntry.objects.create(
+                agent=copied_agent,
+                kb=KnowledgeBase.objects.get(kb=new_kb_id)
+            )
 
         return JsonResponse({
             "code": 0,
@@ -2738,6 +2909,16 @@ def community_agent_handle_copy(request):
         return JsonResponse({
             "code": -1,
             "message": "原始智能体不存在"
+        })
+    except KnowledgeBase.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "知识库迁移失败"
+        })
+    except Workflow.DoesNotExist:
+        return JsonResponse({
+            "code": -1,
+            "message": "工作流复制失败"
         })
 
 def community_agent_send_comment(request):
