@@ -3645,3 +3645,44 @@ def cnt_user_info(request):
             "code": -1,
             "message": str(e)
         })
+
+def cnt_info(request):
+    def get_all_log_counts():
+        # 查询所有日志，按日期和类型分组统计
+        logs = (
+            UserLog.objects
+            .annotate(log_date=TruncDate('date'))  # 截断日期到天
+            .values('log_date', 'type')  # 按日期和类型分组
+            .annotate(count=Count('id'))  # 统计每组的数量
+            .order_by('type', 'log_date')  # 按类型和日期排序
+        )
+
+        # 转换为 {类型: {日期: 数量}} 的格式
+        result = {}
+        for entry in logs:
+            log_type = entry['type']
+            date_str = entry['log_date'].strftime('%Y-%m-%d')
+            count = entry['count']
+
+            # 初始化类型字典（如果不存在）
+            if log_type not in result:
+                result[log_type] = {}
+
+            # 写入日期和数量
+            result[log_type][date_str] = count
+
+        return result
+
+    try:
+        data = get_all_log_counts()
+
+        return JsonResponse({
+            "code": 0,
+            "message": "获取成功",
+            "data": data
+        })
+    except Exception as e:
+        return JsonResponse({
+            "code": -1,
+            "message": str(e)
+        })
