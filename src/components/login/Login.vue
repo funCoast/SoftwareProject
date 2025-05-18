@@ -51,7 +51,6 @@ const byEmail = ref(true)
   text-align: center;
 }
 
-
 .brand {
   display: flex;
   align-items: center;
