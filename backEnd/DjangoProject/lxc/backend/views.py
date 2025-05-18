@@ -3595,24 +3595,27 @@ def cnt_user_info(request):
         logs = (
             UserLog.objects
             .filter(user=user)
-            .annotate(date=TruncDate('date'))  # 截断日期，保留年月日
-            .values('date', 'type')  # 按日期和类型分组
+            .annotate(log_date=TruncDate('date'))  # 截断日期，保留年月日
+            .values('log_date', 'type')  # 按日期和类型分组
             .annotate(count=Count('id'))  # 统计每组的数量
-            .order_by('date', 'type')  # 可选排序
+            .order_by('log_date', 'type')  # 可选排序
         )
 
-        # 将结果转换为字典格式：{日期: {类型: 数量, ...}, ...}
+        # 将结果转换为目标格式：{类型: {日期: 数量}}
         result = {}
         for log in logs:
-            date_str = log['date'].strftime('%Y-%m-%d')
             log_type = log['type']
+            date_str = log['log_date'].strftime('%Y-%m-%d')
             count = log['count']
 
-            if date_str not in result:
-                result[date_str] = {}
-            result[date_str][log_type] = count
+            if log_type not in result:
+                result[log_type] = {}
+
+            result[log_type][date_str] = count
 
         return result
+
+
     try:
         uid = request.GET.get('uid')
     except Exception as e:
