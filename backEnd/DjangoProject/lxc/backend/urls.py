@@ -91,4 +91,8 @@ urlpatterns = [
     path('community/agentSendComment',views.community_agent_send_comment, name='community_agent_send_comment'),
     path('community/fetchAllAgents', views.fetch_all_published_agents, name='fetch_all_agents'),
 
+    # 举报
+    path('agent/report', views.report_agent, name='report_agent'),
+    path('admin/getAgentReports', views.get_agent_reports, name='get_agent_reports'),
+    path('admin/processAgentReport', views.process_agent_report, name='process_agent_report'),
 ]
