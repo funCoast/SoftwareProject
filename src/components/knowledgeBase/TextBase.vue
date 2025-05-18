@@ -38,7 +38,7 @@ function getTexts() {
     method: 'get',
     url: '/kb/getTexts',
     params: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
     },
   }).then(function (response) {
@@ -61,7 +61,7 @@ function getTextContent(id: number) {
     method: 'get',
     url: '/kb/getTextContent',
     params: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       text_id: id
     },
@@ -91,7 +91,7 @@ function confirmDelete() {
     method: "post",
     url: "/kb/deleteText",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       text_id: selectedText.value.id,
     },
@@ -310,52 +310,84 @@ function confirmDelete() {
 }
 
 .text-paragraph {
-  margin-bottom: 10px; /* 增加段落间距 */
-  line-height: 1.8; /* 增加行高 */
-  font-size: 15px; /* 调整字体大小 */
+  margin-bottom: 12px;
+  line-height: 1.8;
+  font-size: 15px;
   color: #333;
-  padding: 10px; /* 增加内边距 */
-  border-left: 4px solid #409eff; /* 添加左侧边框 */
-  background-color: #f9f9f9; /* 设置背景颜色 */
-  border-radius: 4px; /* 添加圆角 */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
+  padding: 10px 16px;
+  border-radius: 6px;
+  background: #f9f9f9;
+  border-left: 5px solid #409eff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  position: relative;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+/* 层级缩进和样式增强 */
+.level-1 {
+  margin-left: 0;
+  font-size: 20px;
+  font-weight: bold;
+  color: #1a237e;
+  border-left: 6px solid #1976d2;
+  background: #e3f2fd;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+}
+
+.level-2 {
+  margin-left: 24px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #1565c0;
+  border-left: 5px solid #42a5f5;
+  background: #e8f5fe;
+  box-shadow: 0 1px 4px rgba(66, 165, 245, 0.08);
+}
+
+.level-3 {
+  margin-left: 48px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #0277bd;
+  border-left: 4px solid #4fc3f7;
+  background: #f1f8fd;
+  box-shadow: 0 1px 2px rgba(79, 195, 247, 0.08);
+}
+
+.level-4 {
+  margin-left: 72px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #00838f;
+  border-left: 3px solid #80deea;
+  background: #e0f7fa;
+  box-shadow: none;
+}
+
+.level-5 {
+  margin-left: 96px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #006064;
+  border-left: 2px solid #b2ebf2;
+  background: #f0ffff;
+  box-shadow: none;
+}
+
+.level-6 {
+  margin-left: 120px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #004d40;
+  border-left: 2px dashed #b2dfdb;
+  background: #e0f2f1;
+  box-shadow: none;
 }
 
 .text-paragraph:hover {
-  background-color: #e6f7ff; /* 段落悬停时背景变浅 */
-  border-left-color: #66b1ff; /* 段落悬停时左侧边框颜色变化 */
-}
-
-/* Level 1 样式 */
-.level-1 {
-  font-size: 18px;
-  font-weight: bold;
-  color: #2c3e50;
-  border-left-color: #409eff;
-}
-
-/* Level 2 样式 */
-.level-2 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #3a8ee6;
-  border-left-color: #66b1ff;
-}
-
-/* Level 3 样式 */
-.level-3 {
-  font-size: 14px;
-  font-weight: 500;
-  color: #5c6bc0;
-  border-left-color: #8c9eff;
-}
-
-/* Level 4 样式 */
-.level-4 {
-  font-size: 13px;
-  font-weight: 400;
-  color: #8d6e63;
-  border-left-color: #bcaaa4;
+  background: #e3f2fd;
+  border-left-color: #1565c0;
+  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.10);
 }
 
 .delete-icon {

@@ -9,17 +9,23 @@ const account = ref('')
 const password = ref('')
 
 function login() {
-  axios
-    .post('user/loginByPassword', { account: account.value, password: password.value })
-    .then((response) => {
-      if (response.data.code === 0) {
-        sessionStorage.setItem('token', response.data.token)
-        sessionStorage.setItem('uid', response.data.id)
-        router.push('/home')
-      } else {
-        ElMessage.error(response.data.message)
-      }
-    })
+  axios({
+    method: 'post',
+    url: 'user/loginByPassword',
+    data: {
+      account: account.value,
+      password: password.value
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      // 将 token,character,name,uid 存入 sessionStorage
+      localStorage.setItem('LingXi_token', response.data.token);
+      localStorage.setItem('LingXi_uid', response.data.id);
+      router.push('/home');
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  })
 }
 </script>
 

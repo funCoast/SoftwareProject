@@ -10,6 +10,12 @@ const routes = [
     component: () => import("./components/login/Login.vue"),
   },
   {
+    path: "/document",
+    name: "Document",
+    meta: { authReq: authRequired },
+    component: () => import("./components/document/Document.vue")
+  },
+  {
     path: "/",
     name: "Main",
     redirect: "/home",
@@ -143,7 +149,7 @@ router.beforeEach((to, from, next) => {
 
   // 检查是否需要登录
   if (to.meta.authReq === true) {
-    if (sessionStorage.getItem("token")) {
+    if (localStorage.getItem("LingXi_token")) {
       next();
     } else {
       next({ name: "Login" });

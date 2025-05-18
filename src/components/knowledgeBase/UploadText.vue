@@ -4,16 +4,18 @@ import type { UploadInstance, UploadRequestOptions } from 'element-plus'
 import { UploadFilled } from "@element-plus/icons-vue"
 import axios from "axios"
 import router from "../../router"
+import { ElMessage } from "element-plus" // 新增
 
 const uploadRef = ref<UploadInstance>()
 const listLength = ref(0)
 const segmentMode = ref("auto")
 const dialogVisible = ref(false)
+const chunkSize = ref(800)
 
 // 文件上传前的钩子，用于校验文件类型和大小
 function handleChange(file: File, fileList: File[]) {
-  const isLt5M = file.size / 1024 / 1024 < 20
-  if (!isLt5M) {
+  const isLt20M = file.size / 1024 / 1024 < 20
+  if (!isLt20M) {
     ElMessage.warning("文件大小不能超过 20MB！")
     fileList.splice(fileList.indexOf(file), 1)
   }
@@ -29,25 +31,38 @@ function openDialog() {
 }
 
 function uploadText(options: UploadRequestOptions) {
+  // 层级分段时校验文件类型
+  if (segmentMode.value === 'hierarchical') {
+    const file = options.file
+    if (!file.name.endsWith('.md')) {
+      ElMessage.error("按层级分段仅支持 Markdown (.md) 文件！")
+      dialogVisible.value = false
+      return
+    }
+  }
+
   const formData = new FormData()
   formData.append("file", options.file)
-  formData.append("uid", sessionStorage.getItem("uid") as string)
+  formData.append("uid", localStorage.getItem('LingXi_uid') as string)
   formData.append("kb_id", router.currentRoute.value.params.id as string)
   formData.append("segment_mode", segmentMode.value)
+  if (segmentMode.value === 'custom') {
+    formData.append("chunk_size", chunkSize.value.toString())
+  }
 
   axios({
     method: 'post',
     url: '/kb/uploadText',
     data: formData,
     headers: {
-          'Content-Type': 'multipart/form-data',
+      'Content-Type': 'multipart/form-data',
     },
   }).then(function (response) {
     if (response.data.code === 0) {
       console.log(response.data.message)
       router.push('/workspace/textBase/' + router.currentRoute.value.params.id)
     } else {
-      console.log(response.data.message)
+      ElMessage.error("上传失败！" + response.data.message)
     }
   }).catch(function (error) {
     console.error(error)
@@ -104,9 +119,24 @@ function clear() {
         <el-form-item label="分段模式">
           <el-radio-group v-model="segmentMode">
             <el-radio value="auto">自动分段</el-radio>
-            <el-radio value="custom">自定义分段（待完善）</el-radio>
-            <el-radio value="hierarchical">按层级分段（待完善）</el-radio>
+            <el-radio value="custom">自定义分段</el-radio>
+            <el-radio value="hierarchical">按层级分段</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item
+          v-if="segmentMode === 'custom'"
+          label="最大分段长度"
+          required
+        >
+          <el-input-number
+            v-model="chunkSize"
+            :min="100"
+            :max="1500"
+            :step="1"
+            style="width: 180px"
+            controls-position="right"
+            placeholder="请输入最大分段长度"
+          />
         </el-form-item>
       </el-form>
       <template #footer>

@@ -37,7 +37,7 @@ async function fetchPendingAgents() {
       method: 'get',
       url: 'admin/fetchPendingAgents',
       params: {
-        uid: sessionStorage.getItem('uid')
+        uid: localStorage.getItem('LingXi_uid')
       }
     })
     if (response.data.code === 0) {
@@ -58,7 +58,7 @@ async function reviewAgent(agentId: number, action: 'approve' | 'reject', catego
       method: 'post',
       url: 'admin/reviewAgent',
       data: {
-        uid: sessionStorage.getItem('uid'),
+        uid: localStorage.getItem('LingXi_uid'),
         agent_id: agentId,
         action,
         category

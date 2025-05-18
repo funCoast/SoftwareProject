@@ -15,7 +15,7 @@ function getAvatar() {
     method: 'get',
     url: 'user/getAvatar',
     params: {
-      uid: sessionStorage.getItem('uid')
+      uid: localStorage.getItem('LingXi_uid')
     }
   }).then(function (response) {
     if (response.data.code === 0) {
@@ -73,15 +73,15 @@ const navItems = ref<NavItem[]>([
 
 // 根据用户角色过滤导航项
 const filteredNavItems = computed(() => {
-  const uid = sessionStorage.getItem('uid')
+  const uid = localStorage.getItem('LingXi_uid')
   if (uid === '3' || uid === '4') {
     return navItems.value.filter(item =>
         item.path !== '/workspace'
     )
   } else {
-    return navItems.value.filter(item => 
-      item.path !== '/publish-anno' &&
-      item.path !== '/review-agent' &&
+    return navItems.value.filter(item =>
+        item.path !== '/publish-anno' &&
+        item.path !== '/review-agent' &&
         item.path !== '/user-manage'
     )
   }
@@ -97,10 +97,15 @@ function handleNavigation(path: string) {
 }
 
 function handleProfileNavigation() {
-  router.push(`/profile/${sessionStorage.getItem('uid')}`)
+  router.push(`/profile/${localStorage.getItem('LingXi_uid')}`)
 }
 function toMessage() {
   router.push('/message')
+}
+
+// 添加文档导航方法
+function toDocument() {
+  router.push('/document')
 }
 </script>
 
@@ -113,11 +118,13 @@ function toMessage() {
         <div class="user-info">
           <img :src="avatar" alt="avatar" class="avatar" @click="handleProfileNavigation">
         </div>
-        <div class="message-icon">
-          <i class="fas fa-envelope"></i>
-          <i @click="toMessage">
+        <div class="action-buttons">
+          <div class="action-button" @click="toMessage">
             <img src="https://api.iconify.design/material-symbols:chat.svg" alt="私信" class="nav-icon">
-          </i>
+          </div>
+          <div class="action-button" @click="toDocument">
+            <img src="https://api.iconify.design/material-symbols:menu-book.svg" alt="使用文档" class="nav-icon">
+          </div>
         </div>
       </div>
 
@@ -207,18 +214,25 @@ function toMessage() {
   text-align: center;
 }
 
-.message-icon {
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-button {
   position: relative;
-  font-size: 24px;
-  color: #fff;
   cursor: pointer;
   padding: 10px;
   border-radius: 50%;
   transition: all 0.3s ease;
   background-color: #34495e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.message-icon:hover {
+.action-button:hover {
   background-color: #2c3e50;
   transform: scale(1.1);
 }

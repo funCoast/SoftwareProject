@@ -52,7 +52,7 @@ function triggerFileInput() {
 }
 
 function uploadAvatar() {
-  const uid = sessionStorage.getItem('uid') || ''
+  const uid = localStorage.getItem('LingXi_uid') || ''
   formData.append('uid', uid)
   axios({
     method: 'post',
@@ -94,12 +94,12 @@ function handleAvatarChange(event: Event) {
 }
 
 function updateBasicInfo() {
-  console.log(sessionStorage.getItem('uid'))
+  console.log(localStorage.getItem('LingXi_uid'))
   axios({
     method: 'post',
     url: 'user/updateBasicInfo',
     data: {
-      uid: sessionStorage.getItem('uid'),
+      uid: localStorage.getItem('LingXi_uid'),
       name: name.value,
       description: description.value
     }
@@ -121,7 +121,7 @@ function updatePwd() {
     method: 'post',
     url: 'user/updatePassword',
     data: {
-      uid: sessionStorage.getItem('uid'),
+      uid: localStorage.getItem('LingXi_uid'),
       oldPwd: oldPwd.value,
       newPwd: newPwd.value
     }
@@ -140,7 +140,7 @@ function updatePwd() {
 
 // 返回个人资料页面
 function goBack() {
-  router.push(`/profile/${sessionStorage.getItem('uid')}`);
+  router.push(`/profile/${localStorage.getItem('LingXi_uid')}`);
 }
   
 </script>

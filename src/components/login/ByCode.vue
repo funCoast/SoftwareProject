@@ -39,38 +39,50 @@ function count(time: number) {
 }
 
 function sendCode() {
-  const reg = /^([A-Za-z0-9_.-])+@([A-Za-z0-9_.-])+\.([A-Za-z]{2,4})$/
+  const reg =  /^([A-Za-z0-9_\.\-])+\@([A-Za-z0-9_\.\-])+\.([A-Za-z]{2,4})$/
   if (!reg.test(email.value)) {
     ElMessage.warning('请输入正确的邮箱')
     return
   }
-  axios.post('user/sendCode', { email: email.value }).then((response) => {
-    if (response.data.code === 0) {
-      ElMessage.success('验证码已发送')
-    } else {
-      ElMessage.error(response.data.message)
+  axios({
+    method: 'post',
+    url: 'user/sendCode', 
+    data: {
+      email: email.value
     }
-    count(60)
+  }).then(function (response) {
+      if(response.data.code === 0) {
+        ElMessage.success("验证码已发送")
+      } else {
+        ElMessage.error(response.data.message)
+      }
+      count(60)
   })
 }
 
 function login() {
-  axios
-    .post('user/loginByCode', { email: email.value, code: code.value })
-    .then((response) => {
-      if (response.data.code === 0) {
-        sessionStorage.setItem('token', response.data.token)
-        sessionStorage.setItem('uid', response.data.id)
-        if (response.data.is_new_user) {
-          router.push('/editProfile')
-          ElMessage.warning('初始密码为123456，请及时修改')
-        } else {
-          router.push('/home')
-        }
+  axios({
+    method: 'post',
+    url: 'user/loginByCode',
+    data: {
+      email: email.value,
+      code: code.value
+    }
+  }).then(function (response) {
+    if (response.data.code === 0) {
+      // 将 token,character,name,uid 存入 sessionStorage
+      localStorage.setItem('LingXi_token', response.data.token);
+      localStorage.setItem('LingXi_uid', response.data.id);
+      if(response.data.is_new_user) {
+        router.push('/editProfile');
+        ElMessage.warning("初始密码为123456，请及时修改")
       } else {
-        ElMessage.error(response.data.message)
+        router.push('/home');
       }
-    })
+    } else {
+      ElMessage.error(response.data.message)
+    }
+  })
 }
 </script>
 

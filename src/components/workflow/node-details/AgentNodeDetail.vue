@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 interface Input {
   id: number
@@ -10,20 +11,24 @@ interface Input {
   value: {
     type: number // 1: 上游节点的输出
     nodeId: number
-    outputId: number,
+    outputId: number
     text: string
   }
 }
 
 interface Output {
   id: number
-  name: 'content'
+  name: 'output'
   type: 'string'
 }
 
-interface KnowledgeBase {
+interface Agent {
   id: number
+  icon: string
   name: string
+  description: string
+  status: 'private' | 'check' | 'published'
+  publishedTime: string
 }
 
 const props = defineProps<{
@@ -34,10 +39,7 @@ const props = defineProps<{
     inputs: Input[]
     outputs: Output[]
     data: {
-      uid: number
-      kbs: Array<{
-        id: number
-      }>
+      agent_id?: number
     }
   }
   allNodes: any[]
@@ -57,7 +59,7 @@ const allUpstreamNodes = computed(() => {
 // 初始化输入
 const input = ref<Input>(props.node.inputs?.[0] || {
   id: 0,
-  name: '',
+  name: 'text',
   type: 'string',
   value: {
     type: 1,
@@ -67,9 +69,9 @@ const input = ref<Input>(props.node.inputs?.[0] || {
   }
 })
 
-// 知识库列表
-const knowledgeBases = ref<KnowledgeBase[]>([])
-const selectedKbs = ref<number[]>(props.node.data?.kbs?.map(kb => kb.id) || [])
+// 智能体列表
+const agents = ref<Agent[]>([])
+const selectedAgentId = ref<number | null>(props.node.data?.agent_id || null)
 
 // 运行相关状态
 const showRunPanel = ref(false)
@@ -79,24 +81,25 @@ const runResult = ref<string | null>(null)
 const runError = ref<string | null>(null)
 const runInput = ref('')
 
-// 获取知识库列表
-async function getKnowledgeBases() {
+// 获取智能体列表
+async function fetchAgents() {
   try {
     const response = await axios({
       method: 'get',
-      url: '/rl/getKnowledgeBases',
+      url: '/agent/fetchAll',
       params: {
         uid: props.uid
-      },
+      }
     })
 
     if (response.data.code === 0) {
-      knowledgeBases.value = response.data.knowledgeBases
+      agents.value = response.data.agents
     } else {
-      console.log(response.data.message)
+      ElMessage.error(response.data.message)
     }
   } catch (error) {
-    console.error('获取知识库列表失败:', error)
+    console.error('获取智能体列表失败:', error)
+    ElMessage.error('获取智能体列表失败')
   }
 }
 
@@ -106,29 +109,44 @@ function generateSelectValue(val?: Input['value']): string {
   return `${val.nodeId}|${val.outputId}`
 }
 
-// 处理选择变化
-function onSelectChange(val: string) {
-  if (!val) return
-  const [nodeId, outputId] = val.split('|').map(Number)
-  const node = allUpstreamNodes.value.find(n => n.id === nodeId)
-  const output = node?.outputs?.find(o => o.id === outputId)
+// 添加判断是否为手动输入的函数
+function isManualInput(input: Input) {
+  return !input.value?.type || input.value.type !== 1
+}
 
-  input.value = {
-    id: 0,
-    name: output?.name || '',
-    type: output?.type || 'string',
-    value: {
-      type: 1,
-      nodeId,
-      outputId,
-      text: ''
+// 修改处理选择变化的函数
+function onSelectChange(inputId: number, val: string) {
+  if (val === 'manual') {
+    input.value = {
+      id: 0,
+      name: 'text',
+      type: 'string',
+      value: {
+        type: 0,
+        nodeId: -1,
+        outputId: -1,
+        text: ''
+      }
+    }
+  } else {
+    const [nodeId, outputId] = val.split('|').map(Number)
+    input.value = {
+      id: 0,
+      name: 'text',
+      type: 'string',
+      value: {
+        type: 1,
+        nodeId,
+        outputId,
+        text: ''
+      }
     }
   }
   updateNode()
 }
 
-// 处理知识库选择变化
-function onKbsChange() {
+// 处理智能体选择变化
+function onAgentChange() {
   updateNode()
 }
 
@@ -139,12 +157,11 @@ function updateNode() {
     inputs: [input.value],
     outputs: [{
       id: 0,
-      name: 'content',
+      name: 'output',
       type: 'string'
     }],
     data: {
-      uid: Number(localStorage.getItem('LingXi_uid')),
-      kbs: selectedKbs.value.map(id => ({ id }))
+      agent_id: selectedAgentId.value
     }
   })
 }
@@ -199,14 +216,14 @@ defineExpose({
   }
 })
 
-// 组件挂载时获取知识库列表
+// 组件挂载时获取智能体列表
 onMounted(() => {
-  getKnowledgeBases()
+  fetchAgents()
 })
 </script>
 
 <template>
-  <div class="knowledge-node-detail">
+  <div class="agent-node-detail">
     <!-- 输入配置 -->
     <div class="section">
       <div class="section-header">
@@ -215,14 +232,18 @@ onMounted(() => {
       
       <div class="input-config">
         <div class="form-group">
-          <label>选择上游输出</label>
+          <label>输入来源</label>
           <el-select
             :model-value="generateSelectValue(input.value)"
-            placeholder="选择上游节点的输出变量"
+            placeholder="选择输入来源"
             size="small"
             class="source-select"
-            @change="onSelectChange"
+            @change="val => onSelectChange(input.id, val)"
           >
+            <el-option
+              label="手动输入"
+              value="manual"
+            />
             <template v-for="node in allUpstreamNodes" :key="node.id">
               <el-option
                 v-for="(nodeOutput, idx) in node.outputs"
@@ -233,42 +254,60 @@ onMounted(() => {
             </template>
           </el-select>
         </div>
+            
+        <div v-if="isManualInput(input)" class="form-group">
+          <label>输入内容</label>
+          <el-input
+            v-model="input.value.text"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入内容"
+            @input="updateNode"
+          />
+        </div>
 
-        <div v-if="input.value.nodeId !== -1" class="input-info">
+        <div v-if="!isManualInput(input)" class="input-info">
           <div class="info-item">
             <label>变量名称:</label>
-            <span>{{ input.name }}</span>
+            <span>text</span>
           </div>
           <div class="info-item">
             <label>变量类型:</label>
-            <span>{{ input.type }}</span>
+            <span>string</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 知识库配置 -->
+    <!-- 智能体配置 -->
     <div class="section">
       <div class="section-header">
-        <h4>知识库配置</h4>
+        <h4>智能体配置</h4>
       </div>
       
       <div class="form-group">
-        <label>选择知识库</label>
+        <label>选择智能体</label>
         <el-select
-          v-model="selectedKbs"
-          multiple
-          placeholder="请选择知识库"
+          v-model="selectedAgentId"
+          placeholder="请选择智能体"
           size="small"
-          class="kb-select"
-          @change="onKbsChange"
+          class="agent-select"
+          @change="onAgentChange"
         >
           <el-option
-            v-for="kb in knowledgeBases"
-            :key="kb.id"
-            :label="kb.name"
-            :value="kb.id"
-          />
+            v-for="agent in agents"
+            :key="agent.id"
+            :label="agent.name"
+            :value="agent.id"
+          >
+            <div class="agent-option">
+<!--              <img :src="'http://122.9.33.84:8000' + agent.icon" :alt="agent.name" class="agent-icon">-->
+              <div class="agent-info">
+                <div class="agent-name">{{ agent.name }}</div>
+                <div class="agent-desc">{{ agent.description }}</div>
+              </div>
+            </div>
+          </el-option>
         </el-select>
       </div>
     </div>
@@ -282,7 +321,7 @@ onMounted(() => {
       <div class="output-info">
         <div class="info-item">
           <label>变量名称:</label>
-          <span>content</span>
+          <span>output</span>
         </div>
         <div class="info-item">
           <label>变量类型:</label>
@@ -290,67 +329,67 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- 运行面板 -->
+    <el-dialog
+      v-model="showRunPanel"
+      title="运行智能体"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div class="run-panel">
+        <div class="run-input">
+          <label>输入内容</label>
+          <el-input
+            v-model="runInput"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入内容"
+          />
+        </div>
+      </div>
+
+      <div v-if="runStatus" class="run-result-section">
+        <div class="run-result-header">
+          <h4>运行结果</h4>
+          <span :class="['status-badge', runStatus]">
+            {{ runStatus === 'running' ? '运行中' : 
+               runStatus === 'success' ? '成功' : '失败' }}
+          </span>
+        </div>
+        
+        <div v-if="runStatus === 'success' && runResult" 
+             class="result-content success">
+          <pre>{{ runResult }}</pre>
+        </div>
+        
+        <div v-if="runStatus === 'error' && runError" 
+             class="result-content error">
+          <pre>{{ runError }}</pre>
+        </div>
+        
+        <div v-if="runStatus === 'running'" class="result-content loading">
+          <div class="loading-spinner"></div>
+          <span>正在运行中...</span>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showRunPanel = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="isRunning"
+          @click="run"
+        >
+          运行
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
-
-  <!-- 运行面板 -->
-  <el-dialog
-    v-model="showRunPanel"
-    title="运行知识库查询"
-    width="500px"
-    :close-on-click-modal="false"
-  >
-    <div class="run-panel">
-      <div class="run-input">
-        <label>查询内容</label>
-        <el-input
-          v-model="runInput"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入查询内容"
-        />
-      </div>
-    </div>
-
-    <div v-if="runStatus" class="run-result-section">
-      <div class="run-result-header">
-        <h4>运行结果</h4>
-        <span :class="['status-badge', runStatus]">
-          {{ runStatus === 'running' ? '运行中' : 
-             runStatus === 'success' ? '成功' : '失败' }}
-        </span>
-      </div>
-      
-      <div v-if="runStatus === 'success' && runResult" 
-           class="result-content success">
-        <pre>{{ runResult }}</pre>
-      </div>
-      
-      <div v-if="runStatus === 'error' && runError" 
-           class="result-content error">
-        <pre>{{ runError }}</pre>
-      </div>
-      
-      <div v-if="runStatus === 'running'" class="result-content loading">
-        <div class="loading-spinner"></div>
-        <span>正在运行中...</span>
-      </div>
-    </div>
-
-    <template #footer>
-      <el-button @click="showRunPanel = false">取消</el-button>
-      <el-button
-        type="primary"
-        :loading="isRunning"
-        @click="run"
-      >
-        运行
-      </el-button>
-    </template>
-  </el-dialog>
 </template>
 
 <style scoped>
-.knowledge-node-detail {
+.agent-node-detail {
   padding: 16px;
 }
 
@@ -387,8 +426,14 @@ label {
 }
 
 .source-select,
-.kb-select {
+.agent-select {
   width: 100%;
+}
+
+.input-config {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .input-info,
@@ -416,6 +461,39 @@ label {
 .info-item span {
   color: #2c3e50;
   font-family: monospace;
+}
+
+.agent-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.agent-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.agent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-name {
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 2px;
+}
+
+.agent-desc {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .run-panel {
@@ -514,4 +592,4 @@ label {
   justify-content: center;
   color: #666;
 }
-</style> 
+</style>

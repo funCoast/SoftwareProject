@@ -21,7 +21,7 @@ const getData = () => {
     method: 'get',
     url: '/kb/getTables',
     params: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
     },
   }).then(function (response) {
@@ -63,7 +63,7 @@ const updateTable = (row: RowData, prop: string, index: number) => {
     method: 'post',
     url: '/kb/updateTable',
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       rowIndex: index,  // 更新的行索引
       prop: prop,       // 更新的字段
@@ -94,7 +94,7 @@ const uploadNewRow = (row: RowData, index: number) => {
     method: "post",
     url: "/kb/addTableRow",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       rowData: row, // 新增行的数据
     },
@@ -113,7 +113,7 @@ const deleteSelectedRows = () => {
     method: "post",
     url: "/kb/deleteTableRows",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       rows: selectedRows.value, // 选中行的索引
     },

@@ -22,7 +22,7 @@ function getPictures() {
     method: 'get',
     url: '/kb/getPictures',
     params: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
     },
   }).then(function (response) {
@@ -58,7 +58,7 @@ function updateEdit() {
     method: "post",
     url: "/kb/updatePicture",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       picture_id: editTarget.value.id,
       description: editTarget.value.description,
@@ -90,7 +90,7 @@ function confirmDelete() {
     method: "post",
     url: "/kb/deletePicture",
     data: {
-      uid: sessionStorage.getItem("uid"),
+      uid: localStorage.getItem('LingXi_uid'),
       kb_id: router.currentRoute.value.params.id,
       picture_id: deleteTarget.value.id,
     },

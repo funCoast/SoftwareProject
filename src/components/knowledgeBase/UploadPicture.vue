@@ -30,7 +30,7 @@ function openDialog() {
 function uploadPicture(options: UploadRequestOptions) {
   const formData = new FormData()
   formData.append("file", options.file)
-  formData.append("uid", sessionStorage.getItem("uid") as string)
+  formData.append("uid", localStorage.getItem('LingXi_uid') as string)
   formData.append("kb_id", router.currentRoute.value.params.id as string)
 
   axios({

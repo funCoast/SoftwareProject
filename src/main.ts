@@ -20,7 +20,7 @@ axios.defaults.baseURL = '/api/linksoul'
 // 每次请求都带上token
 axios.interceptors.request.use(function (config) {
     console.log('url:', config.url);
-    const token = sessionStorage.getItem('token')
+    const token = localStorage.getItem('LingXi_token')
     if (token) {
         config.headers.token = token
     }
@@ -47,7 +47,7 @@ axios.interceptors.response.use(function (response) {
         // 403: token过期,清除本地token,跳转登录页面
         case 403:
             ElMessage.error('登录过期，请重新登录')
-            sessionStorage.removeItem('token');
+            localStorage.removeItem('LingXi_token');
             router.push('/login');
             break;
         // 404: 请求不存在
