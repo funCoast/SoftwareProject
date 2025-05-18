@@ -2,7 +2,7 @@ from backend.models import KnowledgeBase, KnowledgeFile, KnowledgeChunk
 from django.utils import timezone
 import uuid
 
-def clone_knowledge_base(kb_id: int, new_kb_name: str = None) -> int:
+def clone_knowledge_base(user, kb_id: int, new_kb_name: str = None) -> int:
     """
     克隆指定的知识库，包括文件和片段。
     :param kb_id: 要复制的知识库ID
@@ -20,7 +20,7 @@ def clone_knowledge_base(kb_id: int, new_kb_name: str = None) -> int:
         kb_name=new_kb_name or f"{old_kb.kb_name}",
         kb_type=old_kb.kb_type,
         kb_description=old_kb.kb_description,
-        user=old_kb.user,
+        user=user,
         icon=old_kb.icon,
         created_at=timezone.now(),
         updated_at=timezone.now()
