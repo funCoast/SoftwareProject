@@ -78,8 +78,8 @@ const navItems = ref<NavItem[]>([
 
 // 根据用户角色过滤导航项
 const filteredNavItems = computed(() => {
-  const uid = localStorage.getItem('LingXi_uid')
-  if (uid === '3' || uid === '4') {
+  const role = localStorage.getItem('role')
+  if (role === 'admin') {
     return navItems.value.filter(item =>
         item.path !== '/workspace'
     )
