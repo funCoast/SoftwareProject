@@ -290,7 +290,7 @@ class AgentReport(models.Model):
     # 后续处理结果
     is_processed = models.BooleanField(default=False)  # 是否已处理
     process_result = models.CharField(max_length=100, null=True, blank=True)
-    processed_by = models.ForeignKey(Administrator, null=True, blank=True, on_delete=models.SET_NULL,
+    processed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,
                                      related_name='processed_agent_reports')
     processed_time = models.DateTimeField(null=True, blank=True)
 
