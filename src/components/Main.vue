@@ -72,7 +72,7 @@ const navItems = ref<NavItem[]>([
   {
     path: '/report-agent',
     label: '智能体举报',
-    icon: 'https://api.iconify.design/material-symbols:check-circle.svg'
+    icon: 'https://api.iconify.design/material-symbols:report.svg'
   },
 ])
 
