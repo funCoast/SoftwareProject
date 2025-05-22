@@ -238,7 +238,7 @@ async function sendMessage() {
         target_uid: uid.value,
       }
     })
-    if (response.data.code === 0) {
+    if (response.data.code === 0 || response.data.code === 1) {
       await router.push('/message');
     } else {
       ElMessage.error(response.data.message)

@@ -57,9 +57,11 @@ function getAvatar() {
     params: {
       uid: localStorage.getItem('LingXi_uid')
     }
-  }).then(response => {
+  }).then(function (response) {
     if (response.data.code === 0) {
       avatar.value = 'http://122.9.33.84:8000' + response.data.avatar + '?' + Date.now()
+    } else {
+      ElMessage.error(response.data.message)
     }
   })
 }
@@ -74,6 +76,7 @@ interface NavItem {
   icon: string
 }
 
+// 导航配置项（更易维护）
 const navItems = ref<NavItem[]>([
   { path: '/home', label: '首页', icon: 'https://api.iconify.design/material-symbols:home.svg' },
   { path: '/workspace', label: '工作空间', icon: 'https://api.iconify.design/material-symbols:dashboard.svg' },
@@ -84,10 +87,13 @@ const navItems = ref<NavItem[]>([
   { path: '/report-agent', label: '智能体举报', icon: 'https://api.iconify.design/material-symbols:check-circle.svg' }
 ])
 
+// 根据用户角色过滤导航项
 const filteredNavItems = computed(() => {
-  const uid = localStorage.getItem('LingXi_uid')
-  if (uid === '3' || uid === '4') {
-    return navItems.value.filter(item => item.path !== '/workspace')
+  const role = localStorage.getItem('role')
+  if (role === 'admin') {
+    return navItems.value.filter(item =>
+        item.path !== '/workspace'
+    )
   } else {
     return navItems.value.filter(item =>
       !['/publish-anno', '/review-agent', '/user-manage', '/report-agent'].includes(item.path)
@@ -95,23 +101,73 @@ const filteredNavItems = computed(() => {
   }
 })
 
+// 计算属性
 const cur = ref('/home')
+
+// 导航处理方法
 function handleNavigation(path: string) {
   cur.value = path
   router.push(path)
 }
+
 function handleProfileNavigation() {
   router.push(`/profile/${localStorage.getItem('LingXi_uid')}`)
 }
 function toMessage() {
   router.push('/message')
 }
+
+// 添加文档导航方法
 function toDocument() {
   router.push('/document')
 }
 </script>
 
+<template>
+  <div class="app-container">
+    <!-- 侧边导航栏 -->
+    <div class="side-nav">
+      <!-- 用户信息区域 -->
+      <div class="user-section">
+        <div class="user-info">
+          <img :src="avatar" alt="avatar" class="avatar" @click="handleProfileNavigation">
+        </div>
+        <div class="action-buttons">
+          <div class="action-button" @click="toMessage">
+            <img src="https://api.iconify.design/material-symbols:chat.svg" alt="私信" class="nav-icon">
+          </div>
+          <div class="action-button" @click="toDocument">
+            <img src="https://api.iconify.design/material-symbols:menu-book.svg" alt="使用文档" class="nav-icon">
+          </div>
+        </div>
+      </div>
+
+      <!-- 导航菜单 -->
+      <nav>
+        <ul>
+          <li v-for="item in filteredNavItems" :key="item.path" :class="{ active: cur === item.path }" @click="handleNavigation(item.path)">
+            <img :src="item.icon" :alt="item.label" class="nav-icon">
+            <span>{{ item.label }}</span>
+          </li>
+        </ul>
+      </nav>
+    </div>
+
+    <!-- 主要内容区域 -->
+    <div class="main-content">
+      <router-view :avatar="avatar"></router-view>
+    </div>
+  </div>
+</template>
+
 <style scoped>
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #2c3e50;
+}
+
 .app-container {
   display: flex;
   height: 100vh;
@@ -128,7 +184,9 @@ function toDocument() {
   border-right: 1px solid #e0e0e0; /* 添加右侧浅灰边框 */
 }
 
+/* 用户信息区域样式 */
 .user-section {
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;

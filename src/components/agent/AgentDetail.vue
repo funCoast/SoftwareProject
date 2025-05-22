@@ -81,6 +81,17 @@ const reportDescription = ref('')
 // 添加加载状态
 const isLoading = ref(false)
 
+const chatMessagesRef = ref<HTMLElement | null>(null)
+
+// 滚动到底部
+function scrollToBottom() {
+  nextTick(() => {
+    if (chatMessagesRef.value) {
+      chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
+    }
+  })
+}
+
 // 获取智能体基本信息
 async function fetchAgentInfo() {
   try {
@@ -186,6 +197,7 @@ const trySendMessage = () => {
   messageInput.value = ''
   fileList.value = []
   enableSearch.value = false
+  scrollToBottom() // 发送消息后滚动到底部
 }
 
 async function sendMessage() {
@@ -214,6 +226,7 @@ async function sendMessage() {
         showThinking: true
       })
       console.log('信息发送成功')
+      scrollToBottom() // 收到回复后滚动到底部
     } else {
       console.log(response.data.message)
     }
@@ -231,7 +244,6 @@ function toggleThinkingChain(index: number) {
   }
 }
 
-// 修改获取历史消息函数
 async function fetchMessage() {
   try {
     const response = await axios({
@@ -243,18 +255,39 @@ async function fetchMessage() {
       }
     })
     if (response.data.code === 0) {
-      // 为每条消息添加默认的折叠状态
       chatHistory.value = response.data.chatHistory.map((msg: Message) => ({
         ...msg,
         showThinking: true
       }))
       console.log('历史信息获取成功')
       console.log(response.data.chatHistory)
+      scrollToBottom() // 获取历史消息后滚动到底部
     } else {
       console.log(response.data.message)
     }
   } catch (error) {
     console.error('获取历史消息失败:', error)
+  }
+}
+
+async function clearMessage() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'agent/clearHistoryMessage',
+      params: {
+        uid: localStorage.getItem('LingXi_uid'),
+        agent_id: agent_id,
+      }
+    })
+    if (response.data.code === 0) {
+      chatHistory.value = [];
+      ElMessage.success('清除历史对话成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('清除历史消息失败:', error)
   }
 }
 
@@ -419,11 +452,11 @@ async function handleReport() {
   try {
     const response = await axios({
       method: 'post',
-      url: `community/agentHandleReport`,
+      url: `agent/report`,
       data: {
         uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id,
-        description: reportDescription.value
+        reason: reportDescription.value
       }
     })
     if (response.data.code === 0) {
@@ -492,20 +525,15 @@ onMounted(() => {
               <span class="status-badge online">在线</span>
             </div>
           </div>
-<!--          <div class="chat-actions">-->
-<!--            <button class="action-btn" title="清空对话">-->
-<!--              <img src="https://api.iconify.design/material-symbols:delete-outline.svg" alt="清空" class="action-icon">-->
-<!--            </button>-->
-<!--            <button class="action-btn" title="导出对话">-->
-<!--              <img src="https://api.iconify.design/material-symbols:download.svg" alt="导出" class="action-icon">-->
-<!--            </button>-->
-<!--          </div>-->
+          <div class="chat-actions">
+            <button class="action-btn" title="清空对话" @click="clearMessage">
+              <img src="https://api.iconify.design/material-symbols:delete-outline.svg" alt="清空" class="action-icon">
+            </button>
+          </div>
         </div>
 
         <!-- 聊天内容区 -->
-        <div class="chat-content">
-<!--          <div class="chat-day-divider">今天</div>-->
-
+        <div class="chat-content" ref="chatMessagesRef">
           <!-- 遍历消息 -->
           <div
             v-for="(message, index) in chatHistory"
@@ -926,6 +954,8 @@ onMounted(() => {
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
 }
 
 .action-btn:hover {

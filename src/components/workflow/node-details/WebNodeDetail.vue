@@ -57,13 +57,6 @@ const runResult = ref<string | null>(null)
 const runError = ref<string | null>(null)
 const runInput = ref('')
 
-// 模型选项
-const modelOptions = [
-  { label: '通义千问', value: 'qwen-plus' },
-  { label: 'DeepSeek', value: 'deepseek-r1' },
-  { label: '智谱AI', value: 'chatglm-6b-v2' }
-]
-
 // 更新节点
 function updateNode() {
   emit('update:node', {

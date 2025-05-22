@@ -49,6 +49,7 @@ onMounted(() => {
   getAgentInfo()
   getKnowledgeBases()
   getWorkflows()
+  fetchMessage()
 })
 
 onBeforeMount(() => {
@@ -372,6 +373,17 @@ const enableSearch = ref(false)
 // 添加加载状态
 const isLoading = ref(false)
 
+const chatMessagesRef = ref<HTMLElement | null>(null)
+
+// 滚动到底部
+function scrollToBottom() {
+  nextTick(() => {
+    if (chatMessagesRef.value) {
+      chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight
+    }
+  })
+}
+
 // 文件上传前的钩子，用于校验文件类型和大小
 function handleChange(file: File) {
   const isLt5M = file.size / 1024 / 1024 < 20
@@ -409,11 +421,11 @@ function toggleThinkingChain(index: number) {
 }
 
 // 修改发送消息函数，添加默认折叠状态
-const sendMessage = () => {
+const trySendMessage = () => {
   if (!messageInput.value.trim() && fileList.value.length === 0) return
 
   isLoading.value = true
-  sendsendMessage()
+  sendMessage()
   chatHistory.value.push({
     sender: 'user',
     content: {
@@ -429,10 +441,10 @@ const sendMessage = () => {
   messageInput.value = ''
   fileList.value = []
   enableSearch.value = false
+  scrollToBottom() // 发送消息后滚动到底部
 }
 
-// 修改sendsendMessage函数，添加默认折叠状态
-async function sendsendMessage() {
+async function sendMessage() {
   try {
     const formData = new FormData()
     formData.append('uid', uid.value)
@@ -444,12 +456,9 @@ async function sendsendMessage() {
       console.log('file:', file)
       formData.append('file', file.raw)
     }
-    for (const [key, value] of formData.entries()) {
-      console.log(key, value)
-    }
     const response = await axios({
       method: 'post',
-      url: 'agent/sendMessage',
+      url: 'agent/sendAgentMessage',
       data: formData
     })
 
@@ -461,6 +470,7 @@ async function sendsendMessage() {
         showThinking: true
       })
       console.log('信息发送成功')
+      scrollToBottom() // 收到回复后滚动到底部
     } else {
       console.log(response.data.message)
     }
@@ -468,6 +478,53 @@ async function sendsendMessage() {
     console.error('信息发送失败:', error)
   } finally {
     isLoading.value = false
+  }
+}
+
+async function fetchMessage() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'agent/fetchAgentMessage',
+      params: {
+        uid: localStorage.getItem('LingXi_uid'),
+        agent_id: agent_id,
+      }
+    })
+    if (response.data.code === 0) {
+      chatHistory.value = response.data.chatHistory.map((msg: Message) => ({
+        ...msg,
+        showThinking: true
+      }))
+      console.log('历史信息获取成功')
+      console.log(response.data.chatHistory)
+      scrollToBottom() // 获取历史消息后滚动到底部
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('获取历史消息失败:', error)
+  }
+}
+
+async function clearMessage() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'agent/clearHistoryMessage',
+      params: {
+        uid: localStorage.getItem('LingXi_uid'),
+        agent_id: agent_id,
+      }
+    })
+    if (response.data.code === 0) {
+      chatHistory.value = [];
+      ElMessage.success('清除历史对话成功')
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error('清除历史消息失败:', error)
   }
 }
 
@@ -479,7 +536,7 @@ const handleConfirm = () => {
 // 处理回车键
 const handleEnter = (e: KeyboardEvent) => {
   if (e.ctrlKey && e.shiftKey) {
-    sendMessage()
+    trySendMessage()
   } else {
     // 普通回车，插入换行
     const textarea = e.target as HTMLTextAreaElement
@@ -510,7 +567,14 @@ function renderedMarkdown(content: string) {
           <p>{{ agentInfo.description }}</p>
         </div>
       </div>
-      <div class="status-actions" v-if="uid === currentUid">
+      <div class="status-actions">
+        <el-button
+          type="danger"
+          plain
+          @click="clearMessage"
+        >
+          清除历史对话
+        </el-button>
         <el-button
           :type="statusButton.type"
           :disabled="statusButton.disabled"
@@ -649,7 +713,7 @@ function renderedMarkdown(content: string) {
 
       <!-- 右侧聊天面板 -->
       <div class="chat-panel">
-        <div class="chat-messages" ref="chatMessages">
+        <div class="chat-messages" ref="chatMessagesRef">
           <div v-for="(message, index) in chatHistory" :key="index"
                :class="['message', message.sender]">
             <template v-if="message.sender === 'user'">
@@ -770,7 +834,7 @@ function renderedMarkdown(content: string) {
                     type="primary" 
                     class="send-button"
                     :disabled="!messageInput.trim()"
-                    @click="sendMessage"
+                    @click="trySendMessage"
                   >
                     发送
                   </el-button>

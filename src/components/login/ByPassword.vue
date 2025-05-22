@@ -21,6 +21,7 @@ function login() {
       // 将 token,uid 存入 localStorage
       localStorage.setItem('LingXi_token', response.data.token);
       localStorage.setItem('LingXi_uid', response.data.id);
+      localStorage.setItem('LingXi_role', response.data.role)
       router.push('/home');
     } else {
       ElMessage.error(response.data.message)
