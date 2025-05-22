@@ -3,6 +3,8 @@ import { ref, computed, onMounted, inject, type Ref } from 'vue'
 import axios from "axios"
 import router from '../../router'
 import { useRoute }from 'vue-router'
+import { ElMessage } from 'element-plus'
+import type { UploadProps } from 'element-plus'
 
 const avatar = inject('avatar') as Ref
 const refreshAvatar = inject('refreshAvatar') as Function
@@ -74,24 +76,23 @@ function uploadAvatar() {
 }
 
 // 处理头像更改
-function handleAvatarChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  if (input.files && input.files[0]) {
-    const file = input.files[0]
-    
-    // 验证文件大小和类型
-    if (file.size > 2 * 1024 * 1024) {
-      ElMessage.warning('图片大小不能超过2MB')
-      return;
-    }
-    
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      newAvatar.value = e.target?.result as string
-    }
-    formData.append('avatar', input.files[0])
-    reader.readAsDataURL(file)
+const handleAvatarChange: UploadProps['onChange'] = (uploadFile) => {
+  const file = uploadFile.raw
+  if (!file) return
+  
+  // 验证文件大小和类型
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.warning('图片大小不能超过2MB')
+    return
   }
+  
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    newAvatar.value = e.target?.result as string
+  }
+  formData.delete('avatar') // 清除之前的文件
+  formData.append('avatar', file)
+  reader.readAsDataURL(file)
 }
 
 function updateBasicInfo() {
@@ -164,9 +165,20 @@ function goBack() {
         <div class="avatar-upload">
           <img :src="showAvatar" alt="用户头像" class="current-avatar">
           <div class="upload-controls">
-            <el-button class="upload-btn" @click="triggerFileInput">选择头像</el-button>
-            <el-button :v-if="fileInput?.value!=null" type="primary" @click="uploadAvatar" :disabled="!newAvatar">上传头像</el-button>
-            <input type="file" ref="fileInput" style="display: none" accept="image/*" @change="handleAvatarChange"></input>
+            <el-upload
+              class="avatar-uploader"
+              :show-file-list="false"
+              :auto-upload="false"
+              accept="image/*"
+              @change="handleAvatarChange"
+            >
+              <el-button class="upload-btn select">选择头像</el-button>
+            </el-upload>
+            <el-button 
+              class="upload-btn upload" 
+              @click="uploadAvatar" 
+              :disabled="!newAvatar"
+            >上传头像</el-button>
             <p class="upload-hint">支持 JPG、PNG 格式，文件小于 2MB</p>
           </div>
         </div>
@@ -235,164 +247,272 @@ function goBack() {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(79, 175, 255, 0.1);
 }
 
 .edit-header h2 {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 600;
   color: #2c3e50;
   margin: 0;
+  position: relative;
+}
+
+.edit-header h2::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #4FAFFF;
+  border-radius: 2px;
 }
 
 .back-button {
   display: flex;
   align-items: center;
-  color: #2c3e50;
+  color: #4FAFFF;
   cursor: pointer;
   transition: all 0.3s ease;
+  padding: 10px 20px;
+  border-radius: 12px;
+  background: rgba(79, 175, 255, 0.1);
 }
 
 .back-button:hover {
-  opacity: 0.8;
+  transform: translateY(-2px);
+  background: rgba(79, 175, 255, 0.2);
 }
 
 .back-button svg {
-  margin-right: 5px;
+  margin-right: 8px;
 }
 
 .edit-form {
   background: white;
-  border-radius: 8px;
-  padding: 30px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(79, 175, 255, 0.1);
 }
 
 .form-section {
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .form-section label {
   display: block;
-  font-weight: bold;
-  margin-bottom: 8px;
+  font-weight: 600;
+  margin-bottom: 12px;
   color: #2c3e50;
+  font-size: 16px;
 }
 
 .form-input, .form-textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
+  width: 80%;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
   transition: all 0.3s ease;
+  color: #2c3e50;
+  background: #f8fafc;
 }
 
 .form-input:focus, .form-textarea:focus {
-  border-color: #2c3e50;
+  border-color: #4FAFFF;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.2);
+  box-shadow: 0 0 0 3px rgba(79, 175, 255, 0.2);
+  background: white;
 }
 
 .form-textarea {
   resize: vertical;
+  min-height: 120px;
 }
 
 .avatar-section {
-  margin-bottom: 30px;
+  margin-bottom: 40px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .avatar-upload {
   display: flex;
-  align-items: center;
-  gap: 20px;
+  align-items: flex-start;
+  gap: 32px;
 }
 
 .current-avatar {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
+  border: 4px solid white;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.current-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .upload-controls {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+  width: 200px;
+}
+
+.avatar-uploader {
+  display: inline-block;
 }
 
 .upload-btn {
-  background: #2c3e50;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  width: 200px !important;
+  text-align: center !important;
+  justify-content: center !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 12px 24px !important;
+  border-radius: 12px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.upload-btn.select {
+  background: #ffffff !important;
+  color: #4FAFFF !important;
+  border: 2px solid #4FAFFF !important;
+}
+
+.upload-btn.upload {
+  background: #4FAFFF !important;
+  color: white !important;
+  border: none !important;
 }
 
 .upload-btn:hover {
-  background: #1e2b38;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(79, 175, 255, 0.25) !important;
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .upload-hint {
-  font-size: 12px;
-  color: #666;
-  margin-top: 8px;
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+  line-height: 1.5;
+  flex-basis: 100%;
 }
 
 .error-message {
   color: #e74c3c;
   font-size: 14px;
-  margin-top: 5px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(231, 76, 60, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid #e74c3c;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
 }
 
-.cancel-btn, .save-btn {
-  padding: 10px 20px;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
+.el-button {
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
   transition: all 0.3s ease;
 }
 
-.cancel-btn {
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  color: #2c3e50;
+.el-button:hover {
+  transform: translateY(-2px);
 }
 
-.cancel-btn:hover {
-  background: #e9ecef;
-}
-
-.save-btn {
-  background: #2c3e50;
+.el-button--primary {
+  background: linear-gradient(135deg, #4FAFFF 0%, #2b95ff 100%);
   border: none;
-  color: white;
+  box-shadow: 0 2px 8px rgba(79, 175, 255, 0.25);
 }
 
-.save-btn:hover:not(:disabled) {
-  background: #1e2b38;
-}
-
-.save-btn:disabled {
-  background: #a0aec0;
-  cursor: not-allowed;
+.el-button--primary:hover {
+  box-shadow: 0 4px 12px rgba(79, 175, 255, 0.35);
 }
 
 .row {
   min-height: 15px;
-  width: 300px;
-  margin: 10px, auto;
+  width: 100%;
+  margin: 16px auto;
 }
 
 .input {
-  width: 300px;
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: 10px;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.el-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  background: #f8fafc;
+  padding: 20px 24px;
+  margin: 0;
+}
+
+.el-dialog__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.el-dialog__body {
+  padding: 24px;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.el-input__inner {
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.el-input__inner:focus {
+  border-color: #4FAFFF;
+  box-shadow: 0 0 0 3px rgba(79, 175, 255, 0.2);
 }
 </style>

@@ -227,9 +227,6 @@ onUnmounted(() => {
           <div class="contact-info">
             <div class="contact-name">
               {{ contact.name }}
-              <!--              <span v-if="contact.unread > 0" class="unread-badge">-->
-              <!--                {{ contact.unread }}-->
-              <!--              </span>-->
             </div>
             <div class="last-message">
               {{ contact.lastMessage.text }}
@@ -249,7 +246,8 @@ onUnmounted(() => {
         <span class="contact-name">{{ currentContact.name }}</span>
       </div>
       <div v-else class="no-contact">
-        请选择一个联系人开始聊天
+        <img src="https://api.iconify.design/material-symbols:chat.svg" alt="开始聊天" class="chat-icon"/>
+        <span>请选择一个联系人开始聊天</span>
       </div>
 
       <!-- 消息列表 -->
@@ -260,7 +258,7 @@ onUnmounted(() => {
             class="message-item"
             :class="{ 'message-self': message.sender !== currentContact.name }"
         >
-          <el-avatar :size="32" :src="baseImageUrl + message.avatar" />
+          <el-avatar :size="32" :src="baseImageUrl + message.avatar" class="message-avatar"/>
           <div class="message-content">
             <div class="message-text">{{ message.text }}</div>
             <div class="message-time">
@@ -276,10 +274,13 @@ onUnmounted(() => {
             v-model="newMessage"
             type="textarea"
             :autosize="{ minRows: 1, maxRows: 3 }"
-            placeholder="输入消息..."
+            placeholder="输入消息，按Enter发送，Shift+Enter换行..."
             @keydown.enter="handleEnterKey"
         />
-        <el-button type="primary" @click="sendMessage">发送</el-button>
+        <el-button type="primary" :disabled="!newMessage.trim()" @click="sendMessage">
+          <img src="https://api.iconify.design/material-symbols:send.svg" alt="发送" class="send-icon"/>
+          发送
+        </el-button>
       </div>
     </div>
   </div>
@@ -289,8 +290,90 @@ onUnmounted(() => {
 .message-container {
   display: flex;
   height: 100%;
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
 }
+
+.contact-list {
+  width: 280px;
+  background-color: white;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.contact-header {
+  padding: 20px;
+  border-bottom: 1px solid #eef2f7;
+  background: linear-gradient(to right, #ffffff, #f8f9fa);
+}
+
+.contact-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #2c3e50;
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+}
+
+.contact-header h2::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #4FAFFF;
+  border-radius: 2px;
+}
+
+.contact-items {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.no-contacts {
+  text-align: center;
+  color: #94a3b8;
+  padding: 40px 20px;
+  font-size: 15px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+}
+
+.contact-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background-color: #4FAFFF;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.contact-item:hover {
+  background-color: #f8fafc;
+}
+
+.contact-item.active {
+  background-color: #f0f7ff;
+}
+
+.contact-item.active::before {
+  opacity: 1;
+}
+
 .avatar-wrapper {
   position: relative;
   width: 40px;
@@ -299,62 +382,18 @@ onUnmounted(() => {
 
 .unread-dot {
   position: absolute;
-  bottom: -2px;
-  left: -2px;
+  top: -4px;
+  right: -4px;
   background-color: #f56c6c;
   color: white;
   border-radius: 50%;
   font-size: 10px;
-  width: 16px;
+  min-width: 16px;
   height: 16px;
   line-height: 16px;
   text-align: center;
-  box-shadow: 0 0 0 2px white; /* 白边更像微信 */
-}
-.no-contacts {
-  text-align: center;
-  color: #999;
-  padding: 20px;
-}
-
-.contact-list {
-  width: 300px;
-  background-color: white;
-  border-right: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-}
-
-.contact-header {
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.contact-header h2 {
-  margin: 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.contact-items {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.contact-item {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.contact-item:hover {
-  background-color: #f5f5f5;
-}
-
-.contact-item.active {
-  background-color: #e6f7ff;
+  box-shadow: 0 0 0 2px white;
+  padding: 0 4px;
 }
 
 .contact-info {
@@ -365,32 +404,22 @@ onUnmounted(() => {
 
 .contact-name {
   font-size: 14px;
-  color: #333;
+  color: #2c3e50;
   margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-}
-
-.unread-badge {
-  background-color: #f56c6c;
-  color: white;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 10px;
-  margin-left: 8px;
+  font-weight: 500;
 }
 
 .last-message {
   font-size: 12px;
-  color: #999;
+  color: #94a3b8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .message-time {
-  font-size: 12px;
-  color: #999;
+  font-size: 11px;
+  color: #94a3b8;
   white-space: nowrap;
 }
 
@@ -399,78 +428,165 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background-color: white;
+  position: relative;
 }
 
 .message-header {
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 24px;
+  border-bottom: 1px solid #eef2f7;
   display: flex;
   align-items: center;
+  background: linear-gradient(to right, #ffffff, #f8f9fa);
 }
 
 .message-header .contact-name {
   margin-left: 12px;
   font-size: 16px;
-  color: #333;
+  color: #2c3e50;
+  font-weight: 500;
 }
 
 .no-contact {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: #94a3b8;
   font-size: 16px;
+  gap: 16px;
+}
+
+.chat-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.6;
 }
 
 .message-list {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  background-color: #f8fafc;
 }
 
 .message-item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  max-width: 80%;
 }
 
 .message-item.message-self {
   flex-direction: row-reverse;
+  align-self: flex-end;
+}
+
+.message-avatar {
+  margin-top: 4px;
 }
 
 .message-content {
-  max-width: 60%;
+  position: relative;
 }
 
 .message-text {
-  background-color: #f0f0f0;
-  padding: 10px 15px;
-  border-radius: 4px;
+  background-color: white;
+  padding: 12px 16px;
+  border-radius: 12px;
   font-size: 14px;
-  color: #333;
+  color: #2c3e50;
+  line-height: 1.5;
   word-break: break-word;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
 }
 
 .message-self .message-text {
-  background-color: #e6f7ff;
+  background-color: #4FAFFF;
+  color: white;
+  border: none;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+  text-align: right;
 }
 
 .message-input {
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
+  padding: 16px 24px;
+  border-top: 1px solid #eef2f7;
   display: flex;
   gap: 12px;
+  background: white;
 }
 
 .message-input .el-input {
   flex: 1;
 }
 
+.message-input .el-textarea__inner {
+  border-radius: 8px;
+  border-color: #e2e8f0;
+  padding: 8px 12px;
+  font-size: 14px;
+  resize: none;
+  transition: all 0.3s ease;
+}
+
+.message-input .el-textarea__inner:focus {
+  border-color: #4FAFFF;
+  box-shadow: 0 0 0 2px rgba(79, 175, 255, 0.1);
+}
+
 .message-input .el-button {
   align-self: flex-end;
+  height: 36px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  transition: all 0.3s ease;
+}
+
+.send-icon {
+  width: 18px;
+  height: 18px;
+  filter: brightness(0) invert(1);
+}
+
+.message-input .el-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 175, 255, 0.2);
+}
+
+.message-input .el-button:disabled {
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 </style>
