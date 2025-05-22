@@ -3557,7 +3557,7 @@ def get_agent_reports(request):
             "reason": r.reason,
             "is_processed": r.is_processed,
             "process_result": r.process_result,
-            "processed_by": r.processed_by.account if r.processed_by else "",
+            "processed_by": r.processed_by.username if r.processed_by else "",
             "report_time": r.report_time.strftime("%Y-%m-%d %H:%M:%S"),
             "processed_time": r.processed_time.strftime("%Y-%m-%d %H:%M:%S") if r.processed_time else ""
         })
