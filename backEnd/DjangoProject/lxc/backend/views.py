@@ -178,15 +178,11 @@ def user_login_by_code(request):
 
         stored_code = redis_client.get(f'verification_code_{email}')
         if not stored_code or stored_code != code:
-            return JsonResponse({
-                'code': -1,
-                'message': '验证码不正确或已过期'
-            })
+            return JsonResponse({'code': -1, 'message': '验证码不正确或已过期'})
 
         redis_client.delete(f'verification_code_{email}')
 
         is_new_user = False
-
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
@@ -196,39 +192,31 @@ def user_login_by_code(request):
                 username=username,
                 email=email,
                 password='123456',
-                avatar_url=default_avatar
+                avatar_url=default_avatar,
+                role='user'  # 默认角色
             )
             is_new_user = True
 
-        # 检查封禁状态
         ban_message = check_user_ban_status(user)
         if ban_message:
-            return JsonResponse({
-                'code': -1,
-                'message': ban_message
-            })
+            return JsonResponse({'code': -1, 'message': ban_message})
 
         token = str(uuid.uuid4())
         redis_client.setex(f'token_{user.user_id}', 1800, token)
 
-        UserLog.objects.create(
-            user=user,
-            type='login',
-        )
+        UserLog.objects.create(user=user, type='login')
 
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
             'token': token,
             'id': user.user_id,
+            'role': user.role,
             'is_new_user': is_new_user
         })
 
     except Exception as e:
-        return JsonResponse({
-            'code': -1,
-            'message': str(e)
-        })
+        return JsonResponse({'code': -1, 'message': str(e)})
 
 """
 用户密码登录接口
@@ -240,6 +228,7 @@ def user_login_by_password(request):
         account = data.get('account', None)
         password = data.get('password', None)
 
+        user = None
         if '@' in account and '.' in account:
             try:
                 user = User.objects.get(email=account)
@@ -247,30 +236,13 @@ def user_login_by_password(request):
                 return JsonResponse({'code': -1, 'message': '用户不存在'})
         else:
             try:
-                admin = Administrator.objects.get(account=account)
-                if admin.password != password:
-                    return JsonResponse({'code': -1, 'message': '密码错误'})
-                token = str(uuid.uuid4())
-                redis_client.setex(f'token_{admin.admin_id}', 1800, token)
-                return JsonResponse({
-                    'code': 0,
-                    'message': '登录成功',
-                    'token': token,
-                    'id': admin.admin_id,
-                })
-            except Administrator.DoesNotExist:
-                try:
-                    user = User.objects.get(username=account)
-                except User.DoesNotExist:
-                    return JsonResponse({'code': -1, 'message': '用户不存在'})
+                user = User.objects.get(username=account)
+            except User.DoesNotExist:
+                return JsonResponse({'code': -1, 'message': '用户不存在'})
 
-        # 检查封禁状态
         ban_message = check_user_ban_status(user)
         if ban_message:
-            return JsonResponse({
-                'code': -1,
-                'message': ban_message
-            })
+            return JsonResponse({'code': -1, 'message': ban_message})
 
         if user.password != password:
             return JsonResponse({'code': -1, 'message': '密码错误'})
@@ -278,26 +250,21 @@ def user_login_by_password(request):
         token = str(uuid.uuid4())
         redis_client.setex(f'token_{user.user_id}', 1800, token)
 
-        UserLog.objects.create(
-            user=user,
-            type='login',
-        )
+        UserLog.objects.create(user=user, type='login')
 
         return JsonResponse({
             'code': 0,
             'message': '登录成功',
             'token': token,
-            'id': user.user_id
+            'id': user.user_id,
+            'role': user.role
         })
 
     except Exception as e:
         return JsonResponse({'code': -1, 'message': str(e)})
-
-
 """
 用户修改个人信息接口
 """
-
 
 def user_update_profile(request):
     try:
