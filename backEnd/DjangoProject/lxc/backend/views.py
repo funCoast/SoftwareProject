@@ -166,6 +166,7 @@ def send_code(request):
         return JsonResponse({'code': -1, 'message': '邮件服务暂不可用'}, status=503)
     except Exception as e:
         return JsonResponse({'code': -1, 'message': str(e)}, status=500)
+
 '''
 用户验证码登录接口
 '''
@@ -262,10 +263,10 @@ def user_login_by_password(request):
 
     except Exception as e:
         return JsonResponse({'code': -1, 'message': str(e)})
+
 """
 用户修改个人信息接口
 """
-
 def user_update_profile(request):
     try:
         uid = request.POST.get('uid')
