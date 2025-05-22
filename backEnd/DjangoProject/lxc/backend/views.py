@@ -3586,8 +3586,8 @@ def process_agent_report(request):
 
     try:
         report = AgentReport.objects.get(report_id=report_id)
-        admin = Administrator.objects.get(admin_id=admin_id)
-    except (AgentReport.DoesNotExist, Administrator.DoesNotExist):
+        admin = User.objects.get(user_id=admin_id)
+    except (AgentReport.DoesNotExist, User.DoesNotExist):
         return JsonResponse({"code": -1, "message": "举报记录或管理员不存在"})
 
     if report.is_processed:
