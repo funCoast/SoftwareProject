@@ -8,6 +8,17 @@ const currentPage = ref(1)
 const itemsPerPage = ref(12)
 const baseImageUrl = "http://122.9.33.84:8000"
 
+const categoryIcons: Record<string, string> = {
+  all: 'https://api.iconify.design/material-symbols:category.svg',
+  教育学习: 'https://api.iconify.design/material-symbols:school.svg',
+  法律服务: 'https://api.iconify.design/material-symbols:gavel.svg',
+  医疗健康: 'https://api.iconify.design/material-symbols:health-and-safety.svg',
+  设计创意: 'https://api.iconify.design/material-symbols:palette.svg',
+  旅游出行: 'https://api.iconify.design/material-symbols:flight.svg',
+  娱乐游戏: 'https://api.iconify.design/material-symbols:sports-esports.svg',
+  其他: 'https://api.iconify.design/material-symbols:more-horiz.svg',
+}
+
 interface agent {
   id: number
   name: string
@@ -92,53 +103,15 @@ onMounted(() => {
   <div class="community-container">
     <!-- 二级导航栏 -->
     <div class="sub-nav">
-      <div class="sub-nav-item" :class="{ active: currentTag === 'all' }" @click="currentTag = 'all'">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-        </svg>
-        全部
-      </div>
-      <div class="sub-nav-item" :class="{ active: currentTag === '教育学习' }" @click="currentTag = '教育学习'">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
-        </svg>
-        教育学习
-      </div>
-      <div class="sub-nav-item" :class="{ active: currentTag === '法律服务' }" @click="currentTag = '法律服务'">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-        </svg>
-        法律服务
-      </div>
-      <div class="sub-nav-item" :class="{ active: currentTag === '医疗健康' }" @click="currentTag = '医疗健康'">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M19 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z"/>
-        </svg>
-        医疗健康
-      </div>
-      <div class="sub-nav-item" :class="{ active: currentTag === '设计创意' }" @click="currentTag = '设计创意'">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5l7.51-3.49L17.5 6.5 9.99 9.99 6.5 17.5zm5.5-6.6c.61 0 1.1.49 1.1 1.1s-.49 1.1-1.1 1.1-1.1-.49-1.1-1.1.49-1.1 1.1-1.1z"/>
-        </svg>
-        设计创意
-      </div>
-      <div class="sub-nav-item" :class="{ active: currentTag === '旅游出行' }" @click="currentTag = '旅游出行'">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-        </svg>
-        旅游出行
-      </div>
-      <div class="sub-nav-item" :class="{ active: currentTag === '娱乐游戏' }" @click="currentTag = '娱乐游戏'">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M15 7.5V2H9v5.5l3 3 3-3zM7.5 9H2v6h5.5l3-3-3-3zM9 16.5V22h6v-5.5l-3-3-3 3zM16.5 9l-3 3 3 3H22V9h-5.5z"/>
-        </svg>
-        娱乐游戏
-      </div>
-      <div class="sub-nav-item" :class="{ active: currentTag === '其他' }" @click="currentTag = '其他'">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
-        </svg>
-        其他
+      <div
+        v-for="(icon, category) in categoryIcons"
+        :key="category"
+        class="sub-nav-item"
+        :class="{ active: currentTag === category }"
+        @click="currentTag = category"
+      >
+        <img :src="icon" :alt="category" class="sub-icon" />
+        {{ category === 'all' ? '全部' : category }}
       </div>
     </div>
 
@@ -250,41 +223,67 @@ onMounted(() => {
 <style scoped>
 .community-container {
   display: flex;
-  height: 100%;
-  background: #f8f9fa;
+  height: 100vh;
+  background: #fdfdfd;
+  overflow: hidden;
 }
 
 .sub-nav {
-  width: 150px;
-  background: white;
-  padding: 20px 0;
-  border-right: 1px solid #e9ecef;
+  width: 120px;
+  background: #ffffff;
+  flex-direction: column;
+  margin-left: 0;
+  border-left: none; /* 移除可能自带的边框 */
+  z-index: 2;
+  border-right: 1px solid #e0e0e0;
+  padding-left: -5px;
+  position: relative;
+  left: -1px; /* ✅ 向左吸附，覆盖分隔线缝隙 */
+  border-left: none;      /* 避免双线 */
 }
 
 .sub-nav-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  color: #666;
-  cursor: pointer;
+  padding: 12px 0;
+  width: 100%;
+  color: #4FAFFF;
+  font-size: 12px;
   transition: all 0.3s ease;
+  cursor: pointer;
+  border-bottom: 1px solid #cce0f3; /* ✅ 添加分割线 */
 }
 
-.sub-nav-item:hover {
-  background: #f8f9fa;
-  color: #2c3e50;
+.sub-nav-item:last-child {
+  border-bottom: none; /* ✅ 最后一项不加分割线 */
 }
 
+.sub-nav-item:hover,
 .sub-nav-item.active {
-  background: #2c3e50;
-  color: white;
+  background-color: #b3d9f9;
+  color: #1277d3;
+}
+
+.sub-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.sub-nav-item:hover .sub-icon,
+.sub-nav-item.active .sub-icon {
+  opacity: 0.95;
 }
 
 .content {
+    position: relative;
   flex: 1;
-  padding: 20px;
+  padding: 24px 36px 80px;
   overflow-y: auto;
+  background: #fdfdfd;
+  color: #333;
 }
 
 .header {
@@ -306,49 +305,13 @@ onMounted(() => {
   align-items: center;
 }
 
-.filter-select {
-  padding: 8px 12px;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  background: white;
-  color: #2c3e50;
-  cursor: pointer;
-}
-
+.filter-select,
 .search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  padding: 6px 10px;
+  border: 1px solid #cce0f3;
+  border-radius: 6px;
   background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  flex: 1;
-  max-width: 300px;
-}
-
-.search-box input {
-  border: none;
-  outline: none;
-  width: 100%;
-  color: #2c3e50;
-}
-
-.publish-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #2c3e50;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.publish-btn:hover {
-  background: #34495e;
+  font-size: 13px;
 }
 
 .agent-list {
@@ -387,14 +350,13 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 8px; /* 确保图片的圆角与容器一致 */
+  border-radius: 8px;
 }
 
 .agent-info {
   margin: 18px 0 0 10px;
   width: 200px;
   height: 130px;
-  justify-content: space-between;
 }
 
 .agent-header {
@@ -441,29 +403,28 @@ onMounted(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-line-clamp: 3; /* 限制描述显示三行 */
-  line-clamp: 3; /* Standard property for compatibility */
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 .agent-stats {
   display: flex;
-  justify-content: space-between; /* 平均分布 */
+  justify-content: space-between;
   align-items: center;
   padding-top: 10px;
-  border-top: 1px solid #eee; /* 添加分隔线 */
+  border-top: 1px solid #eee;
 }
 
 .stat-item {
-  margin-left: 5px;
-  margin-right: 5px;
+  margin: 0 5px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #666;
   font-size: 13px;
   padding: 4px 0;
-  flex: 1; /* 平均分配宽度 */
-  text-align: center; /* 居中对齐 */
+  flex: 1;
+  text-align: center;
   background: #f8f9fa;
   border-radius: 8px;
   transition: all 0.3s ease;
@@ -478,58 +439,53 @@ onMounted(() => {
   height: 16px;
 }
 
-.stat-item svg.usage-icon {
-  color: #e74c3c;
-}
-
 .stat-item svg.like-icon {
-  color: #e74c3c;
+  color: #e74c3c; /* 红色：表示点赞 */
 }
 
 .stat-item svg.favorite-icon {
-  color: #f1c40f;
+  color: #f1c40f; /* 黄色：表示收藏 */
+}
+
+.stat-item svg.comment-icon {
+  color: #409EFF; /* 蓝色：表示评论数，与 Element Plus 主色调一致 */
 }
 
 .pagination {
-  position: fixed;
-  bottom: 20px;
-  width: 500px;
-  left: 250px;
-  right: 0;
-  margin-left: auto;
-  margin-right: auto;
-  height: 50px;
+  position: absolute;
+  bottom: 24px; /* 距离底部的距离 */
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  background: #ffffff;
+  border: 1px solid #d0e6f7;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   display: flex;
-  justify-content: center;
   align-items: center;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  gap: 12px;
+  font-size: 13px;
+  z-index: 10;
 }
 
 .pagination button {
-  background: #f8f9fa;
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid #4FAFFF;
+  background: white;
+  color: #4FAFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  color: #2c3e50;
-}
-
-.pagination button svg {
-  width: 20px;
-  height: 20px;
-  color: #2c3e50;
+  transition: all 0.2s ease;
+  padding: 0;
 }
 
 .pagination button:hover:not(:disabled) {
-  background: #e9ecef;
-  transform: scale(1.1);
+  background-color: #eaf4ff;
 }
 
 .pagination button:disabled {
@@ -538,8 +494,8 @@ onMounted(() => {
 }
 
 .page-info {
-  color: #666;
-  font-size: 14px;
+  font-size: 13px;
+  color: #4FAFFF;
 }
 
 .no-content {

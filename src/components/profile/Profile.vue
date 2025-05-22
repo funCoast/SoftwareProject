@@ -318,8 +318,8 @@ function logout() {
 
     <!-- 内容切换栏 -->
     <div class="content-tabs">
-      <div 
-        v-for="tab in tabs" 
+      <div
+        v-for="tab in tabs"
         :key="tab.id"
         class="tab-item"
         :class="{ active: currentTab === tab.id }"

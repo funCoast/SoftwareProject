@@ -156,7 +156,7 @@ function goBack() {
         <span>返回</span>
       </div>
     </div>
-    
+
     <div class="edit-form">
       <div class="form-section avatar-section">
         <label>头像</label>
@@ -170,23 +170,23 @@ function goBack() {
           </div>
         </div>
       </div>
-      
+
       <div class="form-section">
         <label for="name">昵称</label>
-        <input 
-          type="text" 
-          id="name" 
-          v-model="name" 
+        <input
+          type="text"
+          id="name"
+          v-model="name"
           class="form-input"
           placeholder="请输入昵称"
         >
       </div>
-      
+
       <div class="form-section">
         <label for="description">个人描述</label>
-        <textarea 
-          id="description" 
-          v-model="description" 
+        <textarea
+          id="description"
+          v-model="description"
           class="form-textarea"
           placeholder="介绍一下自己吧"
           rows="4"
@@ -199,9 +199,9 @@ function goBack() {
       </div>
 
       <el-dialog v-model="dialogVisible" title="修改密码" width="500">
-        <el-row class="row"> 
+        <el-row class="row">
           <el-input class="input" v-model="oldPwd" type="password" placeholder="原密码（初始密码为123456）" maxlength="25"/>
-        </el-row>  
+        </el-row>
         <el-row class="row">
           <el-input class="input" v-model="newPwd" type="password" placeholder="新密码" maxlength="25"/>
         </el-row>
@@ -215,7 +215,7 @@ function goBack() {
           </div>
         </template>
       </el-dialog>
-  
+
     </div>
   </div>
 </template>
@@ -384,7 +384,7 @@ function goBack() {
 
 .row {
   min-height: 15px;
-  width: 300px; 
+  width: 300px;
   margin: 10px, auto;
 }
 
@@ -394,4 +394,4 @@ function goBack() {
   margin-right: auto;
   margin-bottom: 10px;
 }
-</style> 
+</style>

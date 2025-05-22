@@ -39,34 +39,90 @@ function handleNavigation(dst: string) {
 <style scoped>
 .workspace-container {
   display: flex;
-  height: 100%;
-  background: #f8f9fa;
+  height: 100vh; /* 高度占满整屏 */
+  background: #fdfdfd;
+  overflow: hidden;
 }
 
 .sub-nav {
-  width: 150px;
-  background: white;
-  padding: 20px 0;
-  border-right: 1px solid #e9ecef;
+  width: 120px; /* ✅ 与 community 页面统一宽度 */
+  background: #ffffff;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%; /* ✅ 占满父容器高度 */
+  border-right: 1px solid #e0e0e0;
+  box-sizing: border-box;
+  position: relative;
+  left: -1px; /* ✅ 贴合主菜单，避免间隙 */
 }
 
 .sub-nav-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0;
+  font-size: 12px;
+  color: #4FAFFF;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid #cce0f3; /* ✅ 增加分割线 */
+}
+
+.sub-nav-item:last-child {
+  border-bottom: none;
+}
+
+.sub-nav-item.active,
+.sub-nav-item:hover {
+  background-color: #b3d9f9; /* 与 main/community 统一 */
+  color: #1277d3;
+}
+
+.sub-nav-item svg {
+  fill: #909399;
+  opacity: 0.85;
+  transition: fill 0.3s ease;
+}
+
+.sub-nav-item.active svg,
+.sub-nav-item:hover svg {
+  fill: #000000;
+  opacity: 1;
+}
+
+.create-agent,
+.create-resource {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  color: #666;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #4FAFFF;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   transition: all 0.3s ease;
 }
 
-.sub-nav-item:hover {
-  background: #f8f9fa;
-  color: #2c3e50;
+.create-agent:hover,
+.create-resource:hover {
+  background: #1277d3;
+  transform: translateY(-2px);
 }
 
-.sub-nav-item.active {
-  background: #2c3e50;
-  color: white;
+.create-agent svg,
+.create-resource svg {
+  width: 18px;
+  height: 18px;
 }
-</style> 
+
+</style>
