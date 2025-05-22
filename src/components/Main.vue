@@ -123,43 +123,6 @@ function toDocument() {
 }
 </script>
 
-<template>
-  <div class="app-container">
-    <!-- 侧边导航栏 -->
-    <div class="side-nav">
-      <!-- 用户信息区域 -->
-      <div class="user-section">
-        <div class="user-info">
-          <img :src="avatar" alt="avatar" class="avatar" @click="handleProfileNavigation">
-        </div>
-        <div class="action-buttons">
-          <div class="action-button" @click="toMessage">
-            <img src="https://api.iconify.design/material-symbols:chat.svg" alt="私信" class="nav-icon">
-          </div>
-          <div class="action-button" @click="toDocument">
-            <img src="https://api.iconify.design/material-symbols:menu-book.svg" alt="使用文档" class="nav-icon">
-          </div>
-        </div>
-      </div>
-
-      <!-- 导航菜单 -->
-      <nav>
-        <ul>
-          <li v-for="item in filteredNavItems" :key="item.path" :class="{ active: cur === item.path }" @click="handleNavigation(item.path)">
-            <img :src="item.icon" :alt="item.label" class="nav-icon">
-            <span>{{ item.label }}</span>
-          </li>
-        </ul>
-      </nav>
-    </div>
-
-    <!-- 主要内容区域 -->
-    <div class="main-content">
-      <router-view :avatar="avatar"></router-view>
-    </div>
-  </div>
-</template>
-
 <style scoped>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
