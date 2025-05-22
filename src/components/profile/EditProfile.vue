@@ -16,6 +16,7 @@ const showAvatar = computed(() => {
   }
 })
 
+
 const route = useRoute()
 const fileInput = ref<HTMLInputElement | null>(null);
 
