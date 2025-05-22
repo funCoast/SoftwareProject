@@ -108,20 +108,33 @@ function generateSelectValue(val?: Input['value']): string {
 
 // 处理选择变化
 function onSelectChange(val: string) {
-  if (!val) return
-  const [nodeId, outputId] = val.split('|').map(Number)
-  const node = allUpstreamNodes.value.find(n => n.id === nodeId)
-  const output = node?.outputs?.find(o => o.id === outputId)
+  if (val === 'manual') {
+    input.value = {
+      id: 0,
+      name: 'query',
+      type: 'string',
+      value: {
+        type: 0,
+        nodeId: -1,
+        outputId: -1,
+        text: ''
+      }
+    }
+  } else {
+    const [nodeId, outputId] = val.split('|').map(Number)
+    const node = allUpstreamNodes.value.find(n => n.id === nodeId)
+    const output = (node?.outputs || []).find(o => o.id === outputId) as { id: number; name: string; type: string } | undefined
 
-  input.value = {
-    id: 0,
-    name: output?.name || '',
-    type: output?.type || 'string',
-    value: {
-      type: 1,
-      nodeId,
-      outputId,
-      text: ''
+    input.value = {
+      id: 0,
+      name: output?.name || '',
+      type: output?.type || 'string',
+      value: {
+        type: 1,
+        nodeId,
+        outputId,
+        text: ''
+      }
     }
   }
   updateNode()
@@ -215,14 +228,18 @@ onMounted(() => {
       
       <div class="input-config">
         <div class="form-group">
-          <label>选择上游输出</label>
+          <label>输入来源</label>
           <el-select
             :model-value="generateSelectValue(input.value)"
-            placeholder="选择上游节点的输出变量"
+            placeholder="选择输入来源"
             size="small"
             class="source-select"
             @change="onSelectChange"
           >
+            <el-option
+              label="手动输入"
+              value="manual"
+            />
             <template v-for="node in allUpstreamNodes" :key="node.id">
               <el-option
                 v-for="(nodeOutput, idx) in node.outputs"
@@ -234,7 +251,18 @@ onMounted(() => {
           </el-select>
         </div>
 
-        <div v-if="input.value.nodeId !== -1" class="input-info">
+        <div v-if="!input.value.type || input.value.type !== 1" class="form-group">
+          <label>输入内容</label>
+          <el-input
+            v-model="input.value.text"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入查询内容"
+            @input="updateNode"
+          />
+        </div>
+
+        <div v-else class="input-info">
           <div class="info-item">
             <label>变量名称:</label>
             <span>{{ input.name }}</span>
