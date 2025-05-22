@@ -20,6 +20,11 @@ class User(models.Model):
     registered_at = models.DateTimeField(auto_now_add=True)
     avatar_url = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    ROLE_CHOICES = [
+        ('user', '用户'),
+        ('admin', '管理员'),
+    ]
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
 
     def __str__(self):
         return self.username
