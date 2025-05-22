@@ -139,12 +139,14 @@ function toDocument() {
 
 .side-nav {
   width: 100px;
-  background-color: transparent; /* 原蓝色背景去除 */
+  background-color: #ffffff;
   padding: 20px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-right: 1px solid #e0e0e0; /* 添加右侧浅灰边框 */
+  border-right: 1px solid #e0e0e0;
+  z-index: 2;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
 }
 
 /* 用户信息区域样式 */
@@ -154,56 +156,66 @@ function toDocument() {
   flex-direction: column;
   align-items: center;
   margin-bottom: 20px;
+  width: 100%;
+  border-bottom: 1px solid #eef2f7;
 }
 
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  margin-bottom: 12px;
+  margin-bottom: 15px;
   cursor: pointer;
-  transition: transform 0.3s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* 头像立体感 */
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  border: 2px solid #ffffff;
 }
+
 .avatar:hover {
-  transform: scale(1.1);
+  transform: scale(1.08);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
 }
 
 .button-group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
+  width: 100%;
 }
 
 .icon-button {
-  width: 40px;
-  height: 40px;
-  background-color: white;
+  width: 42px;
+  height: 42px;
+  background-color: #ffffff;
   border: 2px solid #4FAFFF;
-  border-radius: 50%;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* 阴影增加立体感 */
+  box-shadow: 0 2px 6px rgba(79, 175, 255, 0.15);
 }
+
 .icon-button:hover {
-  background-color: #e6f3ff;
-  transform: scale(1.05);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  background-color: #4FAFFF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 175, 255, 0.25);
+}
+
+.icon-button:hover img {
+  filter: brightness(0) invert(1);
 }
 
 .icon-button img {
-  width: 18px;
-  height: 18px;
-  filter: none;
-  opacity: 0.8;
+  width: 20px;
+  height: 20px;
+  transition: all 0.3s ease;
 }
 
 nav {
   width: 100%;
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
 nav ul {
@@ -214,26 +226,38 @@ nav ul {
 }
 
 nav ul li {
-  padding: 12px 0;
+  padding: 14px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-
-  border-bottom: 1px solid #cce0f3;  /* ✅ 更深一点蓝 */
   cursor: pointer;
-  color: #4FAFFF;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  color: #94a3b8;
+  transition: all 0.3s ease;
+  position: relative;
+  margin: 4px 0;
 }
 
-nav ul li:last-child {
-  border-bottom: none;
+nav ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 4px;
+  height: 0;
+  background-color: #4FAFFF;
+  transition: height 0.3s ease;
+  border-radius: 0 4px 4px 0;
+}
+
+nav ul li:hover::before,
+nav ul li.active::before {
+  height: 100%;
 }
 
 nav ul li:hover,
 nav ul li.active {
-  background-color: #b3d9f9; /* ✅ 更深一点的蓝色，比 d6ecfb 更明显 */
-  color: #1277d3;           /* ✅ 更有层次的深蓝字体 */
+  background-color: #f1f5f9;
+  color: #4FAFFF;
 }
 
 .nav-icon {
@@ -241,21 +265,23 @@ nav ul li.active {
   height: 24px;
   display: block;
   margin-bottom: 6px;
-  opacity: 0.6; /* 默认浅灰色 */
-  transition: opacity 0.3s ease;
-  filter: none; /* ✅ 移除反转、变白逻辑 */
+  opacity: 0.7;
+  transition: all 0.3s ease;
 }
 
 nav ul li:hover .nav-icon,
 nav ul li.active .nav-icon {
-  opacity: 0.95; /* ✅ 更深的灰色 */
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 nav ul li span {
   font-size: 12px;
   display: block;
   line-height: 1.2;
-  margin-top: 2px;
+  margin-top: 4px;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .menu-group {

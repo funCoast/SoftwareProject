@@ -246,23 +246,35 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 0;
+  padding: 16px 0;
   width: 100%;
-  color: #4FAFFF;
-  font-size: 12px;
+  color: #94a3b8;
+  font-size: 13px;
   transition: all 0.3s ease;
   cursor: pointer;
-  border-bottom: 1px solid #cce0f3; /* ✅ 添加分割线 */
+  position: relative;
+  margin: 4px 0;
+  height: 72px; /* 添加固定高度 */
+  box-sizing: border-box; /* 确保padding不会增加元素实际高度 */
 }
 
-.sub-nav-item:last-child {
-  border-bottom: none; /* ✅ 最后一项不加分割线 */
+.sub-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0; /* 确保从顶部开始 */
+  width: 4px;
+  height: 100%; /* 使用100%而不是动态高度 */
+  background-color: #4FAFFF;
+  opacity: 0; /* 默认不可见 */
+  transition: opacity 0.3s ease;
+  border-radius: 0 4px 4px 0;
 }
 
-.sub-nav-item:hover,
-.sub-nav-item.active {
-  background-color: #b3d9f9;
-  color: #1277d3;
+.sub-nav-item:hover::before,
+.sub-nav-item.active::before {
+  opacity: 1; /* 悬停和激活时显示 */
+  height: 100%;
 }
 
 .sub-icon {

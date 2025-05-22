@@ -686,16 +686,43 @@ const filteredResources = computed(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #2c3e50;
+  background: #4FAFFF;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(79, 175, 255, 0.15);
   transition: all 0.3s ease;
+  font-size: 14px;
 }
 
 .create-btn:hover {
-  background: #34495e;
+  background: #1277d3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 175, 255, 0.25);
+}
+
+.create-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+}
+
+.dropdown-item:hover {
+  background: #f1f5f9;
+  color: #4FAFFF;
+}
+
+.dropdown-item svg {
+  width: 16px;
+  height: 16px;
 }
 
 .filter-bar {

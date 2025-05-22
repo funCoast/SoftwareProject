@@ -147,6 +147,20 @@ function goToAgentDetail(agentId: number) {
     path: `/agentDetail/${agentId}`
   })
 }
+
+// 添加标题计算属性
+const currentTitle = computed(() => {
+  switch (currentAgentTab.value) {
+    case 'hot':
+      return '热度推荐'
+    case 'following':
+      return '关注用户智能体'
+    case 'favorite':
+      return '收藏智能体'
+    default:
+      return '智能体推荐'
+  }
+})
 </script>
 
 <template>
@@ -174,7 +188,7 @@ function goToAgentDetail(agentId: number) {
       <!-- 右侧智能体推荐板块 -->
       <div class="agent-section">
         <div class="section-header">
-          <h2>智能体推荐</h2>
+          <h2>{{ currentTitle }}</h2>
           <div class="tab-switch">
             <span
                 :class="{ active: currentAgentTab === 'hot' }"
@@ -288,38 +302,167 @@ function goToAgentDetail(agentId: number) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding: 0 10px;
 }
 
 .section-header h2 {
   margin: 0;
   color: #2c3e50;
+  font-size: 22px;
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+}
+
+.section-header h2::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #4FAFFF;
+  border-radius: 2px;
 }
 
 .tab-switch {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  background: #f8f9fa;
+  padding: 4px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .tab-switch span {
-  padding: 5px 10px;
+  padding: 8px 16px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-switch span:hover {
+  color: #4FAFFF;
+  background: rgba(79, 175, 255, 0.1);
 }
 
 .tab-switch span.active {
-  background-color: #2c3e50;
+  background: #4FAFFF;
   color: white;
+  box-shadow: 0 2px 8px rgba(79, 175, 255, 0.3);
+}
+
+.tab-switch span::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+.tab-switch span:active::before {
+  width: 100px;
+  height: 100px;
+  opacity: 0;
 }
 
 .notice-section {
   width: 300px;
   height: 750px;
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.notice-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #4FAFFF, #7cc5ff);
+  border-radius: 16px 16px 0 0;
+}
+
+.notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.notice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background-color: #f8f9fa;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(79, 175, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.notice-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: #4FAFFF;
+  border-radius: 0 2px 2px 0;
+  opacity: 0.6;
+}
+
+.notice-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  border-color: rgba(79, 175, 255, 0.2);
+}
+
+.notice-text {
+  flex: 1;
+}
+
+.notice-text h4 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.notice-text p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.notice-time {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 8px;
+  display: block;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.06);
 }
 
 .agent-section {
@@ -329,38 +472,8 @@ function goToAgentDetail(agentId: number) {
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: relative;
 }
-.notice-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.notice-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 6px;
-  background-color: #f8f9fa;
-}
-
-.notice-item i {
-  color: #3498db;
-  font-size: 20px;
-}
-
-.notice-text h4 {
-  margin: 0 0 5px 0;
-  color: #2c3e50;
-}
-
-.notice-text p {
-  margin: 0;
-  color: #666;
-  font-size: 14px;
-}
-
 .agent-content {
   flex: 1;
   overflow-y: auto;
@@ -509,59 +622,50 @@ function goToAgentDetail(agentId: number) {
 }
 
 .pagination {
-  margin-top: auto;
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  background: #ffffff;
+  border: 1px solid #d0e6f7;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 15px;
-  margin-top: 10px;
-  padding: 10px;
-  background: transparent;
+  gap: 12px;
+  font-size: 13px;
+  z-index: 10;
 }
 
 .pagination button {
-  background: #f8f9fa;
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid #4FAFFF;
+  background: white;
+  color: #4FAFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  color: #2c3e50;
-}
-
-.pagination button svg {
-  width: 20px;
-  height: 20px;
-  color: #2c3e50;
+  transition: all 0.2s ease;
+  padding: 0;
 }
 
 .pagination button:hover:not(:disabled) {
-  background: #e9ecef;
-  transform: scale(1.1);
+  background-color: #eaf4ff;
 }
 
 .pagination button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
 }
 
 .page-info {
-  color: #2c3e50;
-  font-size: 16px;
-  font-weight: 500;
-  padding: 0 15px;
-}
-
-.notice-time {
-  font-size: 12px;
-  color: #999;
-  margin-top: 5px;
-  display: block;
+  font-size: 13px;
+  color: #4FAFFF;
 }
 
 .no-content {

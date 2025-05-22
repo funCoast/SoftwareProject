@@ -16,17 +16,20 @@ function handleNavigation(dst: string) {
   <div class="workspace-container">
     <!-- 二级导航栏 -->
     <div class="sub-nav">
-      <div class="sub-nav-item" :class="{ active: currentView === 'agent' }" @click="handleNavigation('agentDevelopment')">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-          <path d="M7 12h2v5H7zm4-7h2v3h-2zm4 2h2v7h-2z"/>
-        </svg>
+      <div
+          class="sub-nav-item"
+          :class="{ active: currentView === 'agent' }"
+          @click="handleNavigation('agentDevelopment')"
+      >
+        <img src="https://api.iconify.design/material-symbols:smart-toy.svg" alt="智能体开发" class="sub-icon" />
         智能体开发
       </div>
-      <div class="sub-nav-item" :class="{ active: currentView === 'resource' }" @click="handleNavigation('resourceLibrary')">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/>
-        </svg>
+      <div
+          class="sub-nav-item"
+          :class="{ active: currentView === 'resource' }"
+          @click="handleNavigation('resourceLibrary')"
+      >
+        <img src="https://api.iconify.design/material-symbols:folder.svg" alt="资源库" class="sub-icon" />
         资源库
       </div>
     </div>
@@ -39,59 +42,75 @@ function handleNavigation(dst: string) {
 <style scoped>
 .workspace-container {
   display: flex;
-  height: 100vh; /* 高度占满整屏 */
+  height: 100vh;
   background: #fdfdfd;
   overflow: hidden;
 }
 
 .sub-nav {
-  width: 120px; /* ✅ 与 community 页面统一宽度 */
+  width: 120px;
   background: #ffffff;
-  padding: 0;
-  display: flex;
   flex-direction: column;
-  align-items: center;
-  height: 100%; /* ✅ 占满父容器高度 */
+  margin-left: 0;
+  border-left: none;
+  z-index: 2;
   border-right: 1px solid #e0e0e0;
-  box-sizing: border-box;
+  padding-left: -5px;
   position: relative;
-  left: -1px; /* ✅ 贴合主菜单，避免间隙 */
+  left: -1px;
+  border-left: none;
 }
 
 .sub-nav-item {
-  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 0;
-  font-size: 12px;
-  color: #4FAFFF;
-  cursor: pointer;
+  padding: 16px 0;
+  width: 100%;
+  color: #94a3b8;
+  font-size: 13px;
   transition: all 0.3s ease;
-  border-bottom: 1px solid #cce0f3; /* ✅ 增加分割线 */
+  cursor: pointer;
+  position: relative;
+  margin: 4px 0;
+  height: 72px;
+  box-sizing: border-box;
 }
 
-.sub-nav-item:last-child {
-  border-bottom: none;
+.sub-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background-color: #4FAFFF;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 0 4px 4px 0;
 }
 
-.sub-nav-item.active,
-.sub-nav-item:hover {
-  background-color: #b3d9f9; /* 与 main/community 统一 */
-  color: #1277d3;
-}
-
-.sub-nav-item svg {
-  fill: #909399;
-  opacity: 0.85;
-  transition: fill 0.3s ease;
-}
-
-.sub-nav-item.active svg,
-.sub-nav-item:hover svg {
-  fill: #000000;
+.sub-nav-item:hover::before,
+.sub-nav-item.active::before {
   opacity: 1;
+  height: 100%;
+}
+
+.sub-icon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.sub-nav-item:hover .sub-icon,
+.sub-nav-item.active .sub-icon {
+  opacity: 0.95;
+}
+
+.sub-nav-item:hover,
+.sub-nav-item.active {
+  color: #4FAFFF;
 }
 
 .create-agent,
