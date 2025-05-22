@@ -1,4 +1,3 @@
-from api.core.plugin.plugins.audio.Speech2TextPlugin import SpeechToTextPlugin
 from api.core.plugin.plugins.code.code_run_plugin import CodeRunPlugin
 from api.core.plugin.plugins.time.current_time_plugin import CurrentTimePlugin
 from api.core.plugin.plugins.time.timestamp_pulgin import TimestampPlugin
@@ -15,5 +14,4 @@ def register_plugins(plugin_manager):
     plugin_manager.register_plugin(TimezoneSwitchPlugin)
     plugin_manager.register_plugin(WeekdayCalculatorPlugin)
     plugin_manager.register_plugin(CodeRunPlugin)
-    plugin_manager.register_plugin(SpeechToTextPlugin)
     plugin_manager.register_plugin(WeatherScraperPlugin)
