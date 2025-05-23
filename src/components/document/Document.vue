@@ -27,6 +27,9 @@ import DialogueDebug from "@/components/document/manual/agent/DialogueDebug.vue"
 import AgentIntro from "@/components/document/manual/agent/AgentIntro.vue"
 import ConfigTool from "@/components/document/manual/agent/ConfigTool.vue"
 import Publish from "@/components/document/manual/agent/Publish.vue"
+import KBIntro from "@/components/document/manual/kb/KBIntro.vue"
+import KBManage from "@/components/document/manual/kb/KBManage.vue"
+import KBUse from "@/components/document/manual/kb/KBUse.vue"
 
 const router = useRouter()
 const expandedSections = ref<string[]>(['workflow', 'kb', 'agent'])
@@ -56,11 +59,11 @@ const navItems = [
       {
         id: 'kb',
         label: '知识库',
-        component: Product,
+        component: KBIntro,
         children: [
-          { id: 'kb-intro', label: '简介', component: Product },
-          { id: 'kb-management', label: '管理', component: Product },
-          { id: 'kb-usage', label: '使用', component: Product }
+          { id: 'kb-intro', label: '简介', component: KBIntro },
+          { id: 'kb-management', label: '管理', component: KBManage },
+          { id: 'kb-usage', label: '使用', component: KBUse }
         ]
       },
       {
