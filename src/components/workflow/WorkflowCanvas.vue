@@ -762,11 +762,12 @@ const clearWorkflowCacheAndGoBack = () => {
   background: #f8f9fa;
   margin: 0;
   padding: 0;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 9999;
 }
 
 .top-navbar {
