@@ -86,7 +86,7 @@ const fullscreenContainer = ref<HTMLElement | null>(null)
 // 初始化编辑器
 function initEditor() {
   if (!editorContainer.value) return
-  
+
   // 配置编辑器主题
   monaco.editor.defineTheme('customTheme', {
     base: 'vs',
@@ -108,7 +108,8 @@ function initEditor() {
     padding: { top: 10, bottom: 10 },
     automaticLayout: true,
     tabSize: 4,
-    wordWrap: 'on'
+    wordWrap: 'off',
+    lineNumbersMinChars: 4
   })
 
   // 监听编辑器内容变化
@@ -369,27 +370,27 @@ defineExpose({
         <div class="header-left">
           <h4>代码编辑</h4>
           <el-select
-            v-model="language"
-            size="small"
-            style="width: 120px; margin-left: 12px;"
+              v-model="language"
+              size="small"
+              style="width: 120px; margin-left: 12px;"
           >
             <el-option
-              v-for="lang in languages"
-              :key="lang.value"
-              :label="lang.label"
-              :value="lang.value"
+                v-for="lang in languages"
+                :key="lang.value"
+                :label="lang.label"
+                :value="lang.value"
             />
           </el-select>
         </div>
         <div class="header-right">
-          <img 
-            :src="isFullscreen 
+          <img
+              :src="isFullscreen
               ? 'https://api.iconify.design/material-symbols:fullscreen-exit.svg'
               : 'https://api.iconify.design/material-symbols:fullscreen.svg'"
-            @click="toggleFullscreen"
-            class="fullscreen-icon"
-            :alt="isFullscreen ? '退出全屏' : '全屏'"
-            :title="isFullscreen ? '退出全屏 (ESC)' : '全屏'"
+              @click="toggleFullscreen"
+              class="fullscreen-icon"
+              :alt="isFullscreen ? '退出全屏' : '全屏'"
+              :title="isFullscreen ? '退出全屏 (ESC)' : '全屏'"
           >
         </div>
       </div>
@@ -415,29 +416,29 @@ defineExpose({
         <div v-for="output in outputs" :key="output.id" class="output-item">
           <div class="output-row">
             <el-input
-              v-model="output.name"
-              placeholder="变量名称"
-              size="small"
-              class="name-input"
+                v-model="output.name"
+                placeholder="变量名称"
+                size="small"
+                class="name-input"
             />
             <el-select
-              v-model="output.type"
-              placeholder="选择类型"
-              size="small"
-              class="type-select"
+                v-model="output.type"
+                placeholder="选择类型"
+                size="small"
+                class="type-select"
             >
               <el-option
-                v-for="type in outputTypes"
-                :key="type.value"
-                :label="type.label"
-                :value="type.value"
+                  v-for="type in outputTypes"
+                  :key="type.value"
+                  :label="type.label"
+                  :value="type.value"
               />
             </el-select>
             <el-button
-              type="danger"
-              size="small"
-              @click="removeOutput(output.id)"
-              class="remove-btn"
+                type="danger"
+                size="small"
+                @click="removeOutput(output.id)"
+                class="remove-btn"
             >
               删除
             </el-button>
@@ -448,18 +449,18 @@ defineExpose({
 
     <!-- 运行面板 -->
     <el-dialog
-      v-model="showRunPanel"
-      title="运行代码"
-      width="500px"
-      :close-on-click-modal="false"
+        v-model="showRunPanel"
+        title="运行代码"
+        width="500px"
+        :close-on-click-modal="false"
     >
       <div class="run-panel">
         <div v-for="(input, name) in runInputs" :key="name" class="run-input-item">
           <label>{{ name }}</label>
           <el-input
-            v-model="runInputs[name]"
-            size="small"
-            :placeholder="`请输入 ${name}`"
+              v-model="runInputs[name]"
+              size="small"
+              :placeholder="`请输入 ${name}`"
           />
         </div>
       </div>
@@ -468,23 +469,23 @@ defineExpose({
         <div class="run-result-header">
           <h4>运行结果</h4>
           <span :class="['status-badge', runStatus]">
-            {{ runStatus === 'running' ? '运行中' : 
-               runStatus === 'success' ? '成功' : '失败' }}
+            {{ runStatus === 'running' ? '运行中' :
+              runStatus === 'success' ? '成功' : '失败' }}
           </span>
         </div>
-        
+
         <!-- 成功结果 -->
-        <div v-if="runStatus === 'success' && runResult" 
+        <div v-if="runStatus === 'success' && runResult"
              class="result-content success">
           <pre>{{ JSON.stringify(runResult, null, 2) }}</pre>
         </div>
-        
+
         <!-- 错误信息 -->
-        <div v-if="runStatus === 'error' && runError" 
+        <div v-if="runStatus === 'error' && runError"
              class="result-content error">
           <pre>{{ runError }}</pre>
         </div>
-        
+
         <!-- 加载动画 -->
         <div v-if="runStatus === 'running'" class="result-content loading">
           <div class="loading-spinner"></div>
@@ -495,9 +496,9 @@ defineExpose({
       <template #footer>
         <el-button @click="showRunPanel = false">取消</el-button>
         <el-button
-          type="primary"
-          :loading="isRunning"
-          @click="run"
+            type="primary"
+            :loading="isRunning"
+            @click="run"
         >
           运行
         </el-button>
@@ -546,11 +547,6 @@ defineExpose({
   overflow: hidden;
 }
 
-.code-editor {
-  font-family: monospace;
-  font-size: 14px;
-}
-
 .code-editor :deep(.el-textarea__inner) {
   border: none;
   border-bottom: 1px dashed #dcdfe6;
@@ -561,42 +557,12 @@ defineExpose({
   padding-bottom: 60px; /* 为返回代码预留空间 */
 }
 
-.return-code {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-top: 1px dashed #dcdfe6;
-  border-radius: 0 0 4px 4px;
-}
-
 .return-empty pre,
 .return-content pre {
   margin: 0;
   font-family: monospace;
   font-size: 14px;
   color: #606266;
-}
-
-.return-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
-  padding-right: 24px;
-}
-
-.return-name {
-  font-family: monospace;
-  font-size: 14px;
-  color: #606266;
-  white-space: nowrap;
-}
-
-.return-value-input {
-  flex: 1;
 }
 
 .return-value-input :deep(.el-input__inner) {

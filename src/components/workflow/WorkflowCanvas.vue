@@ -452,8 +452,6 @@ async function executeRun() {
 
 // 保存工作流
 async function saveWorkflow() {
-  console.log("workflowNodes: ", workflowNodes.value)
-  console.log("connections ", connections.value)
   try {
     const response = await axios({
       method: 'post',
@@ -664,30 +662,36 @@ function clearWorkflowCacheAndGoBack() {
       </div>
 
       <div class="node-detail-content">
-        <!-- 添加名称和描述编辑区域 -->
-        <div class="edit-section">
-          <div class="edit-item">
-            <label>节点名称</label>
-            <input
-              type="text"
-              v-model="selectedNode.name"
-              @input="updateNode(selectedNode)"
-              placeholder="请输入节点名称"
-              class="edit-input"
-            >
+        <!-- 基本配置区域 -->
+        <div class="section-container">
+          <div class="section-header">
+            <h4>基本配置</h4>
           </div>
-          <div class="edit-item">
-            <label>节点描述</label>
-            <textarea
-              v-model="selectedNode.description"
-              @input="updateNode(selectedNode)"
-              placeholder="请输入节点描述"
-              class="edit-textarea"
-              rows="3"
-            ></textarea>
+          <div class="section-content">
+            <div class="edit-item">
+              <label>节点名称</label>
+              <input
+                type="text"
+                v-model="selectedNode.name"
+                @input="updateNode(selectedNode)"
+                placeholder="请输入节点名称"
+                class="edit-input"
+              >
+            </div>
+            <div class="edit-item">
+              <label>节点描述</label>
+              <textarea
+                v-model="selectedNode.description"
+                @input="updateNode(selectedNode)"
+                placeholder="请输入节点描述"
+                class="edit-textarea"
+                rows="3"
+              ></textarea>
+            </div>
           </div>
         </div>
 
+        <!-- 节点详情组件 -->
         <component
           :is="getNodeDetailComponent(selectedNode.type)"
           :node="selectedNode"
@@ -1081,14 +1085,16 @@ function clearWorkflowCacheAndGoBack() {
   z-index: 1002;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .node-detail-header {
-  padding: 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .header-actions {
@@ -1135,7 +1141,8 @@ function clearWorkflowCacheAndGoBack() {
 .node-detail-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  overflow-x: hidden;
+  padding: 20px;
 }
 
 .node-detail-header h3 {
@@ -1207,71 +1214,85 @@ function clearWorkflowCacheAndGoBack() {
   100% { transform: rotate(360deg); }
 }
 
-.selector-tabs {
-  display: flex;
-  gap: 12px;
-}
-
-.tab-btn {
-  background: none;
-  border: none;
-  padding: 8px 16px;
-  font-size: 14px;
-  color: #666;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
 .tab-btn:hover {
   background: #f5f5f5;
 }
 
-.tab-btn.active {
-  background: #e3f2fd;
-  color: #1976d2;
+.section-container {
+  background: #fff;
+  border-radius: 8px;
+  margin: 0 0 20px 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.edit-section {
-  margin-bottom: 16px;
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 16px;
-  background: #f8f9fa;
+  margin-left: 16px;
+}
+
+.section-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.section-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-color: #f8f9fa;
   border-radius: 8px;
+  width: 87.5%;
+  box-sizing: border-box;
+  margin-left: 32px;
 }
 
 .edit-item {
-  margin-bottom: 12px;
-}
-
-.edit-item:last-child {
-  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 
 .edit-item label {
-  display: block;
   font-size: 14px;
   color: #666;
-  margin-bottom: 8px;
 }
 
-.edit-input, .edit-textarea {
+.edit-input,
+.edit-textarea {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
   border-radius: 4px;
   font-size: 14px;
   color: #2c3e50;
   background: white;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
-.edit-input:focus, .edit-textarea:focus {
+.edit-input:hover,
+.edit-textarea:hover {
+  border-color: #c0c4cc;
+}
+
+.edit-input:focus,
+.edit-textarea:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: #409eff;
 }
 
 .edit-textarea {
   resize: vertical;
   min-height: 60px;
+  line-height: 1.5;
+  font-family: inherit;
 }
 
 .run-dialog-content {
