@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { getAllUpstreamNodes } from '@/utils/getAllUpstreamNodes.ts'
+import * as monaco from 'monaco-editor'
 
 interface Input {
   id: number
@@ -73,6 +74,91 @@ const runStatus = ref<'running' | 'success' | 'error' | null>(null)
 const runResult = ref<any>(null)
 const runError = ref<string | null>(null)
 const runInputs = ref<Record<string, string>>({})
+
+// Monaco Editor 相关
+const editorContainer = ref<HTMLElement | null>(null)
+let editor: monaco.editor.IStandaloneCodeEditor | null = null
+
+// 全屏相关
+const isFullscreen = ref(false)
+const fullscreenContainer = ref<HTMLElement | null>(null)
+
+// 初始化编辑器
+function initEditor() {
+  if (!editorContainer.value) return
+  
+  // 配置编辑器主题
+  monaco.editor.defineTheme('customTheme', {
+    base: 'vs',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': '#f8f9fa',
+    }
+  })
+
+  editor = monaco.editor.create(editorContainer.value, {
+    value: code.value,
+    language: language.value,
+    theme: 'customTheme',
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    fontSize: 14,
+    lineHeight: 21,
+    padding: { top: 10, bottom: 10 },
+    automaticLayout: true,
+    tabSize: 4,
+    wordWrap: 'on'
+  })
+
+  // 监听编辑器内容变化
+  editor.onDidChangeModelContent(() => {
+    code.value = editor?.getValue() || ''
+  })
+}
+
+// 更新编辑器语言
+function updateEditorLanguage(newLanguage: string) {
+  if (!editor) return
+  monaco.editor.setModelLanguage(editor.getModel()!, newLanguage)
+}
+
+// 监听语言变化
+watch(language, (newLang) => {
+  updateEditorLanguage(newLang)
+})
+
+// 切换全屏模式
+function toggleFullscreen() {
+  isFullscreen.value = !isFullscreen.value
+  if (isFullscreen.value) {
+    // 进入全屏时重新初始化编辑器大小
+    nextTick(() => {
+      if (editor) {
+        editor.layout()
+      }
+    })
+  }
+}
+
+// 监听 ESC 键退出全屏
+function handleKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && isFullscreen.value) {
+    toggleFullscreen()
+  }
+}
+
+onMounted(() => {
+  initEditor()
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  if (editor) {
+    editor.dispose()
+  }
+  window.removeEventListener('keydown', handleKeydown)
+})
 
 // 监听变化并更新节点
 watch([inputs, outputs, code, language], () => {
@@ -216,16 +302,6 @@ async function run() {
   }
 }
 
-// 获取默认返回值
-function getDefaultValue(type: string): string {
-  switch (type) {
-    case 'string': return '""'
-    case 'number': return '0'
-    case 'Array[File]': return '[]'
-    default: return 'null'
-  }
-}
-
 defineExpose({
   openRunPanel
 })
@@ -233,34 +309,6 @@ defineExpose({
 
 <template>
   <div class="code-node-detail">
-    <!-- 代码编辑区域 -->
-    <div class="code-section">
-      <div class="section-header">
-        <h4>代码编辑</h4>
-        <el-select
-          v-model="language"
-          size="small"
-          style="width: 120px"
-        >
-          <el-option
-            v-for="lang in languages"
-            :key="lang.value"
-            :label="lang.label"
-            :value="lang.value"
-          />
-        </el-select>
-      </div>
-      <div class="code-editor-container">
-        <el-input
-          v-model="code"
-          type="textarea"
-          :rows="10"
-          placeholder="请输入代码"
-          class="code-editor"
-        />
-      </div>
-    </div>
-
     <!-- 输入变量区域 -->
     <div class="inputs-section">
       <div class="section-header">
@@ -278,32 +326,32 @@ defineExpose({
         <div v-for="input in inputs" :key="input.id" class="input-item">
           <div class="input-row">
             <el-input
-              v-model="input.name"
-              placeholder="变量名称"
-              size="small"
-              class="name-input"
+                v-model="input.name"
+                placeholder="变量名称"
+                size="small"
+                class="name-input"
             />
             <el-select
-              :model-value="generateSelectValue(input.value)"
-              placeholder="选择上游输出"
-              size="small"
-              class="type-select"
-              @change="(val: string) => onSelectChange(val, input)"
+                :model-value="generateSelectValue(input.value)"
+                placeholder="选择上游输出"
+                size="small"
+                class="type-select"
+                @change="(val: string) => onSelectChange(val, input)"
             >
               <template v-for="node in allUpstreamNodes" :key="node.id">
                 <el-option
-                  v-for="(nodeOutput, idx) in node.outputs"
-                  :key="`${node.id}-${idx}`"
-                  :label="`${node.name}: ${nodeOutput.name} (${nodeOutput.type})`"
-                  :value="`${node.id}|${nodeOutput.id}`"
+                    v-for="(nodeOutput, idx) in node.outputs"
+                    :key="`${node.id}-${idx}`"
+                    :label="`${node.name}: ${nodeOutput.name} (${nodeOutput.type})`"
+                    :value="`${node.id}|${nodeOutput.id}`"
                 />
               </template>
             </el-select>
             <el-button
-              type="danger"
-              size="small"
-              @click="removeInput(input.id)"
-              class="remove-btn"
+                type="danger"
+                size="small"
+                @click="removeInput(input.id)"
+                class="remove-btn"
             >
               删除
             </el-button>
@@ -312,6 +360,41 @@ defineExpose({
             类型: {{ getUpstreamOutputType(input.value.nodeId, input.value.outputId) }}
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 代码编辑区域 -->
+    <div class="code-section" :class="{ 'fullscreen': isFullscreen }" ref="fullscreenContainer">
+      <div class="section-header">
+        <div class="header-left">
+          <h4>代码编辑</h4>
+          <el-select
+            v-model="language"
+            size="small"
+            style="width: 120px; margin-left: 12px;"
+          >
+            <el-option
+              v-for="lang in languages"
+              :key="lang.value"
+              :label="lang.label"
+              :value="lang.value"
+            />
+          </el-select>
+        </div>
+        <div class="header-right">
+          <img 
+            :src="isFullscreen 
+              ? 'https://api.iconify.design/material-symbols:fullscreen-exit.svg'
+              : 'https://api.iconify.design/material-symbols:fullscreen.svg'"
+            @click="toggleFullscreen"
+            class="fullscreen-icon"
+            :alt="isFullscreen ? '退出全屏' : '全屏'"
+            :title="isFullscreen ? '退出全屏 (ESC)' : '全屏'"
+          >
+        </div>
+      </div>
+      <div class="code-editor-container">
+        <div ref="editorContainer" class="monaco-editor"></div>
       </div>
     </div>
 
@@ -454,6 +537,13 @@ defineExpose({
   position: relative;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
+}
+
+.monaco-editor {
+  height: 300px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .code-editor {
@@ -665,5 +755,74 @@ defineExpose({
   align-items: center;
   justify-content: center;
   color: #666;
+}
+
+.code-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+
+.code-section.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  margin: 0;
+  border-radius: 0;
+  background: #fff;
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fullscreen-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.fullscreen-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.monaco-editor {
+  height: 300px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: height 0.3s ease;
+}
+
+.fullscreen .monaco-editor {
+  height: calc(100vh - 120px);
+}
+
+.fullscreen .code-editor-container {
+  margin-bottom: 0;
 }
 </style> 
