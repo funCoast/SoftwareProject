@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+import { getAllUpstreamNodes } from '@/utils/getAllUpstreamNodes.ts'
 import axios from 'axios'
 
 interface Input {
@@ -417,6 +417,31 @@ label {
 .source-select,
 .kb-select {
   width: 100%;
+}
+
+:deep(.el-select) {
+  width: 100%;
+}
+
+:deep(.el-input__wrapper) {
+  background-color: #fff !important;
+}
+
+:deep(.el-select__popper) {
+  background: #fff !important;
+}
+
+:deep(.el-select-dropdown__item) {
+  color: #606266 !important;
+}
+
+:deep(.el-select-dropdown__item.hover) {
+  background-color: #f5f7fa !important;
+}
+
+:deep(.el-select-dropdown__item.selected) {
+  color: #409eff !important;
+  font-weight: 700;
 }
 
 .input-info,

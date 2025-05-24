@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, defineProps, defineEmits, onMounted } from 'vue'
-import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+import { ref, computed, defineProps, defineEmits } from 'vue'
+import { getAllUpstreamNodes } from '@/utils/getAllUpstreamNodes.ts'
 import axios from "axios";
 import { ElMessage } from 'element-plus'
 
@@ -199,17 +199,6 @@ defineExpose({
     showRunPanel.value = true
   }
 })
-
-function handleChange(file: File, fileListArr: File[]) {
-  const isLt5M = file.size / 1024 / 1024 < 20
-  if (!isLt5M) {
-    ElMessage.warning("文件大小不能超过 20MB！")
-    fileListArr.splice(fileListArr.indexOf(file), 1)
-    return
-  }
-  // 直接同步 fileList
-  fileList.value = [...fileListArr]
-}
 </script>
 
 <template>
@@ -436,10 +425,42 @@ label {
 
 .model-select {
   width: 100%;
+  :deep(.el-input__wrapper) {
+    background-color: #fff;
+  }
+  :deep(.el-select__popper.el-popper) {
+    background: #fff;
+  }
+  :deep(.el-select-dropdown__item) {
+    color: #606266;
+  }
+  :deep(.el-select-dropdown__item.hover) {
+    background-color: #f5f7fa;
+  }
+  :deep(.el-select-dropdown__item.selected) {
+    color: #409eff;
+    font-weight: 700;
+  }
 }
 
 .source-select {
   width: 100%;
+  :deep(.el-input__wrapper) {
+    background-color: #fff;
+  }
+  :deep(.el-select__popper.el-popper) {
+    background: #fff;
+  }
+  :deep(.el-select-dropdown__item) {
+    color: #606266;
+  }
+  :deep(.el-select-dropdown__item.hover) {
+    background-color: #f5f7fa;
+  }
+  :deep(.el-select-dropdown__item.selected) {
+    color: #409eff;
+    font-weight: 700;
+  }
 }
 
 .output-info {

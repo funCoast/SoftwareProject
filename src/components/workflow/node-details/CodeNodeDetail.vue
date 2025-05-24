@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+import { getAllUpstreamNodes } from '@/utils/getAllUpstreamNodes.ts'
 
 interface Input {
   id: number

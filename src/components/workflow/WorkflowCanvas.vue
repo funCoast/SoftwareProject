@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import {usePersistentRef} from '../../utils/usePersistentRef'
 import ClassifierNodeDetail from './node-details/ClassifierNodeDetail.vue'
 import CodeNodeDetail from "./node-details/CodeNodeDetail.vue"
 import ConditionNodeDetail from "./node-details/ConditionNodeDetail.vue"
@@ -15,6 +14,7 @@ import WebNodeDetail from "./node-details/WebNodeDetail.vue"
 import AgentNodeDetail from "./node-details/AgentNodeDetail.vue";
 import {useRouter, useRoute} from "vue-router"
 import axios from "axios"
+import { ArrowLeft, Check } from "@element-plus/icons-vue"
 
 const router = useRouter()
 const route = useRoute()
@@ -22,7 +22,6 @@ const workflow_id = route.params.id
 const uid = ref<string>('')
 
 const name = ref('')
-const description = ref('')
 const icon = ref('')
 const isLoading = ref(true)
 
@@ -143,8 +142,8 @@ interface Connection {
 const canvasEl = ref<HTMLElement>()
 const zoom = ref(1)
 
-const workflowNodes = usePersistentRef<WorkflowNode[]>('workflowNodes', [])
-const connections = usePersistentRef<Connection[]>('connections', [])
+const workflowNodes = ref<WorkflowNode[]>([])
+const connections = ref<Connection[]>([])
 const tempNode = ref<WorkflowNode | null>(null)
 const selectedNode = ref<WorkflowNode | null>(null)
 
@@ -181,7 +180,6 @@ onMounted(async () => {
       workflowNodes.value = response.data.nodes
       connections.value = response.data.edges
       name.value = response.data.name
-      description.value = response.data.description
       icon.value = "http://122.9.33.84:8000" + response.data.icon
       console.log("iconUrl: ", icon.value)
       if (workflowNodes.value.length === 0) {
@@ -250,7 +248,7 @@ function addNode(type: string, x: number, y: number) {
 }
 
 // 放下临时节点
-function handleTempNodeClick(e: MouseEvent) {
+async function handleTempNodeClick(e: MouseEvent) {
   e.stopPropagation() // 阻止事件冒泡，防止点击临时节点时触发外层的 click 事件
   if (tempNode.value) {
     const newNode = {
@@ -260,6 +258,7 @@ function handleTempNodeClick(e: MouseEvent) {
     workflowNodes.value.push(newNode) // 把节点添加到正式工作流中
     isAddingNode.value = false // 标记添加过程结束
     tempNode.value = null // 清空临时节点
+    await saveWorkflow()
   }
 }
 
@@ -355,7 +354,7 @@ function runSelectedNode() {
 }
 
 // 通过详情面板更新节点数据
-function updateNode(updatedNode: WorkflowNode) {
+async function updateNode(updatedNode: WorkflowNode) {
   const index = workflowNodes.value.findIndex(n => n.id === updatedNode.id)
   if (index !== -1) {
     const currentNode = workflowNodes.value[index]
@@ -365,6 +364,7 @@ function updateNode(updatedNode: WorkflowNode) {
       y: currentNode.y
     }
   }
+  await saveWorkflow()
 }
 
 // 关闭详情面板
@@ -373,16 +373,18 @@ function closeDetailPanel() {
 }
 
 // 通过复制、删除更新节点数量
-function updateNodes(newNodes: WorkflowNode[]) {
+async function updateNodes(newNodes: WorkflowNode[]) {
   workflowNodes.value = newNodes;
   if (selectedNode.value && !newNodes.find(n => n.id === selectedNode.value!.id)) {
     selectedNode.value = null
   }
+  await saveWorkflow()
 }
 
 // 更新连接
-function updateConnections(newConnections: Connection[]) {
+async function updateConnections(newConnections: Connection[]) {
   connections.value = newConnections
+  await saveWorkflow()
 }
 
 // 打开试运行弹窗
@@ -464,6 +466,30 @@ async function saveWorkflow() {
       },
     })
     if (response.data.code === 0) {
+      // ElMessage.success("保存成功")
+    } else {
+      console.log(response.data.message)
+    }
+  } catch (error) {
+    console.error("Error:", error)
+  }
+}
+
+async function saveWorkflowMessage() {
+  console.log("workflowNodes: ", workflowNodes.value)
+  console.log("connections ", connections.value)
+  try {
+    const response = await axios({
+      method: 'post',
+      url: 'workflow/save',
+      data: {
+        'uid': uid.value,
+        'workflow_id': route.params.id,
+        'nodes': workflowNodes.value,
+        'edges': connections.value
+      },
+    })
+    if (response.data.code === 0) {
       ElMessage.success("保存成功")
     } else {
       console.log(response.data.message)
@@ -510,34 +536,33 @@ function getNodeDetailComponent(type: string) {
   }
 }
 
-const clearWorkflowCacheAndGoBack = () => {
-  // 清除 localStorage 缓存
-  localStorage.removeItem('workflowNodes')
-  localStorage.removeItem('connections')
-  // 返回上一页
+function clearWorkflowCacheAndGoBack() {
   router.go(-1)
 }
 </script>
 
 <template>
-  <div v-if="isLoading">
-    加载中...
+  <div v-if="isLoading" class="workflow-container">
+    <div class="loading-container">
+      <img src="https://api.iconify.design/material-symbols:refresh.svg" alt="加载中" class="loading-icon">
+      <span class="loading-text">加载中...</span>
+    </div>
   </div>
   <div v-if="!isLoading" class="workflow-container">
     <!-- 上侧导航栏 -->
     <div class="top-navbar">
       <button class="back-btn" @click="clearWorkflowCacheAndGoBack">
-        <i class="fas fa-arrow-left"></i>
+        <img src="https://api.iconify.design/material-symbols:arrow-back.svg" alt="返回" class="btn-icon">
         返回
       </button>
       <div class="workflow-info">
         <img :src="icon" alt="Workflow" class="workflow-image">
         <div class="workflow-details">
           <h3 class="workflow-name">{{name}}</h3>
-          <p class="workflow-description">{{description}}</p>
         </div>
       </div>
-      <button class="publish-btn" @click="saveWorkflow">
+      <button class="publish-btn" @click="saveWorkflowMessage">
+        <img src="https://api.iconify.design/material-symbols:save.svg" alt="保存" class="btn-icon">
         保存
       </button>
     </div>
@@ -590,10 +615,6 @@ const clearWorkflowCacheAndGoBack = () => {
       <button class="tool-btn primary" @click="showNodeSelector = true">
         <img src="https://api.iconify.design/material-symbols:add-box.svg" alt="添加" class="tool-btn-icon">
         添加节点
-      </button>
-      <button class="tool-btn secondary" @click="saveWorkflow">
-        <img src="https://api.iconify.design/material-symbols:save.svg" alt="保存" class="tool-btn-icon">
-        保存工作流
       </button>
       <button class="tool-btn accent" @click="runTest">
         <img src="https://api.iconify.design/material-symbols:play-circle.svg" alt="运行" class="tool-btn-icon">
@@ -762,11 +783,12 @@ const clearWorkflowCacheAndGoBack = () => {
   background: #f8f9fa;
   margin: 0;
   padding: 0;
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 10;
 }
 
 .top-navbar {
@@ -1294,5 +1316,42 @@ const clearWorkflowCacheAndGoBack = () => {
   background: #f8f9fa;
   border-radius: 8px;
   color: #666;
+}
+
+.btn-icon {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.loading-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loading-icon {
+  width: 48px;
+  height: 48px;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  color: #666;
+  font-size: 16px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style> 
