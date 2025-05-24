@@ -548,11 +548,11 @@ onMounted(async () => {
          class="context-menu"
          :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }">
       <div class="context-menu-item" @click="copyNode">
-        <i class="fas fa-copy"></i>
+        <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="menu-icon">
         <span>复制节点</span>
       </div>
       <div class="context-menu-item" @click="deleteNode">
-        <i class="fas fa-trash"></i>
+        <img src="https://api.iconify.design/material-symbols:delete.svg" alt="删除" class="menu-icon">
         <span>删除节点</span>
       </div>
     </div>
@@ -562,7 +562,7 @@ onMounted(async () => {
          class="context-menu"
          :style="{ left: connectionContextMenu.x + 'px', top: connectionContextMenu.y + 'px' }">
       <div class="context-menu-item" @click="deleteConnection">
-        <i class="fas fa-trash"></i>
+        <img src="https://api.iconify.design/material-symbols:link-off.svg" alt="删除连线" class="menu-icon">
         <span>删除连线</span>
       </div>
     </div>
@@ -858,5 +858,15 @@ onMounted(async () => {
 
 .result-content::-webkit-scrollbar-thumb:hover {
   background: #adb5bd;
+}
+
+.menu-icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+}
+
+.context-menu-item:hover .menu-icon {
+  opacity: 1;
 }
 </style> 

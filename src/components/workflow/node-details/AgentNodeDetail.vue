@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getAllUpstreamNodes } from '../../../utils/getAllUpstreamNodes'
+import { getAllUpstreamNodes } from '@/utils/getAllUpstreamNodes.ts'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 

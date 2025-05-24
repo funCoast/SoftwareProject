@@ -231,8 +231,6 @@ async function submitWF() {
     if (response.data.code === 0) {
       console.log(response.data)
       const workflow_id = response.data.workflow_id
-      localStorage.removeItem('workflowNodes')
-      localStorage.removeItem('connections')
       WFForm.value.icon = null
       await router.push({
         path: `/workspace/workflow/${workflow_id}`,
