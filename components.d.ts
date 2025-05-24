@@ -62,7 +62,6 @@ declare module 'vue' {
     Home: typeof import('./src/components/home/Home.vue')['default']
     Knowledge: typeof import('./src/components/document/manual/workflow/nodes/Knowledge.vue')['default']
     KnowledgeNodeDetail: typeof import('./src/components/workflow/node-details/KnowledgeNodeDetail.vue')['default']
-    Lab: typeof import('./src/components/document/Lab.vue')['default']
     Login: typeof import('./src/components/login/Login.vue')['default']
     Main: typeof import('./src/components/Main.vue')['default']
     Message: typeof import('./src/components/message/Message.vue')['default']
