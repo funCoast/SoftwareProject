@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, inject, type Ref } from 'vue'
 import axios from "axios"
-import router from '../../router'
+import router from '@/router'
 import { useRoute }from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { UploadProps } from 'element-plus'

@@ -2,7 +2,7 @@
 import { ref, onBeforeMount } from 'vue'
 import { Message, CircleCheckFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
-import router from '../../router'
+import router from '@/router'
 import './login.css'
 
 const email = ref('')

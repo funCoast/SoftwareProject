@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import axios from "axios";
-import router from "../../router";
+import router from "@/router";
 
 interface Picture {
   id: number

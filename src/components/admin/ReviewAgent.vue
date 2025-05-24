@@ -2,7 +2,7 @@
 import axios from 'axios'
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import router from '../../router'
+import router from '@/router'
 
 const baseImageUrl = "http://122.9.33.84:8000"
 

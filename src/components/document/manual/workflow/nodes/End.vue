@@ -49,5 +49,5 @@ li {
   margin-bottom: 8px;
 }
 </style>
-<script setup>
+<script setup lang="ts">
 </script>

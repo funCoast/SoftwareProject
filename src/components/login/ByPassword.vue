@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { Message, Lock } from '@element-plus/icons-vue'
 import axios from 'axios'
-import router from '../../router'
+import router from '@/router'
 import './login.css'
 
 const account = ref('')

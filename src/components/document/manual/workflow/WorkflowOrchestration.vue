@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 const supportTable = [
   { type: '大模型', manual: true, upper: true },
   { type: '代码', manual: false, upper: true },

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import router from '../../router'
+import router from '@/router'
 import axios from "axios";
 
 const currentTag = ref('all')

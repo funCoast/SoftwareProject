@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue'
-import router from '../../router'
+import router from '@/router'
 import axios from "axios";
 
 interface resource {

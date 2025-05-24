@@ -3,7 +3,7 @@ import { ref } from "vue"
 import type { UploadInstance, UploadRequestOptions } from 'element-plus'
 import { UploadFilled } from "@element-plus/icons-vue"
 import axios from "axios"
-import router from "../../router"
+import router from "@/router"
 
 const uploadRef = ref<UploadInstance>()
 const listLength = ref(0)

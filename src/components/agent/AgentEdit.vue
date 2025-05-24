@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import {useRoute} from "vue-router";
 import { marked } from 'marked'
-import router from "../../router.ts";
+import router from "@/router.ts";
 import {Close, Document, Plus, Search, ArrowDown} from "@element-plus/icons-vue";
 import type { UploadInstance } from 'element-plus'
 

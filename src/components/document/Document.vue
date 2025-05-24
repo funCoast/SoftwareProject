@@ -35,7 +35,14 @@ const router = useRouter()
 const expandedSections = ref<string[]>(['workflow', 'kb', 'agent'])
 const currentSection = ref('product')
 
-const navItems = [
+interface NavItem {
+  id: string;
+  label: string;
+  component?: any;
+  children?: NavItem[];
+}
+
+const navItems: NavItem[] = [
   {
     id: 'introduction',
     label: '简介',

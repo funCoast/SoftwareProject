@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
 import { Search } from '@element-plus/icons-vue'
-import router from "../../router"
+import router from "@/router"
 import axios from "axios"
 
 interface Text {
