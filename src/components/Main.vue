@@ -89,11 +89,9 @@ const navItems = ref<NavItem[]>([
 
 // 根据用户角色过滤导航项
 const filteredNavItems = computed(() => {
-  const role = localStorage.getItem('role')
+  const role = localStorage.getItem('LingXi_role')
   if (role === 'admin') {
-    return navItems.value.filter(item =>
-        item.path !== '/workspace'
-    )
+    return navItems.value
   } else {
     return navItems.value.filter(item =>
       !['/publish-anno', '/review-agent', '/user-manage', '/report-agent'].includes(item.path)
