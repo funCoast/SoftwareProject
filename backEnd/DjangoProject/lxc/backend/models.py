@@ -208,6 +208,7 @@ class Agent(models.Model):
     llm = models.TextField(null=True, blank=True, default="qwen-plus")
     created_time = models.DateTimeField(default=timezone.now)
     updated_time = models.DateTimeField(auto_now=True)
+    usage_amount = models.IntegerField(default=0)
 
     def __str__(self):
         return self.agent_name

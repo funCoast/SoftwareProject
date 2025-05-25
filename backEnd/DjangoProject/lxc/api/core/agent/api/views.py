@@ -102,6 +102,10 @@ def send_agent_message(request):
             type='use',
         )
 
+        agent = Agent.objects.get(agent_id=agent_id)
+        agent.usage_amount = agent.usage_amount + 1
+        agent.save()
+
         return JsonResponse({
             "code": 0,
             "message": "发送成功",
