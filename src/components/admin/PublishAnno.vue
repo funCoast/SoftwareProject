@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import moment from 'moment'
 
@@ -11,6 +11,17 @@ const announcements = ref<{
   content: string
   time: Date
 }[]>([])
+
+const searchQuery = ref('')
+
+const filteredAnnouncements = computed(() => {
+  if (!searchQuery.value) return announcements.value
+  const query = searchQuery.value.toLowerCase()
+  return announcements.value.filter(anno => 
+    anno.title.toLowerCase().includes(query) ||
+    anno.content.toLowerCase().includes(query)
+  )
+})
 
 const newAnnouncement = ref({
   title: '',
@@ -146,40 +157,102 @@ onMounted(() => {
   <div class="publish-anno">
     <div class="section-header">
       <h2>公告管理</h2>
+      <div class="header-actions">
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索公告..."
+          prefix-icon="Search"
+          class="search-input"
+        />
+        <el-button type="primary">
+          <img src="https://api.iconify.design/material-symbols:refresh.svg" class="action-icon" />
+          刷新
+        </el-button>
+      </div>
     </div>
-    <div class="notice-content">
+
+    <div class="stats-cards">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <img src="https://api.iconify.design/material-symbols:campaign.svg" alt="total" />
+        </div>
+        <div class="stat-info">
+          <h3>总公告数</h3>
+          <p>{{ announcements.length }}</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <img src="https://api.iconify.design/material-symbols:today.svg" alt="today" />
+        </div>
+        <div class="stat-info">
+          <h3>今日发布</h3>
+          <p>{{ announcements.filter(a => moment(a.time).isSame(moment(), 'day')).length }}</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <img src="https://api.iconify.design/material-symbols:history.svg" alt="week" />
+        </div>
+        <div class="stat-info">
+          <h3>本周发布</h3>
+          <p>{{ announcements.filter(a => moment(a.time).isSame(moment(), 'week')).length }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
       <!-- 公告发布表单 -->
-      <div class="notice-form">
-        <el-input
-          v-model="newAnnouncement.title"
-          placeholder="请输入公告标题"
-          class="notice-title"
-        />
-        <el-input
-          v-model="newAnnouncement.content"
-          type="textarea"
-          :rows="4"
-          placeholder="请输入公告内容"
-          class="notice-content-input"
-        />
-        <el-button type="primary" @click="publishAnnouncement">发布公告</el-button>
+      <div class="publish-card">
+        <div class="card-header">
+          <h3>发布新公告</h3>
+          <img src="https://api.iconify.design/material-symbols:edit-note.svg" class="header-icon" />
+        </div>
+        <div class="publish-form">
+          <el-input
+            v-model="newAnnouncement.title"
+            placeholder="请输入公告标题"
+            class="title-input"
+          >
+            <template #prefix>
+              <img src="https://api.iconify.design/material-symbols:title.svg" class="input-icon" />
+            </template>
+          </el-input>
+          <el-input
+            v-model="newAnnouncement.content"
+            type="textarea"
+            :rows="6"
+            placeholder="请输入公告内容"
+            class="content-input"
+          />
+          <el-button type="primary" class="publish-btn" @click="publishAnnouncement">
+            <img src="https://api.iconify.design/material-symbols:send.svg" class="button-icon" />
+            发布公告
+          </el-button>
+        </div>
       </div>
 
       <!-- 公告列表 -->
-      <div class="notice-list">
-        <div v-for="announcement in announcements" :key="announcement.id" class="notice-item">
-          <div class="notice-text">
-            <div class="notice-header">
-              <h4>{{ announcement.title }}</h4>
-            </div>
-            <p>{{ announcement.content }}</p>
-            <div class="notice-footer">
-              <span class="notice-time">{{ moment(announcement.time).format('YYYY-MM-DD hh:mm:ss') }}</span>
+      <div class="list-card">
+        <div class="card-header">
+          <h3>已发布公告</h3>
+          <img src="https://api.iconify.design/material-symbols:list-alt.svg" class="header-icon" />
+        </div>
+        <div class="notice-list">
+          <div v-for="announcement in filteredAnnouncements" :key="announcement.id" class="notice-item">
+            <div class="notice-content">
+              <div class="notice-header">
+                <h4>{{ announcement.title }}</h4>
+                <span class="notice-time">{{ moment(announcement.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
+              </div>
+              <p class="notice-text">{{ announcement.content }}</p>
               <div class="notice-actions">
-                <el-button type="primary" size="small" @click="openEditDialog(announcement)">
+                <el-button type="primary" text @click="openEditDialog(announcement)">
+                  <img src="https://api.iconify.design/material-symbols:edit.svg" class="action-icon" />
                   编辑
                 </el-button>
-                <el-button type="danger" size="small" @click="deleteAnnouncement(announcement.id)">
+                <el-button type="danger" text @click="deleteAnnouncement(announcement.id)">
+                  <img src="https://api.iconify.design/material-symbols:delete.svg" class="action-icon" />
                   删除
                 </el-button>
               </div>
@@ -194,6 +267,7 @@ onMounted(() => {
       v-model="editDialogVisible"
       title="编辑公告"
       width="50%"
+      destroy-on-close
     >
       <el-form>
         <el-form-item label="标题">
@@ -203,7 +277,7 @@ onMounted(() => {
           <el-input
             v-model="currentEditAnnouncement.content"
             type="textarea"
-            :rows="4"
+            :rows="6"
           />
         </el-form-item>
       </el-form>
@@ -221,69 +295,181 @@ onMounted(() => {
 
 <style scoped>
 .publish-anno {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .section-header h2 {
   margin: 0;
+  font-size: 24px;
   color: #2c3e50;
 }
 
-.notice-content {
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.action-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.notice-form {
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #ecf5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon img {
+  width: 28px;
+  height: 28px;
+  color: #409EFF;
+}
+
+.stat-icon.success {
+  background: #f0f9eb;
+}
+
+.stat-icon.success img {
+  color: #67c23a;
+}
+
+.stat-icon.warning {
+  background: #fdf6ec;
+}
+
+.stat-icon.warning img {
+  color: #e6a23c;
+}
+
+.stat-info h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.stat-info p {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.publish-card,
+.list-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
 }
 
-.notice-title {
-  margin-bottom: 10px;
+.card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #2c3e50;
 }
 
-.notice-content-input {
-  margin-bottom: 10px;
+.header-icon {
+  width: 24px;
+  height: 24px;
+  color: #409EFF;
+}
+
+.publish-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-icon {
+  width: 20px;
+  height: 20px;
+  color: #909399;
+}
+
+.button-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.publish-btn {
+  align-self: flex-end;
 }
 
 .notice-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 16px;
 }
 
 .notice-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 20px;
+  background: #f8f9fa;
   border-radius: 8px;
-  background-color: #f8f9fa;
+  padding: 16px;
   transition: all 0.3s ease;
-  margin-bottom: 15px;
-  position: relative;
 }
 
 .notice-item:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: #f2f6fc;
 }
 
 .notice-header {
-  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .notice-header h4 {
@@ -292,43 +478,41 @@ onMounted(() => {
   color: #2c3e50;
 }
 
-.notice-text p {
-  margin: 0 0 15px 0;
-  color: #666;
+.notice-time {
+  font-size: 12px;
+  color: #909399;
+}
+
+.notice-text {
+  margin: 0;
+  color: #606266;
   font-size: 14px;
   line-height: 1.6;
 }
 
-.notice-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
-}
-
-.notice-time {
-  font-size: 12px;
-  color: #999;
-}
-
 .notice-actions {
   display: flex;
-  gap: 8px;
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-}
-
-.notice-actions .el-button {
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-.dialog-footer {
-  display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+:deep(.el-dialog) {
+  border-radius: 12px;
+}
+
+:deep(.el-dialog__header) {
+  margin: 0;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+:deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 20px;
+  border-top: 1px solid #eee;
 }
 </style>

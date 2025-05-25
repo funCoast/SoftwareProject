@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
@@ -19,6 +19,20 @@ const pendingAgents = ref<{
   }
   category: string
 }[]>([])
+
+// 添加搜索相关的变量
+const searchQuery = ref('')
+
+// 添加过滤后的智能体计算属性
+const filteredAgents = computed(() => {
+  if (!searchQuery.value) return pendingAgents.value
+  const query = searchQuery.value.toLowerCase()
+  return pendingAgents.value.filter(agent => 
+    agent.name.toLowerCase().includes(query) ||
+    agent.description.toLowerCase().includes(query) ||
+    agent.author.name.toLowerCase().includes(query)
+  )
+})
 
 const categories = [
   { value: 'education', label: '教育学习' },
@@ -99,51 +113,83 @@ onMounted(() => {
   <div class="review-agent">
     <div class="section-header">
       <h2>智能体审核</h2>
+      <div class="header-actions">
+        <el-input
+          placeholder="搜索智能体..."
+          prefix-icon="Search"
+          class="search-input"
+          v-model="searchQuery"
+        />
+        <el-button type="primary" @click="fetchPendingAgents">
+          <img src="https://api.iconify.design/material-symbols:refresh.svg" class="action-icon" />
+          刷新
+        </el-button>
+      </div>
     </div>
+
+    <div class="stats-cards">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <img src="https://api.iconify.design/material-symbols:pending-actions.svg" alt="pending" />
+        </div>
+        <div class="stat-info">
+          <h3>待审核</h3>
+          <p>{{ pendingAgents.length }}</p>
+        </div>
+      </div>
+    </div>
+
     <div class="agents-content">
       <div class="agents-grid">
-        <div v-for="agent in pendingAgents" :key="agent.id" class="agent-card" @click="goToAgentEdit(agent.id, agent.author.id)">
-          <div class="agent-image">
-            <el-avatar :size="80" :src="baseImageUrl + agent.icon" />
-          </div>
-          <div class="agent-info">
-            <div class="agent-header">
+        <div v-for="agent in filteredAgents" :key="agent.id" class="agent-card">
+          <div class="agent-header">
+            <div class="agent-image">
+              <el-avatar :size="60" :src="baseImageUrl + agent.icon" />
+            </div>
+            <div class="agent-title">
               <h3>{{ agent.name }}</h3>
               <div class="agent-author">
                 <el-avatar :size="24" :src="baseImageUrl + agent.author.avatar" />
                 <span>{{ agent.author.name }}</span>
               </div>
             </div>
-            <p class="agent-description">{{ agent.description }}</p>
-            <div class="agent-actions">
-              <el-select
-                v-model="agent.category"
-                placeholder="选择分类"
-                class="category-select"
-                @click.stop
+            <el-button 
+              type="text" 
+              class="detail-btn"
+              @click="goToAgentEdit(agent.id, agent.author.id)"
+            >
+              查看详情
+              <img src="https://api.iconify.design/material-symbols:chevron-right.svg" class="action-icon" />
+            </el-button>
+          </div>
+          <p class="agent-description">{{ agent.description }}</p>
+          <div class="agent-actions">
+            <el-select
+              v-model="agent.category"
+              placeholder="选择分类"
+              class="category-select"
+            >
+              <el-option
+                v-for="cat in categories"
+                :key="cat.value"
+                :label="cat.label"
+                :value="cat.label"
+              />
+            </el-select>
+            <div class="review-buttons">
+              <el-button
+                type="success"
+                :disabled="!agent.category"
+                @click="reviewAgent(agent.id, 'approve', agent.category)"
               >
-                <el-option
-                  v-for="cat in categories"
-                  :key="cat.value"
-                  :label="cat.label"
-                  :value="cat.label"
-                />
-              </el-select>
-              <div class="review-buttons" @click.stop>
-                <el-button
-                  type="success"
-                  :disabled="!agent.category"
-                  @click="reviewAgent(agent.id, 'approve', agent.category)"
-                >
-                  通过
-                </el-button>
-                <el-button
-                  type="danger"
-                  @click="reviewAgent(agent.id, 'reject', agent.category)"
-                >
-                  拒绝
-                </el-button>
-              </div>
+                通过
+              </el-button>
+              <el-button
+                type="danger"
+                @click="reviewAgent(agent.id, 'reject')"
+              >
+                拒绝
+              </el-button>
             </div>
           </div>
         </div>
@@ -154,33 +200,109 @@ onMounted(() => {
 
 <style scoped>
 .review-agent {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .section-header h2 {
   margin: 0;
+  font-size: 24px;
+  color: #2c3e50;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.action-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #ecf5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon img {
+  width: 28px;
+  height: 28px;
+  color: #409EFF;
+}
+
+.stat-icon.success {
+  background: #f0f9eb;
+}
+
+.stat-icon.success img {
+  color: #67c23a;
+}
+
+.stat-icon.warning {
+  background: #fdf6ec;
+}
+
+.stat-icon.warning img {
+  color: #e6a23c;
+}
+
+.stat-info h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.stat-info p {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: bold;
   color: #2c3e50;
 }
 
 .agents-content {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
 
 .agents-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 20px;
 }
 
@@ -188,36 +310,22 @@ onMounted(() => {
   background: white;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.agent-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.agent-image {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 15px;
-}
-
-.agent-info {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
 .agent-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.agent-header h3 {
-  margin: 0;
+.agent-title {
+  flex: 1;
+}
+
+.agent-title h3 {
+  margin: 0 0 8px;
   font-size: 18px;
   color: #2c3e50;
 }
@@ -225,26 +333,35 @@ onMounted(() => {
 .agent-author {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
 }
 
 .agent-author span {
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
 }
 
+.detail-btn {
+  color: #409EFF;
+  font-size: 14px;
+}
+
 .agent-description {
-  margin: 0;
+  margin: 0 0 16px;
   color: #666;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 3;
 }
 
 .agent-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 12px;
 }
 
 .category-select {
@@ -253,7 +370,10 @@ onMounted(() => {
 
 .review-buttons {
   display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  gap: 12px;
+}
+
+.review-buttons .el-button {
+  flex: 1;
 }
 </style>

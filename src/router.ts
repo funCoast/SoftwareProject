@@ -100,24 +100,37 @@ const routes = [
         component: () => import("@/components/community/Community.vue"),
       },
       {
-        path: "publish-anno",
-        name: "PublishAnno",
-        component: () => import("@/components/admin/PublishAnno.vue")
-      },
-      {
-        path: "review-agent",
-        name: "ReviewAgent",
-        component: () => import("@/components/admin/ReviewAgent.vue")
-      },
-      {
-        path: "report-agent",
-        name: "ReportAgent",
-        component: () => import("@/components/admin/ReportAgent.vue")
-      },
-      {
-        path: "user-manage",
-        name: "UserManage",
-        component: () => import("@/components/admin/UserManage.vue")
+        path: "admin",
+        name: "Admin",
+        redirect: "/admin/userManage",
+        meta: { authReq: authRequired },
+        component: () => import("@/components/admin/AdminLayout.vue"),
+        children: [
+          {
+            path: "userManage",
+            name: "UserManage",
+            meta: { authReq: authRequired },
+            component: () => import("@/components/admin/UserManage.vue"),
+          },
+          {
+            path: "reviewAgent",
+            name: "ReviewAgent",
+            meta: { authReq: authRequired },
+            component: () => import("@/components/admin/ReviewAgent.vue"),
+          },
+          {
+            path: "reportAgent",
+            name: "ReportAgent",
+            meta: { authReq: authRequired },
+            component: () => import("@/components/admin/ReportAgent.vue"),
+          },
+          {
+            path: "publishAnno",
+            name: "PublishAnno",
+            meta: { authReq: authRequired },
+            component: () => import("@/components/admin/PublishAnno.vue"),
+          },
+        ],
       },
       {
         path: "agentDetail/:id",

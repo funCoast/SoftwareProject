@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AdminLayout: typeof import('./src/components/admin/AdminLayout.vue')['default']
     Agent: typeof import('./src/components/document/manual/workflow/nodes/Agent.vue')['default']
     AgentDetail: typeof import('./src/components/agent/AgentDetail.vue')['default']
     AgentDevelopment: typeof import('./src/components/workspace/AgentDevelopment.vue')['default']
