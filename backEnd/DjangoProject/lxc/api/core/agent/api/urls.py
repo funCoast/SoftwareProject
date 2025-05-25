@@ -9,4 +9,5 @@ urlpatterns = [
     path('updateInfo', AgentUpdateView.as_view(), name='update_info'),
     path('create', AgentCreateView.as_view(), name='create'),
     path('fetchAgentMessage', AgentFetchAgentMessageView.as_view(), name='fetch_agent_message'),
+    path('clearHistoryMessage', AgentCreateView.as_view(), name='clear_history_message'),
 ]
