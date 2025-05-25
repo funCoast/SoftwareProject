@@ -3041,6 +3041,8 @@ def fetch_all_published_agents(request):
                 "likes": agent.likes_count,
                 "favorites": agent.favorites_count,
                 "comments": comment_count,  # 新增字段：评论数
+                "publish_time": agent.publish_time,
+                "usage_time": agent.usage_amount,
                 "author": {
                     "id": agent.user.user_id,
                     "name": agent.user.username,
