@@ -28,6 +28,8 @@ interface agent {
   likes: number
   favorites: number
   comments: number
+  usage: number
+  createTime: string
   author: {
     id?: number
     name: string
@@ -62,12 +64,39 @@ async function fetchAllAgents() {
   }
 }
 
-const filteredAgents = computed(() => {
-  if (currentTag.value === 'all') {
-    return agents.value
-  }
-  return agents.value.filter(agent => agent.category === currentTag.value)
+const filterCriteria = ref({
+  sortBy: 'trend', // trend | usage | likes | favorites | publishedTime
+  search: ''
 })
+
+const filteredAgents = computed(() => {
+  let result = [...agents.value]
+  // 分类筛选
+  if (currentTag.value !== 'all') {
+    result = result.filter(agent => agent.category === currentTag.value)
+  }
+  // 搜索
+  if (filterCriteria.value.search.trim() !== '') {
+    result = result.filter(agent =>
+      agent.name.includes(filterCriteria.value.search.trim()) ||
+      agent.description.includes(filterCriteria.value.search.trim())
+    )
+  }
+  // 排序
+  if (filterCriteria.value.sortBy === 'trend') {
+    result.sort((a, b) => (10 * b.favorites + b.likes) - (10 * a.favorites + a.likes))
+  } else if (filterCriteria.value.sortBy === 'usage') {
+    result.sort((a, b) => b.usage - a.usage)
+  } else if (filterCriteria.value.sortBy === 'likes') {
+    result.sort((a, b) => b.likes - a.likes)
+  } else if (filterCriteria.value.sortBy === 'favorites') {
+    result.sort((a, b) => b.favorites - a.favorites)
+  } else if (filterCriteria.value.sortBy === 'publishedTime') {
+    result.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime())
+  }
+  return result
+})
+
 const totalPages = computed(() => {
   const pages = Math.ceil(filteredAgents.value.length / itemsPerPage.value);
   return pages > 0 ? pages : 0; // 如果没有智能体，页码为 0
@@ -121,17 +150,23 @@ onMounted(() => {
       <div class="header">
         <h1>{{ currentTag === 'all' ? '全部' : currentTag === 'template' ? '模板' : currentTag }}</h1>
         <div class="header-right">
-          <select class="filter-select">
+          <select class="filter-select" v-model="filterCriteria.sortBy">
             <option value="trend">按当前趋势</option>
             <option value="usage">按使用量</option>
             <option value="likes">按点赞量</option>
             <option value="favorites">按收藏量</option>
-            <option value="time">按发布时间</option>
+            <option value="publishedTime">按发布时间</option>
           </select>
           <div class="search-box">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
             </svg>
+            <input
+              type="text"
+              v-model="filterCriteria.search"
+              placeholder="搜索智能体名称或描述"
+              class="search-input"
+            />
           </div>
           <!--          <button class="publish-btn">-->
           <!--            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">-->
@@ -324,6 +359,24 @@ onMounted(() => {
   border-radius: 6px;
   background: white;
   font-size: 13px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  position: relative;
+  flex: 1;
+}
+
+.search-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  background: #f8f9fa;
+  margin-left: 8px;
 }
 
 .agent-list {
