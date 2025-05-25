@@ -67,7 +67,14 @@ def run_if_else_node(node, inputs):
     case_list = node.get("data", {}).get("case", [])
 
     # 预处理 inputs: list -> dict
-    input_dict = {item["id"]: parse_value(item["value"]) for item in inputs}
+    input_dict = {
+        item["id"]: (
+            int(float(item["value"])) if item.get("type") == "number" and float(item["value"]).is_integer()
+            else float(item["value"]) if item.get("type") == "number"
+            else item["value"]
+        )
+        for item in inputs
+    }
 
     for case in case_list:
         conditions = case["condition"]
