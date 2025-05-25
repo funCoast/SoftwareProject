@@ -28,8 +28,8 @@ interface agent {
   likes: number
   favorites: number
   comments: number
-  usage: number
-  createTime: string
+  usage_time: number
+  publish_time: string
   author: {
     id?: number
     name: string
@@ -86,13 +86,13 @@ const filteredAgents = computed(() => {
   if (filterCriteria.value.sortBy === 'trend') {
     result.sort((a, b) => (10 * b.favorites + b.likes) - (10 * a.favorites + a.likes))
   } else if (filterCriteria.value.sortBy === 'usage') {
-    result.sort((a, b) => b.usage - a.usage)
+    result.sort((a, b) => b.usage_time - a.usage_time)
   } else if (filterCriteria.value.sortBy === 'likes') {
     result.sort((a, b) => b.likes - a.likes)
   } else if (filterCriteria.value.sortBy === 'favorites') {
     result.sort((a, b) => b.favorites - a.favorites)
   } else if (filterCriteria.value.sortBy === 'publishedTime') {
-    result.sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime())
+    result.sort((a, b) => new Date(b.publish_time).getTime() - new Date(a.publish_time).getTime())
   }
   return result
 })
