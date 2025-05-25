@@ -1,6 +1,7 @@
 # llm_integration.py
 import openai
 import requests
+from dashscope import Generation
 from openai import OpenAI, completions
 
 from api.core.agent.skill.plugin_call.plugin_call import plugin_choose_and_run
@@ -97,7 +98,26 @@ class LLMClient:
             'response': completion.choices[0].message.content
         }
 
+    def call_glm_messages(self, messages, search=False):
+        # response = {
+        #     'thinking_chain': '',
+        #     'response': Generation().call(
+        #         api_key=settings.DASHSCOPE_API_KEY,
+        #         model='chatglm-6b-v2',
+        #         messages=messages,
+        #         result_format='message',
+        #     )
+        # }
+        # return response
+        completion = self.qwen_client.chat.completions.create(
+            model="chatglm-6b-v2",
+            messages=messages,
+            extra_body={
+                "enable_search": search
+            }
+        )
 
-
-
-
+        return {
+            'thinking_chain': '',
+            'response': completion.choices[0].message.content
+        }
