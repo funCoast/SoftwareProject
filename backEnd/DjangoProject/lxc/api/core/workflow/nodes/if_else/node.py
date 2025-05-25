@@ -49,12 +49,25 @@ def judge_case(case: dict, inputs: list) -> bool:
         return any(results)
 
 
+def parse_value(item):
+    value = item["value"]
+    value_type = item.get("type", "string")  # 默认为 string
+
+    if value_type == "number":
+        try:
+            num = float(value)
+            return int(num) if num.is_integer() else num
+        except ValueError:
+            raise ValueError(f"Invalid number: {value}")
+
+    # 你可以扩展更多类型，比如 boolean、list 等
+    return value  # 默认作为字符串返回
 @register_node("if_else")
 def run_if_else_node(node, inputs):
     case_list = node.get("data", {}).get("case", [])
 
     # 预处理 inputs: list -> dict
-    input_dict = {item["id"]: item["value"] for item in inputs}
+    input_dict = {item["id"]: parse_value(item["value"]) for item in inputs}
 
     for case in case_list:
         conditions = case["condition"]
@@ -68,6 +81,19 @@ def run_if_else_node(node, inputs):
             compare_value = cond.get("compare_value")
             compare_type = cond.get("compare_type")
             input_val = input_dict.get(variable, "")
+            if isinstance(input_val, (int, float)):
+                try:
+                    compare_value_num = float(compare_value)
+                    if isinstance(input_val, int) and compare_value_num.is_integer():
+                        compare_value = int(compare_value_num)
+                    else:
+                        compare_value = compare_value_num
+                except (ValueError, TypeError):
+                    # 转换失败 fallback：说明 compare_value 是非数字的字符串
+                    compare_value = 0  # 或 raise ValueError，按你业务逻辑决定
+            else:
+                # input_val 是字符串、布尔值等，保持 compare_value 原样（默认字符串）
+                pass
             result = compare(compare_type, input_val, compare_value)
             results.append(result)
 
