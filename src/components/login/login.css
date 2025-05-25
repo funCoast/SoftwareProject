@@ -12,7 +12,7 @@
 
 /* 通用输入框 */
 .input {
-  width: var(--input-width);
+  width: 260px !important;
   height: 38px;
   border-radius: 8px;
   box-sizing: border-box;
@@ -23,11 +23,13 @@
   display: flex;
   justify-content: center;
   gap: 10px;
+  width: 260px;
+  margin: 0 auto;
 }
 
 /* 验证码输入框 */
 .code-input {
-  width: 150px;
+  width: 150px !important;
   height: 38px;
   border-radius: 8px;
 }
