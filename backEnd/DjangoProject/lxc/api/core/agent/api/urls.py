@@ -1,5 +1,5 @@
 from api.core.agent.api.views import temp_send_message, send_agent_message, AgentInfoView, AgentCreateView, \
-    AgentUpdateView, AgentFetchAgentMessageView
+    AgentUpdateView, AgentFetchAgentMessageView, AgentClearView
 from django.urls import path
 
 urlpatterns = [
@@ -9,5 +9,5 @@ urlpatterns = [
     path('updateInfo', AgentUpdateView.as_view(), name='update_info'),
     path('create', AgentCreateView.as_view(), name='create'),
     path('fetchAgentMessage', AgentFetchAgentMessageView.as_view(), name='fetch_agent_message'),
-    path('clearHistoryMessage', AgentCreateView.as_view(), name='clear_history_message'),
+    path('clearHistoryMessage', AgentClearView.as_view(), name='clear_history_message'),
 ]
