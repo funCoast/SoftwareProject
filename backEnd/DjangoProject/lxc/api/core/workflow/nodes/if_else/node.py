@@ -105,6 +105,6 @@ def run_if_else_node(node, inputs):
             results.append(result)
 
         if (and_or == 1 and all(results)) or (and_or == 0 and any(results)):
-            return {"next_node":case.get("next_node")}
+            return {"0":case.get("next_node")}
 
     return None  # 所有条件都不满足
