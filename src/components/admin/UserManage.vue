@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, computed, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import * as echarts from 'echarts'
@@ -20,6 +20,17 @@ interface User {
 const users = ref<User[]>([])
 const loading = ref(false)
 const baseImageUrl = 'http://122.9.33.84:8000'
+const searchQuery = ref('')
+
+const filteredUsers = computed(() => {
+  if (!searchQuery.value) return users.value
+  const query = searchQuery.value.toLowerCase()
+  return users.value.filter(user => 
+    user.name.toLowerCase().includes(query) ||
+    user.email.toLowerCase().includes(query) ||
+    user.uid.toString().includes(query)
+  )
+})
 
 // 获取用户列表
 async function fetchUsers() {
@@ -108,42 +119,94 @@ const dates = ref([
 ])
 
 // 初始化折线图
+let myChart: any = null
+
 function initChart() {
-  const chartDom = document.getElementById('loginChart') as HTMLDivElement
-  const myChart = echarts.init(chartDom)
-
-  const option = {
-    title: {
-      text: '最近七日用户登录次数'
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    xAxis: {
-      type: 'category',
-      data: dates.value
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [
-      {
-        data: loginData.value,
-        type: 'line',
-        smooth: true,
-        lineStyle: {
-          width: 3
-        }
+  nextTick(() => {
+    const chartDom = document.getElementById('loginChart')
+    if (chartDom) {
+      if (myChart) {
+        myChart.dispose()
       }
-    ]
-  }
+      myChart = echarts.init(chartDom)
+      const option = {
+        title: {
+          text: '最近七日用户登录次数',
+          left: 'center'
+        },
+        tooltip: {
+          trigger: 'axis'
+        },
+        grid: {
+          top: 60,
+          right: 30,
+          bottom: 30,
+          left: 40,
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          data: dates.value,
+          axisLabel: {
+            formatter: (value: string) => value.slice(5) // 只显示月-日
+          }
+        },
+        yAxis: {
+          type: 'value',
+          minInterval: 1
+        },
+        series: [
+          {
+            name: '登录次数',
+            data: loginData.value,
+            type: 'line',
+            smooth: true,
+            lineStyle: {
+              width: 3,
+              color: '#4FAFFF'
+            },
+            itemStyle: {
+              color: '#4FAFFF'
+            },
+            areaStyle: {
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: 'rgba(79, 175, 255, 0.3)' },
+                  { offset: 1, color: 'rgba(79, 175, 255, 0.1)' }
+                ]
+              }
+            }
+          }
+        ]
+      }
+      myChart.setOption(option)
 
-  myChart.setOption(option)
+      // 添加窗口大小变化的监听
+      window.addEventListener('resize', () => {
+        myChart.resize()
+      })
+    }
+  })
 }
 
 onMounted(() => {
   fetchUsers()
   initChart()
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  if (myChart) {
+    myChart.dispose()
+    window.removeEventListener('resize', () => {
+      myChart.resize()
+    })
+  }
 })
 </script>
 
@@ -151,13 +214,59 @@ onMounted(() => {
   <div class="user-manage">
     <div class="header">
       <h2>用户管理</h2>
+      <div class="header-actions">
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索用户..."
+          prefix-icon="Search"
+          class="search-input"
+          clearable
+        />
+        <el-button type="primary" @click="fetchUsers">
+          <img src="https://api.iconify.design/material-symbols:refresh.svg" class="action-icon" />
+          刷新
+        </el-button>
+      </div>
     </div>
-    <div id="loginChart" style="height: 400px; margin-top: 20px;"></div>
+    
+    <div class="stats-cards">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <img src="https://api.iconify.design/material-symbols:group.svg" alt="total users" />
+        </div>
+        <div class="stat-info">
+          <h3>总用户数</h3>
+          <p>{{ users.length }}</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon warning">
+          <img src="https://api.iconify.design/material-symbols:gpp-bad.svg" alt="banned users" />
+        </div>
+        <div class="stat-info">
+          <h3>封禁用户</h3>
+          <p>{{ users.filter(u => !u.can_log).length }}</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon danger">
+          <img src="https://api.iconify.design/material-symbols:block.svg" alt="restricted users" />
+        </div>
+        <div class="stat-info">
+          <h3>发布受限</h3>
+          <p>{{ users.filter(u => !u.can_post).length }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="loginChart" class="chart-card"></div>
+
     <el-table
       v-loading="loading"
-      :data="users"
+      :data="filteredUsers"
       style="width: 100%"
       border
+      class="user-table"
     >
       <el-table-column prop="uid" label="ID" width="80" />
       <el-table-column label="头像" width="80">
@@ -215,24 +324,24 @@ onMounted(() => {
       </el-table-column>
       <el-table-column label="操作" width="200">
         <template #default="{ row }">
+          <div v-if="row.can_log && row.can_post">
+            <el-button
+              type="danger"
+              size="small"
+              @click="banUser(row.uid, 'account')"
+            >
+              封禁账号
+            </el-button>
+            <el-button
+              type="warning"
+              size="small"
+              @click="banUser(row.uid, 'post')"
+            >
+              限制发布
+            </el-button>
+          </div>
           <el-button
-            v-if="row.can_log"
-            type="danger"
-            size="small"
-            @click="banUser(row.uid, 'account')"
-          >
-            封禁账号
-          </el-button>
-          <el-button
-            v-if="row.can_post"
-            type="warning"
-            size="small"
-            @click="banUser(row.uid, 'post')"
-          >
-            限制发布
-          </el-button>
-          <el-button
-            v-if="!row.can_log || !row.can_post"
+            v-else
             type="success"
             size="small"
             @click="unbanUser(row.uid)"
@@ -247,29 +356,130 @@ onMounted(() => {
 
 <style scoped>
 .user-manage {
-  padding: 20px;
+  width: 100%;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .header h2 {
   margin: 0;
+  font-size: 24px;
   color: #2c3e50;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.action-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #ecf5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon img {
+  width: 28px;
+  height: 28px;
+  color: #409EFF;
+}
+
+.stat-icon.warning {
+  background: #fdf6ec;
+}
+
+.stat-icon.warning img {
+  color: #e6a23c;
+}
+
+.stat-icon.danger {
+  background: #fef0f0;
+}
+
+.stat-icon.danger img {
+  color: #f56c6c;
+}
+
+.stat-info h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.stat-info p {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.chart-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  height: 400px;
 }
 
 #loginChart {
   width: 100%;
-  height: 300px;
+  height: 100%;
 }
 
-:deep(.el-table) {
-  margin-top: 20px;
-  border-radius: 8px;
-  overflow: hidden;
+.user-table {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ban-time-input {
+  display: flex;
+  gap: 8px;
+}
+
+:deep(.el-input-number) {
+  width: 100px;
+}
+
+:deep(.el-select) {
+  width: 80px;
 }
 </style>

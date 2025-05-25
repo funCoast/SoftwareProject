@@ -15,13 +15,13 @@
         </div>
       </div>
 
-      <!-- 导航菜单 -->
+      <!-- 主导航菜单 -->
       <nav>
         <ul>
           <li
             v-for="item in filteredNavItems"
             :key="item.path"
-            :class="{ active: cur === item.path }"
+            :class="{ active: cur === item.path || (item.children && route.path.startsWith(item.path)) }"
             @click="handleNavigation(item.path)"
           >
             <img :src="item.icon" :alt="item.label" class="nav-icon" />
@@ -31,8 +31,25 @@
       </nav>
     </div>
 
+    <!-- 管理后台侧边栏 -->
+    <div v-if="route.path.startsWith('/admin')" class="admin-side-nav">
+      <nav>
+        <ul>
+          <li
+            v-for="item in adminMenuItems"
+            :key="item.path"
+            :class="{ active: route.path === item.path }"
+            @click="router.push(item.path)"
+          >
+            <img :src="item.icon" :alt="item.label" class="nav-icon" />
+            <span>{{ item.label }}</span>
+          </li>
+        </ul>
+      </nav>
+    </div>
+
     <!-- 主体区域 -->
-    <div class="main-content">
+    <div class="main-content" :class="{ 'with-admin-nav': route.path.startsWith('/admin') }">
       <router-view :avatar="avatar" />
     </div>
   </div>
@@ -41,8 +58,10 @@
 <script setup lang="ts">
 import { ref, onBeforeMount, provide, computed } from 'vue'
 import router from '../router'
+import { useRoute } from 'vue-router'
 import axios from 'axios'
 
+const route = useRoute()
 const avatar = ref('')
 function refreshAvatar(newOne: string) {
   avatar.value = newOne
@@ -74,17 +93,23 @@ interface NavItem {
   path: string
   label: string
   icon: string
+  children?: NavItem[]
 }
+
+// 管理后台菜单项
+const adminMenuItems = [
+  { path: '/admin/userManage', label: '用户管理', icon: 'https://api.iconify.design/material-symbols:manage-accounts.svg' },
+  { path: '/admin/reviewAgent', label: '智能体审核', icon: 'https://api.iconify.design/material-symbols:rate-review.svg' },
+  { path: '/admin/reportAgent', label: '举报处理', icon: 'https://api.iconify.design/material-symbols:report.svg' },
+  { path: '/admin/publishAnno', label: '公告发布', icon: 'https://api.iconify.design/material-symbols:campaign.svg' }
+]
 
 // 导航配置项（更易维护）
 const navItems = ref<NavItem[]>([
   { path: '/home', label: '首页', icon: 'https://api.iconify.design/material-symbols:home.svg' },
   { path: '/workspace', label: '工作空间', icon: 'https://api.iconify.design/material-symbols:dashboard.svg' },
   { path: '/community', label: '社区', icon: 'https://api.iconify.design/material-symbols:groups.svg' },
-  { path: '/user-manage', label: '用户管理', icon: 'https://api.iconify.design/material-symbols:manage-accounts.svg' },
-  { path: '/publish-anno', label: '公告管理', icon: 'https://api.iconify.design/material-symbols:announcement.svg' },
-  { path: '/review-agent', label: '智能体审核', icon: 'https://api.iconify.design/material-symbols:check-circle.svg' },
-  { path: '/report-agent', label: '智能体举报', icon: 'https://api.iconify.design/material-symbols:check-circle.svg' }
+  { path: '/admin', label: '管理后台', icon: 'https://api.iconify.design/material-symbols:admin-panel-settings.svg' }
 ])
 
 // 根据用户角色过滤导航项
@@ -93,9 +118,7 @@ const filteredNavItems = computed(() => {
   if (role === 'admin') {
     return navItems.value
   } else {
-    return navItems.value.filter(item =>
-      !['/publish-anno', '/review-agent', '/user-manage', '/report-agent'].includes(item.path)
-    )
+    return navItems.value.filter(item => item.path !== '/admin')
   }
 })
 
@@ -105,7 +128,11 @@ const cur = ref('/home')
 // 导航处理方法
 function handleNavigation(path: string) {
   cur.value = path
-  router.push(path)
+  if (path === '/admin') {
+    router.push('/admin/userManage')
+  } else {
+    router.push(path)
+  }
 }
 
 function handleProfileNavigation() {
@@ -300,5 +327,88 @@ nav ul li span {
   overflow-y: auto;
   padding: 24px;
   color: #333;
+}
+
+.admin-side-nav {
+  width: 120px;
+  background: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  z-index: 1;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.admin-side-nav nav {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.admin-side-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.admin-side-nav li {
+  height: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #94a3b8;
+  position: relative;
+  margin: 4px 0;
+}
+
+.admin-side-nav li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 4px;
+  height: 0;
+  background-color: #4FAFFF;
+  transition: height 0.3s ease;
+  border-radius: 0 4px 4px 0;
+}
+
+.admin-side-nav li:hover::before,
+.admin-side-nav li.active::before {
+  height: 100%;
+}
+
+.admin-side-nav li:hover,
+.admin-side-nav li.active {
+  background-color: #f1f5f9;
+  color: #4FAFFF;
+}
+
+.admin-side-nav .nav-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  margin-bottom: 6px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+.admin-side-nav li:hover .nav-icon,
+.admin-side-nav li.active .nav-icon {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.admin-side-nav span {
+  font-size: 12px;
+  display: block;
+  line-height: 1.2;
+  margin-top: 4px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.main-content.with-admin-nav {
+  margin-left: 120px;
 }
 </style>
