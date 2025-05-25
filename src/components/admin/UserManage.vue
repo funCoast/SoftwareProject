@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
+import * as echarts from 'echarts'
 
 interface User {
   uid: number
@@ -30,7 +31,7 @@ async function fetchUsers() {
     })
     if (response.data.code === 0) {
       users.value = response.data.users
-        // .filter((user: User) => user.uid !== 3 && user.uid !== 4)
+        .filter((user: User) => user.uid !== 3 && user.uid !== 4)
         .sort((a: User, b: User) => a.uid - b.uid)
     } else {
       ElMessage.error(response.data.message)
@@ -99,8 +100,50 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString()
 }
 
+// 模拟最近七天的登录次数数据
+const loginData = ref([5, 3, 4, 6, 8, 7, 9])
+const dates = ref([
+  '2025-05-15', '2025-05-16', '2025-05-17',
+  '2025-05-18', '2025-05-19', '2025-05-20', '2025-05-21'
+])
+
+// 初始化折线图
+function initChart() {
+  const chartDom = document.getElementById('loginChart') as HTMLDivElement
+  const myChart = echarts.init(chartDom)
+
+  const option = {
+    title: {
+      text: '最近七日用户登录次数'
+    },
+    tooltip: {
+      trigger: 'axis'
+    },
+    xAxis: {
+      type: 'category',
+      data: dates.value
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        data: loginData.value,
+        type: 'line',
+        smooth: true,
+        lineStyle: {
+          width: 3
+        }
+      }
+    ]
+  }
+
+  myChart.setOption(option)
+}
+
 onMounted(() => {
   fetchUsers()
+  initChart()
 })
 </script>
 
@@ -109,7 +152,7 @@ onMounted(() => {
     <div class="header">
       <h2>用户管理</h2>
     </div>
-
+    <div id="loginChart" style="height: 400px; margin-top: 20px;"></div>
     <el-table
       v-loading="loading"
       :data="users"
@@ -219,41 +262,14 @@ onMounted(() => {
   color: #2c3e50;
 }
 
-.ban-time-input {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-:deep(.el-input-number) {
-  width: 100px;
-}
-
-:deep(.el-select) {
-  width: 80px;
+#loginChart {
+  width: 100%;
+  height: 300px;
 }
 
 :deep(.el-table) {
   margin-top: 20px;
   border-radius: 8px;
   overflow: hidden;
-}
-
-:deep(.el-table th) {
-  background-color: #f5f7fa;
-  color: #2c3e50;
-  font-weight: 600;
-}
-
-:deep(.el-table td) {
-  padding: 12px 0;
-}
-
-:deep(.el-tag) {
-  border-radius: 4px;
-}
-
-:deep(.el-button) {
-  margin: 0 4px;
 }
 </style>
