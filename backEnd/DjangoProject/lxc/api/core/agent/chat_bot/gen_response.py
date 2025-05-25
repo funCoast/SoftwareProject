@@ -1,6 +1,5 @@
 import os
 import uuid
-from idlelib.rpc import response_queue
 
 from django.core.files.storage import default_storage
 
