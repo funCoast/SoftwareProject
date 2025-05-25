@@ -405,3 +405,55 @@ class AgentCreateView(View):
             {"code": 0, "message": "创建成功", "agent_id": agent.agent_id},
             json_dumps_params={'ensure_ascii': False}
         )
+
+class AgentClearView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"code": -1, "message": "JSON 格式错误"}, status=400)
+
+        uid = data.get("uid")
+        agent_id = data.get("agent_id")
+
+        if not agent_id:
+            return JsonResponse(
+                {"code": -1, "message": "缺少参数 agent_id"},
+                status=400,
+                json_dumps_params={'ensure_ascii': False}
+            )
+
+        if not uid:
+            return JsonResponse(
+                {"code": -1, "message": "缺少参数 uid"},
+                status=400,
+                json_dumps_params={'ensure_ascii': False}
+            )
+
+        # 获取 Agent
+        try:
+            agent = Agent.objects.get(agent_id=agent_id)
+        except Agent.DoesNotExist:
+            return JsonResponse(
+                {"code": -1, "message": "未找到对应的智能体"},
+                status=404,
+                json_dumps_params={'ensure_ascii': False}
+            )
+
+        session, error = get_or_create_session(User.objects.get(user_id=uid), agent_id)
+
+        if not session:
+            return JsonResponse({"status": "error", "message": error}, status=500)
+
+        try:
+            Message.objects.filter(conversation=session).delete()
+            return JsonResponse({
+                "code": 0,
+                "message": "清空成功",
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                "code": -1,
+                "message": str(e),
+            })
