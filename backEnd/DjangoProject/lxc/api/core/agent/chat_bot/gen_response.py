@@ -1,5 +1,6 @@
 import os
 import uuid
+from idlelib.rpc import response_queue
 
 from django.core.files.storage import default_storage
 
@@ -177,8 +178,10 @@ def gen_response(user_id, agent_id, message, files, can_search, session_history)
             response = LLMClient().call_deepseek_messages(messages)
         elif agent.llm == 'qwen-plus':
             response = LLMClient().call_qwen_messages(messages)
+        elif agent.llm == 'chatglm-6b-v2':
+            response = LLMClient.call_glm_messages(messages)
         else:
-            response = LLMClient().call_qwen_message(messages)
+            response = LLMClient().call_qwen_messages(messages)
 
         return response
 
@@ -264,6 +267,8 @@ def gen_response_temp(agent_id, message, files, can_search):
             response = LLMClient().call_deepseek_messages(messages)
         elif agent.llm == 'qwen-plus':
             response = LLMClient().call_qwen_messages(messages)
+        elif agent.llm == 'chatglm-6b-v2':
+            response = LLMClient.call_glm_messages(messages)
         else:
             response = LLMClient().call_qwen_message(messages)
 
