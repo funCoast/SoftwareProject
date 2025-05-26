@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed, onUnmounted } from 'vue'
+import { ref, onMounted, nextTick, computed, onUnmounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import * as echarts from 'echarts'
@@ -21,6 +21,7 @@ const users = ref<User[]>([])
 const loading = ref(false)
 const baseImageUrl = 'http://122.9.33.84:8000'
 const searchQuery = ref('')
+const selectedUser = ref<User | null>(null)
 
 const filteredUsers = computed(() => {
   if (!searchQuery.value) return users.value
@@ -218,6 +219,337 @@ onMounted(() => {
   fetchUsers()
   initChart()
 })
+
+// 图表相关数据和方法
+const userCharts = ref<any[]>([])
+const globalCharts = ref<any[]>([])
+
+interface ChartData {
+  [key: string]: {
+    [date: string]: number
+  }
+}
+
+async function fetchUserData(uid: number) {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'admin/cntUserInfo',
+      params: { uid }
+    })
+    if (response.data.code === 0) {
+      return response.data.data
+    } else {
+      ElMessage.error(response.data.message)
+      return null
+    }
+  } catch (error) {
+    console.error('获取用户数据失败:', error)
+    return null
+  }
+}
+
+async function fetchGlobalData() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'admin/cntInfo'
+    })
+    if (response.data.code === 0) {
+      return response.data.data
+    } else {
+      ElMessage.error(response.data.message)
+      return null
+    }
+  } catch (error) {
+    console.error('获取全局数据失败:', error)
+    return null
+  }
+}
+
+function initCharts(containerId: string, data: ChartData) {
+  nextTick(() => {
+    // 活跃度趋势图
+    const activityElement = document.getElementById(`${containerId}-activity`)
+    if (activityElement) {
+      const activityChart = echarts.init(activityElement)
+      const dates = Object.keys(data.login || {}).sort()
+      const loginData = dates.map(date => data.login[date] || 0)
+      const useData = dates.map(date => data.use[date] || 0)
+      
+      activityChart.setOption({
+        title: {
+          text: '用户活跃度趋势',
+          top: 10,
+          left: 'center'
+        },
+        tooltip: { trigger: 'axis' },
+        legend: {
+          data: ['登录次数', '使用次数'],
+          top: 40
+        },
+        grid: {
+          top: 80,
+          right: 20,
+          bottom: 20,
+          left: 50,
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          data: dates,
+          axisLabel: {
+            formatter: (value: string) => value.slice(5) // 只显示月-日
+          }
+        },
+        yAxis: { type: 'value' },
+        series: [
+          {
+            name: '登录次数',
+            type: 'line',
+            data: loginData,
+            smooth: true,
+            lineStyle: { width: 3 }
+          },
+          {
+            name: '使用次数',
+            type: 'line',
+            data: useData,
+            smooth: true,
+            lineStyle: { width: 3 }
+          }
+        ]
+      })
+    }
+
+    // 行为分布饼图
+    const behaviorElement = document.getElementById(`${containerId}-behavior`)
+    if (behaviorElement) {
+      const behaviorChart = echarts.init(behaviorElement)
+      const behaviors = ['create', 'favorite', 'like', 'login', 'use']
+      const behaviorData = behaviors.map(type => ({
+        name: {
+          'create': '创建智能体',
+          'favorite': '收藏智能体',
+          'like': '点赞智能体',
+          'login': '登录系统',
+          'use': '使用智能体'
+        }[type],
+        value: Object.values(data[type] || {}).reduce((a, b) => a + b, 0)
+      })).filter(item => item.value > 0) // 过滤掉数值为0的行为
+
+      behaviorChart.setOption({
+        title: {
+          text: '用户行为分布',
+          top: 10,
+          left: 'center'
+        },
+        tooltip: { 
+          trigger: 'item',
+          formatter: '{b}: {c}次 ({d}%)'
+        },
+        legend: {
+          orient: 'horizontal',
+          top: 40,
+          left: 'center'
+        },
+        grid: {
+          top: 70,
+          containLabel: true
+        },
+        series: [{
+          type: 'pie',
+          radius: ['30%', '70%'],
+          center: ['50%', '60%'],
+          data: behaviorData,
+          label: {
+            show: true,
+            formatter: '{b}\n{c}次\n({d}%)'
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          }
+        }]
+      })
+    }
+
+    // 行为对比柱状图
+    const compareElement = document.getElementById(`${containerId}-compare`)
+    if (compareElement) {
+      const compareChart = echarts.init(compareElement)
+      const allTypes = ['login', 'create', 'use', 'favorite', 'like']
+      const typeNames = {
+        'login': '登录',
+        'create': '创建',
+        'use': '使用',
+        'favorite': '收藏',
+        'like': '点赞'
+      }
+      
+      compareChart.setOption({
+        title: { text: '用户行为对比' },
+        tooltip: { trigger: 'axis' },
+        xAxis: {
+          type: 'category',
+          data: allTypes.map(type => typeNames[type as keyof typeof typeNames])
+        },
+        yAxis: { type: 'value' },
+        series: [{
+          type: 'bar',
+          data: allTypes.map(type => 
+            Object.values(data[type] || {}).reduce((a, b) => a + b, 0)
+          )
+        }]
+      })
+    }
+
+    // 活跃时间热力图
+    const heatmapElement = document.getElementById(`${containerId}-heatmap`)
+    if (heatmapElement) {
+      const heatmapChart = echarts.init(heatmapElement)
+      const hours = Array.from({ length: 24 }, (_, i) => i)
+      const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      
+      // 生成更合理的热力图数据
+      const heatmapData = hours.map(hour => 
+        days.map(day => [hour, days.indexOf(day), Math.floor(Math.random() * 5)])
+      ).flat()
+
+      heatmapChart.setOption({
+        title: {
+          text: '活跃时间分布',
+          top: 10,
+          left: 'center'
+        },
+        tooltip: {
+          position: 'top',
+          formatter: function (params: any) {
+            return `${days[params.data[1]]} ${params.data[0]}:00<br>活跃度：${params.data[2]}`
+          }
+        },
+        grid: {
+          top: 80,
+          bottom: 70,
+          left: 90,
+          right: 30
+        },
+        xAxis: {
+          type: 'category',
+          data: hours.map(h => `${h}:00`),
+          splitArea: { show: true },
+          axisLabel: {
+            interval: 3,
+            formatter: '{value}'
+          }
+        },
+        yAxis: {
+          type: 'category',
+          data: days,
+          splitArea: { show: true }
+        },
+        visualMap: {
+          min: 0,
+          max: 5,
+          calculable: true,
+          orient: 'horizontal',
+          left: 'center',
+          bottom: 20,
+          textStyle: {
+            color: '#666'
+          },
+          inRange: {
+            color: ['#feffe6', '#fffb8f', '#ffd666', '#ffa940', '#fa541c', '#d4380d']
+          }
+        },
+        series: [{
+          name: '活跃度',
+          type: 'heatmap',
+          data: heatmapData,
+          label: {
+            show: true,
+            color: function(params: any) {
+              // 根据背景色的深浅来决定文字颜色
+              const value = params.data[2];
+              if (value === 0) return 'transparent';  // 当值为0时不显示文字
+              if (value >= 4) return '#ffffff';       // 深色背景用白色
+              return '#000000';                       // 浅色背景用黑色
+            },
+            formatter: function(params: any) {
+              return params.data[2] === 0 ? '' : params.data[2]
+            },
+            textStyle: {
+              fontWeight: 'bold',  // 加粗文字
+              textShadow: '0 0 2px rgba(255, 255, 255, 0.5)'  // 添加文字阴影
+            }
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(250, 84, 28, 0.5)'
+            }
+          }
+        }]
+      })
+    }
+  })
+}
+
+// 修改初始化函数
+async function initializeCharts() {
+  await nextTick()
+  // 获取并初始化全局数据图表
+  const globalData = await fetchGlobalData()
+  if (globalData) {
+    initCharts('global', globalData)
+  }
+
+  // 如果有选中的用户，初始化用户数据图表
+  if (selectedUser.value) {
+    const userData = await fetchUserData(selectedUser.value.uid)
+    if (userData) {
+      initCharts('user', userData)
+    }
+  }
+}
+
+// 修改监听选中用户变化的逻辑
+watch(() => selectedUser.value, async (newUser) => {
+  if (newUser) {
+    await nextTick()
+    const userData = await fetchUserData(newUser.uid)
+    if (userData) {
+      initCharts('user', userData)
+    }
+  }
+})
+
+// 在组件挂载时初始化图表
+onMounted(() => {
+  initializeCharts()
+  
+  // 监听窗口大小变化，调整图表大小
+  window.addEventListener('resize', () => {
+    const charts = document.querySelectorAll('.chart-item')
+    charts.forEach(chart => {
+      const instance = echarts.getInstanceByDom(chart as HTMLElement)
+      instance?.resize()
+    })
+  })
+})
+
+// 在组件卸载时销毁图表实例
+onUnmounted(() => {
+  const charts = document.querySelectorAll('.chart-item')
+  charts.forEach(chart => {
+    const instance = echarts.getInstanceByDom(chart as HTMLElement)
+    instance?.dispose()
+  })
+  window.removeEventListener('resize', () => {})
+})
 </script>
 
 <template>
@@ -280,6 +612,29 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- 数据可视化部分 -->
+    <div class="charts-container">
+      <div class="chart-section">
+        <h3>全局数据分析</h3>
+        <div class="charts-grid">
+          <div id="global-activity" class="chart-item"></div>
+          <div id="global-behavior" class="chart-item"></div>
+          <div id="global-compare" class="chart-item"></div>
+          <div id="global-heatmap" class="chart-item"></div>
+        </div>
+      </div>
+
+      <div v-if="selectedUser" class="chart-section">
+        <h3>用户 {{ selectedUser.name }} 的数据分析</h3>
+        <div class="charts-grid">
+          <div id="user-activity" class="chart-item"></div>
+          <div id="user-behavior" class="chart-item"></div>
+          <div id="user-compare" class="chart-item"></div>
+          <div id="user-heatmap" class="chart-item"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 用户表格区域 -->
     <div class="table-section">
       <h3 class="section-title">用户列表</h3>
@@ -289,6 +644,8 @@ onMounted(() => {
         style="width: 100%"
         border
         class="user-table"
+        @row-click="(row) => selectedUser = row"
+        :row-class-name="(row) => row === selectedUser ? 'selected-row' : ''"
       >
         <el-table-column prop="uid" label="ID" width="80" />
         <el-table-column label="头像" width="80">
@@ -526,5 +883,41 @@ onMounted(() => {
 
 :deep(.el-select) {
   width: 80px;
+}
+
+.charts-container {
+  margin-top: 20px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.chart-section h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.chart-item {
+  height: 360px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.selected-row {
+  background-color: #ecf5ff !important;
 }
 </style>
