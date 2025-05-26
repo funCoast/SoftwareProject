@@ -120,9 +120,13 @@ const dates = ref([
 
 // 初始化折线图
 let myChart: any = null
+let resizeHandler: (() => void) | null = null
 
 function initChart() {
-  nextTick(() => {
+  nextTick(async () => {
+    // 等待一小段时间确保 DOM 完全渲染
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
     const chartDom = document.getElementById('loginChart')
     if (chartDom) {
       if (myChart) {
@@ -186,27 +190,33 @@ function initChart() {
       }
       myChart.setOption(option)
 
-      // 添加窗口大小变化的监听
-      window.addEventListener('resize', () => {
-        myChart.resize()
-      })
+      // 更新 resize 处理函数
+      if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler)
+      }
+      resizeHandler = () => {
+        if (myChart) {
+          myChart.resize()
+        }
+      }
+      window.addEventListener('resize', resizeHandler)
     }
   })
 }
-
-onMounted(() => {
-  fetchUsers()
-  initChart()
-})
 
 // 组件卸载时清理
 onUnmounted(() => {
   if (myChart) {
     myChart.dispose()
-    window.removeEventListener('resize', () => {
-      myChart.resize()
-    })
   }
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler)
+  }
+})
+
+onMounted(() => {
+  fetchUsers()
+  initChart()
 })
 </script>
 
@@ -229,134 +239,148 @@ onUnmounted(() => {
       </div>
     </div>
     
-    <div class="stats-cards">
-      <div class="stat-card">
-        <div class="stat-icon">
-          <img src="https://api.iconify.design/material-symbols:group.svg" alt="total users" />
+    <!-- 统计卡片和图表区域 -->
+    <div class="stats-section">
+      <!-- 统计卡片 -->
+      <div class="stats-cards">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <img src="https://api.iconify.design/material-symbols:group.svg" alt="total users" />
+          </div>
+          <div class="stat-info">
+            <h3>总用户数</h3>
+            <p>{{ users.length }}</p>
+          </div>
         </div>
-        <div class="stat-info">
-          <h3>总用户数</h3>
-          <p>{{ users.length }}</p>
+        <div class="stat-card">
+          <div class="stat-icon warning">
+            <img src="https://api.iconify.design/material-symbols:gpp-bad.svg" alt="banned users" />
+          </div>
+          <div class="stat-info">
+            <h3>封禁用户</h3>
+            <p>{{ users.filter(u => !u.can_log).length }}</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon danger">
+            <img src="https://api.iconify.design/material-symbols:block.svg" alt="restricted users" />
+          </div>
+          <div class="stat-info">
+            <h3>发布受限</h3>
+            <p>{{ users.filter(u => !u.can_post).length }}</p>
+          </div>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon warning">
-          <img src="https://api.iconify.design/material-symbols:gpp-bad.svg" alt="banned users" />
-        </div>
-        <div class="stat-info">
-          <h3>封禁用户</h3>
-          <p>{{ users.filter(u => !u.can_log).length }}</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon danger">
-          <img src="https://api.iconify.design/material-symbols:block.svg" alt="restricted users" />
-        </div>
-        <div class="stat-info">
-          <h3>发布受限</h3>
-          <p>{{ users.filter(u => !u.can_post).length }}</p>
+
+      <!-- 图表区域 -->
+      <div class="chart-section">
+        <div class="chart-card">
+          <div id="loginChart"></div>
         </div>
       </div>
     </div>
 
-    <div id="loginChart" class="chart-card"></div>
-
-    <el-table
-      v-loading="loading"
-      :data="filteredUsers"
-      style="width: 100%"
-      border
-      class="user-table"
-    >
-      <el-table-column prop="uid" label="ID" width="80" />
-      <el-table-column label="头像" width="80">
-        <template #default="{ row }">
-          <el-avatar :size="40" :src="baseImageUrl + row.avatar" />
-        </template>
-      </el-table-column>
-      <el-table-column prop="name" label="用户名" width="120" />
-      <el-table-column prop="email" label="邮箱" min-width="180" />
-      <el-table-column label="账号状态" width="120">
-        <template #default="{ row }">
-          <el-tag :type="row.can_log ? 'success' : 'danger'">
-            {{ row.can_log ? '正常' : '已封禁' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="发布状态" width="120">
-        <template #default="{ row }">
-          <el-tag :type="row.can_post ? 'success' : 'warning'">
-            {{ row.can_post ? '正常' : '已限制' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="账号封禁到期" width="180">
-        <template #default="{ row }">
-          {{ formatDate(row.ban_expire) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="发布限制到期" width="180">
-        <template #default="{ row }">
-          {{ formatDate(row.post_expire) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="封禁时长" width="200">
-        <template #default="{ row }">
-          <div class="ban-time-input">
-            <el-input-number 
-              v-model="row.banTime" 
-              :min="1" 
-              :max="365"
-              placeholder="时长"
-              size="small"
-            />
-            <el-select 
-              v-model="row.banTimeUnit" 
-              placeholder="单位"
-              size="small"
-            >
-              <el-option label="日" value="日" />
-              <el-option label="月" value="月" />
-              <el-option label="年" value="年" />
-            </el-select>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-          <div v-if="row.can_log && row.can_post">
+    <!-- 用户表格区域 -->
+    <div class="table-section">
+      <h3 class="section-title">用户列表</h3>
+      <el-table
+        v-loading="loading"
+        :data="filteredUsers"
+        style="width: 100%"
+        border
+        class="user-table"
+      >
+        <el-table-column prop="uid" label="ID" width="80" />
+        <el-table-column label="头像" width="80">
+          <template #default="{ row }">
+            <el-avatar :size="40" :src="baseImageUrl + row.avatar" />
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="用户名" width="120" />
+        <el-table-column prop="email" label="邮箱" min-width="180" />
+        <el-table-column label="账号状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.can_log ? 'success' : 'danger'">
+              {{ row.can_log ? '正常' : '已封禁' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="发布状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.can_post ? 'success' : 'warning'">
+              {{ row.can_post ? '正常' : '已限制' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="账号封禁到期" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.ban_expire) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="发布限制到期" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.post_expire) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="封禁时长" width="200">
+          <template #default="{ row }">
+            <div class="ban-time-input">
+              <el-input-number 
+                v-model="row.banTime" 
+                :min="1" 
+                :max="365"
+                placeholder="时长"
+                size="small"
+              />
+              <el-select 
+                v-model="row.banTimeUnit" 
+                placeholder="单位"
+                size="small"
+              >
+                <el-option label="日" value="日" />
+                <el-option label="月" value="月" />
+                <el-option label="年" value="年" />
+              </el-select>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200">
+          <template #default="{ row }">
+            <div v-if="row.can_log && row.can_post">
+              <el-button
+                type="danger"
+                size="small"
+                @click="banUser(row.uid, 'account')"
+              >
+                封禁账号
+              </el-button>
+              <el-button
+                type="warning"
+                size="small"
+                @click="banUser(row.uid, 'post')"
+              >
+                限制发布
+              </el-button>
+            </div>
             <el-button
-              type="danger"
+              v-else
+              type="success"
               size="small"
-              @click="banUser(row.uid, 'account')"
+              @click="unbanUser(row.uid)"
             >
-              封禁账号
+              解封
             </el-button>
-            <el-button
-              type="warning"
-              size="small"
-              @click="banUser(row.uid, 'post')"
-            >
-              限制发布
-            </el-button>
-          </div>
-          <el-button
-            v-else
-            type="success"
-            size="small"
-            @click="unbanUser(row.uid)"
-          >
-            解封
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .user-manage {
   width: 100%;
+  padding: 20px;
 }
 
 .header {
@@ -386,6 +410,11 @@ onUnmounted(() => {
   height: 18px;
   margin-right: 4px;
   vertical-align: middle;
+}
+
+/* 统计卡片和图表区域样式 */
+.stats-section {
+  margin-bottom: 30px;
 }
 
 .stats-cards {
@@ -450,13 +479,17 @@ onUnmounted(() => {
   color: #2c3e50;
 }
 
+/* 图表区域样式 */
+.chart-section {
+  margin-bottom: 30px;
+}
+
 .chart-card {
   background: white;
   border-radius: 12px;
   padding: 20px;
-  margin-bottom: 24px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  height: 400px;
+  height: 300px;
 }
 
 #loginChart {
@@ -464,10 +497,22 @@ onUnmounted(() => {
   height: 100%;
 }
 
-.user-table {
+/* 表格区域样式 */
+.table-section {
   background: white;
   border-radius: 12px;
+  padding: 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: #2c3e50;
+}
+
+.user-table {
+  margin-top: 10px;
 }
 
 .ban-time-input {
