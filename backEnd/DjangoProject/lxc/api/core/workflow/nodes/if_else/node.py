@@ -48,20 +48,6 @@ def judge_case(case: dict, inputs: list) -> bool:
     else:
         return any(results)
 
-
-def parse_value(item):
-    value = item["value"]
-    value_type = item.get("type", "string")  # 默认为 string
-
-    if value_type == "number":
-        try:
-            num = float(value)
-            return int(num) if num.is_integer() else num
-        except ValueError:
-            raise ValueError(f"Invalid number: {value}")
-
-    # 你可以扩展更多类型，比如 boolean、list 等
-    return value  # 默认作为字符串返回
 @register_node("if_else")
 def run_if_else_node(node, inputs):
     case_list = node.get("data", {}).get("case", [])
@@ -79,7 +65,7 @@ def run_if_else_node(node, inputs):
     for case in case_list:
         conditions = case["condition"]
         if not conditions:
-            return {"next_node":case.get("next_node")}
+            return {"0":case.get("next_node")}
         and_or = case.get("and_or", 1)
         results = []
 
