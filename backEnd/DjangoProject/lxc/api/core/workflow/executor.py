@@ -109,14 +109,14 @@ class Executor:
 
         # ✅ 特殊处理 if_else
         if node["type"] == "if_else":
-            next_node_id = outputs.get("next_node")
+            next_node_id = outputs.get("0")
             if next_node_id is not None and next_node_id in self.nodes:
                 self.execute_from_node(next_node_id, visited)
             return  # ❗终止后续 neighbors 遍历
 
         # ✅ 特殊处理 classifier
         if node["type"] == "classifier":
-            next_node_id = outputs.get("next_node")
+            next_node_id = outputs.get("0")
             if next_node_id is not None and next_node_id in self.nodes:
                 self.execute_from_node(next_node_id, visited)
             return
