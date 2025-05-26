@@ -101,11 +101,28 @@ function formatDate(dateStr: string) {
 }
 
 // 模拟最近七天的登录次数数据
-const loginData = ref([5, 3, 4, 6, 8, 7, 9])
-const dates = ref([
-  '2025-05-15', '2025-05-16', '2025-05-17',
-  '2025-05-18', '2025-05-19', '2025-05-20', '2025-05-21'
-])
+const loginData = ref<number[]>([]);
+const dates = ref<string[]>([]);
+
+async function initInfo() {
+  try {
+    const response = await axios({
+      method: 'get',
+      url: 'admin/cntInfo'
+    })
+    if (response.data.code === 0) {
+      console.log('获取信息成功', Object.keys(response.data.data.login), Object.values(response.data.data.login))
+      dates.value = Object.keys(response.data.data.login)
+      loginData.value = Object.values(response.data.data.login)
+    } else {
+      ElMessage.error('获取信息失败：' + response.data.message)
+    }
+  } catch (error) {
+    console.error('获取信息失败:', error)
+    ElMessage.error('获取信息失败')
+  }
+  initChart()
+}
 
 // 初始化折线图
 function initChart() {
@@ -143,7 +160,7 @@ function initChart() {
 
 onMounted(() => {
   fetchUsers()
-  initChart()
+  initInfo()
 })
 </script>
 
