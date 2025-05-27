@@ -72,7 +72,7 @@ onMounted(() => {
       type: 'string',
       value: {
         text: '',
-        type: 0,
+        type: 1,
         nodeId: -1,
         outputId: -1
       }
@@ -109,7 +109,7 @@ const runInputs = ref<Record<string, string>>({})
 function generateSelectValue(input: Input): string {
   const val = input.value
   if (val.type === 0) {
-    return 'manual'
+    return ''
   }
   if (val.type === 1 && val.nodeId !== -1 && val.outputId !== -1) {
     const node = allUpstreamNodes.value.find(n => n.id === val.nodeId)
@@ -123,17 +123,10 @@ function generateSelectValue(input: Input): string {
 
 // 处理输入来源选择变化
 function onSelectChange(val: string, input: Input): void {
-  if (val === 'manual') {
-    input.value.type = 0
-    input.value.nodeId = -1
-    input.value.outputId = -1
-    return
-  }
   const [nodeId, outputId] = val.split('|').map(Number)
   if (input.value) {
     input.value.nodeId = nodeId
     input.value.outputId = outputId
-    input.value.type = 1
   }
 }
 
@@ -199,10 +192,10 @@ function openRunPanel() {
 // 验证节点配置
 function isNodeValid() {
   if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
-  if (!inputs || inputs.value.length === 0) return '未配置输入变量！'
-  if (!outputs || outputs.value.length === 0) return '未配置输出变量！'
+  if (!props.node.inputs || props.node.inputs.length === 0) return '未配置输入变量！'
+  if (!props.node.outputs || props.node.outputs.length === 0) return '未配置输出变量！'
 
-  for (const input of inputs.value) {
+  for (const input of props.node.inputs) {
     if (!input.name || input.name.trim() === '') return '未配置输入变量的名称！'
     const value = input.value
     if (value?.type === 1) {
@@ -213,13 +206,14 @@ function isNodeValid() {
       return '未知配置！'
     }
   }
-  if (!instruction.value || instruction.value.trim() === '') return '未配置提取指令！'
+  if (!props.node.data.instruction || props.node.data.instruction.trim() === '') return '未配置提取指令！'
   return ''
 }
 
 // 暴露方法给父组件
 defineExpose({
-  openRunPanel: openRunPanel
+  openRunPanel: openRunPanel,
+  isNodeValid: isNodeValid
 })
 </script>
 
@@ -247,10 +241,6 @@ defineExpose({
                 class="source-select"
                 @change="(val: string) => onSelectChange(val, input)"
             >
-              <el-option
-                  label="手动输入"
-                  value="manual"
-              />
               <template v-for="node in allUpstreamNodes" :key="node.id">
                 <el-option
                     v-for="(nodeOutput, idx) in node.outputs"

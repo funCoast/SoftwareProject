@@ -72,14 +72,18 @@ function removeOutput(id: number) {
 
 function isNodeValid() {
   if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
-  if (!outputs || outputs.value.length === 0) return '未配置输入变量！'
+  if (!props.node.outputs || props.node.outputs.length === 0) return '未配置输入变量！'
 
-  for (const output of outputs.value) {
+  for (const output of props.node.outputs) {
     if (!output.name || output.name.trim() === '') return '未配置输入变量的名称！'
     if (!output.description || output.description.trim() === '') return '未配置输入变量的描述！'
   }
   return ''
 }
+
+defineExpose({
+  isNodeValid: isNodeValid
+})
 </script>
 
 <template>

@@ -117,15 +117,18 @@ function onSelectChange(val: string, input: Input) {
 
 function isNodeValid() {
   if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
-  if (!inputs || inputs.value.length === 0) return '未配置输出变量！'
+  if (!props.node.inputs || props.node.inputs.length === 0) return '未配置输出变量！'
 
-  for (const input of inputs.value) {
+  for (const input of props.node.inputs) {
     if (!input.name || input.name.trim() === '') return '未配置输出变量的名称！'
-    const value = input.value
     if (generateSelectValue(input).trim() === '') return '未选择输出变量的来源！'
   }
   return ''
 }
+
+defineExpose({
+  isNodeValid: isNodeValid
+})
 </script>
 
 <template>

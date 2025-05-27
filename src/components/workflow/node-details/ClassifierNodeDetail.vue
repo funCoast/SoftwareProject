@@ -161,10 +161,10 @@ const runInputs = ref<Record<string, string>>({})
 
 function isNodeValid() {
   if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
-  if (!inputs || inputs.value.length === 0) return '未配置输入变量！'
-  if (!outputs || outputs.value.length === 0) return '未配置输出变量！'
+  if (!props.node.inputs || props.node.inputs.length === 0) return '未配置输入变量！'
+  if (!props.node.outputs || props.node.outputs.length === 0) return '未配置输出变量！'
 
-  for (const input of inputs.value) {
+  for (const input of props.node.inputs) {
     if (!input.name || input.name.trim() === '') return '未配置输入变量的名称！'
     const value = input.value
     if (value?.type === 1) {
@@ -175,11 +175,8 @@ function isNodeValid() {
       return '未知配置！'
     }
   }
-  for (const output of outputs.value) {
-    if (!output.name || output.name.trim() === '') return '未配置输出变量的名称！'
-  }
-  if (!classConfigs || classConfigs.value.length === 0) return '未配置分支！'
-  for (const config of classConfigs.value) {
+  if (!props.node.data.classes || props.node.data.classes.length === 0) return '未配置分支！'
+  for (const config of props.node.data.classes) {
     if (getNextNodeValue(config) === null) return '未选择下一个节点！'
     if (!config.description || config.description.trim() === '') return '未配置分支描述！'
   }
@@ -269,7 +266,8 @@ function onSelectChange(val: string, input: Input): void {
 
 // 暴露方法给父组件
 defineExpose({
-  openRunPanel
+  openRunPanel: openRunPanel,
+  isNodeValid: isNodeValid
 })
 </script>
 

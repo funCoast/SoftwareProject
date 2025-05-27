@@ -237,10 +237,10 @@ const validNextNodeIds = computed(() => {
 
 function isNodeValid() {
   if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
-  if (!inputs || inputs.value.length === 0) return '未配置输入变量！'
-  if (!outputs || outputs.value.length === 0) return '未配置输出变量！'
+  if (!props.node.inputs || props.node.inputs.length === 0) return '未配置输入变量！'
+  if (!props.node.outputs || props.node.outputs.length === 0) return '未配置输出变量！'
 
-  for (const input of inputs.value) {
+  for (const input of props.node.inputs) {
     if (!input.name || input.name.trim() === '') return '未配置输入变量的名称！'
     const value = input.value
     if (value?.type === 1) {
@@ -251,11 +251,11 @@ function isNodeValid() {
       return '未知配置！'
     }
   }
-  for (const output of outputs.value) {
+  for (const output of props.node.outputs) {
     if (!output.name || output.name.trim() === '') return '未配置输出变量的名称！'
   }
-  if (!cases || cases.value.length === 0) return '未配置分支！'
-  for (const case_ of cases.value) {
+  if (!props.node.data.case || props.node.data.case.length === 0) return '未配置分支！'
+  for (const case_ of props.node.data.case) {
     if (getNextNodeValue(case_) === null) return '未选择下一个节点！'
     for (const condition of case_.condition) {
       if (condition.variable === null) return '未选择条件变量！'
@@ -324,7 +324,8 @@ async function run() {
 }
 
 defineExpose({
-  openRunPanel
+  openRunPanel: openRunPanel,
+  isNodeValid: isNodeValid
 })
 </script>
 

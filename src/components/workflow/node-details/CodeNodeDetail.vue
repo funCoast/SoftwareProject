@@ -114,7 +114,7 @@ function initEditor() {
     }
   })
 
-  editor = monaco.editor.create(editorContainer.value, {
+  editor = monaco.editor.create(<HTMLElement>editorContainer.value, {
     value: code.value,
     language: language.value,
     theme: 'customTheme',
@@ -345,10 +345,10 @@ async function run() {
 
 function isNodeValid() {
   if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
-  if (!inputs || inputs.value.length === 0) return '未配置输入变量！'
-  if (!outputs || outputs.value.length === 0) return '未配置输出变量！'
+  if (!props.node.inputs || props.node.inputs.length === 0) return '未配置输入变量！'
+  if (!props.node.outputs || props.node.outputs.length === 0) return '未配置输出变量！'
 
-  for (const input of inputs.value) {
+  for (const input of props.node.inputs) {
     if (!input.name || input.name.trim() === '') return '未配置输入变量的名称！'
     const value = input.value
     if (value?.type === 1) {
@@ -359,15 +359,16 @@ function isNodeValid() {
       return '未知配置！'
     }
   }
-  for (const output of outputs.value) {
+  for (const output of props.node.outputs) {
     if (!output.name || output.name.trim() === '') return '未配置输出变量的名称！'
   }
-  if (!code || code.value.trim() === '') return '未输入代码！'
+  if (!props.node.data.code || props.node.data.code.trim() === '') return '未输入代码！'
   return ''
 }
 
 defineExpose({
-  openRunPanel
+  openRunPanel: openRunPanel,
+  isNodeValid: isNodeValid
 })
 </script>
 

@@ -226,10 +226,10 @@ function openRunPanel() {
 // 验证节点配置
 function isNodeValid() {
   if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
-  if (!inputs || inputs.value.length === 0) return '未配置输入变量！'
-  if (!outputs || outputs.value.length === 0) return '未配置输出变量！'
+  if (!props.node.inputs || props.node.inputs.length === 0) return '未配置输入变量！'
+  if (!props.node.outputs || props.node.outputs.length === 0) return '未配置输出变量！'
 
-  for (const input of inputs.value) {
+  for (const input of props.node.inputs) {
     if (!input.name || input.name.trim() === '') return '未配置输入变量的名称！'
     const value = input.value
     if (value?.type === 1) {
@@ -242,11 +242,6 @@ function isNodeValid() {
   }
   return ''
 }
-
-// 暴露方法给父组件
-defineExpose({
-  openRunPanel: openRunPanel
-})
 
 // 添加状态处理函数
 function getStatusType(status?: string) {
@@ -274,6 +269,12 @@ function getStatusText(status?: string) {
       return '未知'
   }
 }
+
+// 暴露方法给父组件
+defineExpose({
+  openRunPanel: openRunPanel,
+  isNodeValid: isNodeValid
+})
 </script>
 
 <template>
