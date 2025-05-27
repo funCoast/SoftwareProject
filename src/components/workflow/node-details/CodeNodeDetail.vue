@@ -1,11 +1,25 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick, watchEffect } from 'vue'
 import { getAllUpstreamNodes } from '@/utils/getAllUpstreamNodes.ts'
 import * as monaco from 'monaco-editor'
+
+import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+import axios from "axios";
+
+self.MonacoEnvironment = {
+  getWorker: function (_moduleId, label) {
+    if (label === 'typescript' || label === 'javascript') {
+      return new TsWorker()
+    }
+    return new EditorWorker()
+  }
+}
 
 interface Input {
   id: number
   name: string
+  type: string
   value?: {
     type: number // 1: 上游节点的输出变量
     text: string
@@ -24,6 +38,7 @@ interface Output {
 const props = defineProps<{
   node: {
     id: number
+    name: string
     type: string
     label: string
     x: number
@@ -36,6 +51,7 @@ const props = defineProps<{
     }
   }
   allNodes: any[]
+  workflow_id: string
 }>()
 
 const emit = defineEmits<{
@@ -49,9 +65,7 @@ const allUpstreamNodes = computed(() => {
 
 // 初始化输入输出列表
 const inputs = ref<Input[]>(props.node.inputs || [])
-const outputs = ref<Output[]>(props.node.outputs?.map(output => ({
-  ...output,
-})) || [])
+const outputs = ref<Output[]>(props.node.outputs || [])
 const code = ref(props.node.data?.code || '')
 const language = ref(props.node.data?.language || 'python')
 
@@ -71,7 +85,7 @@ const languages = [
 const showRunPanel = ref(false)
 const isRunning = ref(false)
 const runStatus = ref<'running' | 'success' | 'error' | null>(null)
-const runResult = ref<any>(null)
+const runResult = ref<{ name: string; value: string }[]>([])
 const runError = ref<string | null>(null)
 const runInputs = ref<Record<string, string>>({})
 
@@ -82,6 +96,9 @@ let editor: monaco.editor.IStandaloneCodeEditor | null = null
 // 全屏相关
 const isFullscreen = ref(false)
 const fullscreenContainer = ref<HTMLElement | null>(null)
+
+// 结果全屏相关
+const isResultFullscreen = ref(false)
 
 // 初始化编辑器
 function initEditor() {
@@ -149,9 +166,22 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+// 切换结果全屏
+function toggleResultFullscreen() {
+  isResultFullscreen.value = !isResultFullscreen.value
+}
+
+// 监听 ESC 键退出全屏
+function handleResultKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && isResultFullscreen.value) {
+    toggleResultFullscreen()
+  }
+}
+
 onMounted(() => {
   initEditor()
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('keydown', handleResultKeydown)
 })
 
 onBeforeUnmount(() => {
@@ -159,19 +189,15 @@ onBeforeUnmount(() => {
     editor.dispose()
   }
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('keydown', handleResultKeydown)
 })
 
 // 监听变化并更新节点
 watch([inputs, outputs, code, language], () => {
-  const returnConfig: Record<string, string> = {}
-  outputs.value.forEach(output => {
-    returnConfig[output.name] = output.returnValue
-  })
-
   emit('update:node', {
     ...props.node,
     inputs: inputs.value,
-    outputs: outputs.value, // 从输出中移除 returnValue
+    outputs: outputs.value,
     data: {
       code: code.value,
       language: language.value,
@@ -184,17 +210,19 @@ function addInput() {
   const newId = inputs.value.length
       ? Math.max(...inputs.value.map((i: Input) => i.id)) + 1
       : 0
-
-  inputs.value.push({
+  const newInput: Input = {
     id: newId,
     name: '',
+    type: 'string',
     value: {
       type: 1,
       nodeId: -1,
       text: '',
       outputId: -1
     }
-  })
+  }
+  bindInputType(newInput)
+  inputs.value.push(newInput)
 }
 
 // 删除输入
@@ -227,11 +255,26 @@ function removeOutput(id: number) {
 }
 
 // 用于保持 select 的 value 绑定正确
-function generateSelectValue(val: Input['value']): string {
+function generateSelectValue(input: Input): string {
+  const val = input['value']
   if (val?.type === 1 && val?.nodeId !== -1 && val?.outputId !== -1) {
-    return `${val.nodeId}|${val.outputId}`
+    const node = allUpstreamNodes.value.find(n => n.id === val.nodeId)
+    const outputExists = node?.outputs?.some(o => o.id === val.outputId)
+    if (node && outputExists) {
+      return `${val.nodeId}|${val.outputId}`
+    }
   }
   return ''
+}
+
+function bindInputType(input: Input) {
+  watchEffect(() => {
+    if (!input.value) return
+    const { nodeId, outputId } = input.value
+    const node = allUpstreamNodes.value.find(n => n.id === nodeId)
+    const output = node?.outputs.find(o => o.id === outputId)
+    input.type = output?.type ?? 'string'
+  })
 }
 
 // 处理上游输出选择变化
@@ -243,17 +286,17 @@ function onSelectChange(val: string, input: Input) {
   }
 }
 
-// 获取上游节点输出的类型
-function getUpstreamOutputType(nodeId: number, outputId: number): string {
-  const node = allUpstreamNodes.value.find((n: { id: number }) => n.id === nodeId)
-  const output = node?.outputs?.find((o: { id: number }) => o.id === outputId)
-  return output?.type || '未知类型'
-}
-
 // 打开运行面板
 function openRunPanel() {
-  // 初始化运行输入值
+  const isValid = isNodeValid()
+  if (isValid !== '') {
+    ElMessage.warning(isValid)
+    return
+  }
   runInputs.value = {}
+  runResult.value = []
+  runStatus.value = null
+  runError.value = null
   inputs.value.forEach(input => {
     runInputs.value[input.name] = ''
   })
@@ -264,36 +307,33 @@ function openRunPanel() {
 async function run() {
   isRunning.value = true
   runStatus.value = 'running'
-  runResult.value = null
+  runResult.value = []
   runError.value = null
-
+  const formattedInputs = inputs.value.map(input => ({
+    name: input.name,
+    type: input.type,
+    value: runInputs.value[input.name] || ''
+  }))
   try {
-    const response = await fetch('/api/code/execute', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        code: code.value,
-        language: language.value,
-        inputs: runInputs.value
-      })
+    const response = await axios({
+      method: 'post',
+      url: '/workflow/runSingle',
+      data: {
+        workflow_id: props.workflow_id,
+        node_id: props.node.id,
+        inputs: JSON.stringify(formattedInputs)
+      }
     })
-
-    const data = await response.json()
-    if (data.success) {
-      runResult.value = data.result
+    const data = await response.data
+    if (data.code === 0) {
+      runResult.value = outputs.value.map(output => ({
+        name: output.name,
+        value: data.result[output.id.toString()] ?? ''
+      }))
       runStatus.value = 'success'
-      // 更新输出值
-      Object.entries(data.result).forEach(([key, value]) => {
-        const output = outputs.value.find(o => o.name === key)
-        if (output) {
-          output.value = value
-        }
-      })
     } else {
       runStatus.value = 'error'
-      runError.value = data.error || '执行失败'
+      runError.value = data.message || '执行失败'
     }
   } catch (e: any) {
     runStatus.value = 'error'
@@ -301,6 +341,29 @@ async function run() {
   } finally {
     isRunning.value = false
   }
+}
+
+function isNodeValid() {
+  if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
+  if (!inputs || inputs.value.length === 0) return '未配置输入变量！'
+  if (!outputs || outputs.value.length === 0) return '未配置输出变量！'
+
+  for (const input of inputs.value) {
+    if (!input.name || input.name.trim() === '') return '未配置输入变量的名称！'
+    const value = input.value
+    if (value?.type === 1) {
+      if (generateSelectValue(input).trim() === '') return '未选择输入变量的来源！'
+    } else if (value?.type === 0) {
+      if (!value.text || value.text.trim() === '') return '未配置输入变量的值！'
+    } else {
+      return '未知配置！'
+    }
+  }
+  for (const output of outputs.value) {
+    if (!output.name || output.name.trim() === '') return '未配置输出变量的名称！'
+  }
+  if (!code || code.value.trim() === '') return '未输入代码！'
+  return ''
 }
 
 defineExpose({
@@ -328,16 +391,16 @@ defineExpose({
           <div class="input-row">
             <el-input
                 v-model="input.name"
-                placeholder="变量名称"
+                placeholder="变量名称（必填）"
                 size="small"
                 class="name-input"
             />
             <el-select
-                :model-value="generateSelectValue(input.value)"
+                :model-value="generateSelectValue(input)"
                 placeholder="选择上游输出"
                 size="small"
-                class="type-select"
-                @change="(val: string) => onSelectChange(val, input)"
+                class="source-select"
+                @change="val => onSelectChange(val, input)"
             >
               <template v-for="node in allUpstreamNodes" :key="node.id">
                 <el-option
@@ -356,9 +419,6 @@ defineExpose({
             >
               删除
             </el-button>
-          </div>
-          <div v-if="input.value && input.value.nodeId !== -1" class="input-type">
-            类型: {{ getUpstreamOutputType(input.value.nodeId, input.value.outputId) }}
           </div>
         </div>
       </div>
@@ -417,7 +477,7 @@ defineExpose({
           <div class="output-row">
             <el-input
                 v-model="output.name"
-                placeholder="变量名称"
+                placeholder="变量名称（必填）"
                 size="small"
                 class="name-input"
             />
@@ -475,9 +535,17 @@ defineExpose({
         </div>
 
         <!-- 成功结果 -->
-        <div v-if="runStatus === 'success' && runResult"
-             class="result-content success">
-          <pre>{{ JSON.stringify(runResult, null, 2) }}</pre>
+        <div v-if="runStatus === 'success' && runResult.length">
+          <div class="result-list">
+            <div v-for="item in runResult" :key="item.name" class="result-item">
+              <div class="result-name">
+                <span class="name-label">{{ item.name }}</span>
+              </div>
+              <div class="result-value">
+                <div class="value-content">{{ item.value }}</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 错误信息 -->
@@ -603,22 +671,19 @@ defineExpose({
 }
 
 .name-input {
-  flex: 2;
+  flex: 0.7;
 }
 
 .type-select {
-  flex: 2;
+  flex: 0.8;
+}
+
+.source-select {
+  flex: 0.8;
 }
 
 .remove-btn {
   flex-shrink: 0;
-}
-
-.input-type {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #666;
-  padding-left: 4px;
 }
 
 .run-panel {
@@ -790,5 +855,103 @@ defineExpose({
 
 .fullscreen .code-editor-container {
   margin-bottom: 0;
+}
+
+.fullscreen-btn img {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+}
+
+.fullscreen-btn:hover img {
+  opacity: 1;
+}
+
+.result-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 12px;
+}
+
+.result-item {
+  background: #ffffff;
+  border: 1px solid #e6e8eb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.result-item:last-child {
+  margin-bottom: 0;
+}
+
+.result-name {
+  padding: 10px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e6e8eb;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.result-value {
+  padding: 12px 16px;
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1f2937;
+  background: #ffffff;
+  overflow-x: auto;
+}
+
+.result-value > div {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .result-item {
+    background: #1a1a1a;
+    border-color: #2d2d2d;
+  }
+
+  .result-name {
+    background: #1f1f1f;
+    border-color: #2d2d2d;
+    color: #e5e7eb;
+  }
+
+  .result-value {
+    color: #e5e7eb;
+    background: #1a1a1a;
+  }
+}
+
+/* 滚动条样式 */
+.result-list::-webkit-scrollbar,
+.result-value::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.result-list::-webkit-scrollbar-thumb,
+.result-value::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.result-list::-webkit-scrollbar-track,
+.result-value::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 暗色模式滚动条 */
+@media (prefers-color-scheme: dark) {
+  .result-list::-webkit-scrollbar-thumb,
+  .result-value::-webkit-scrollbar-thumb {
+    background: #4d4d4d;
+  }
 }
 </style> 

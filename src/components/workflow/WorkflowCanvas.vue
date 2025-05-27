@@ -33,31 +33,31 @@ interface nodeType {
 }
 
 const nodeTypes = ref<nodeType[]>([
-  { 
+  {
     type: 'llm',
     label: '大模型',
     description: '使用AI大模型处理任务',
     image: 'https://api.iconify.design/carbon:machine-learning-model.svg',
   },
-  { 
+  {
     type: 'code',
     label: '代码',
     description: '执行自定义代码逻辑',
     image: 'https://api.iconify.design/material-symbols:code.svg',
   },
-  { 
+  {
     type: 'if_else',
     label: '条件分支',
     description: '根据条件选择执行路径',
     image: 'https://api.iconify.design/material-symbols:fork-right.svg',
   },
-  { 
+  {
     type: 'classifier',
     label: '问题分类器',
     description: '对输入内容进行分类',
     image: 'https://api.iconify.design/material-symbols:category.svg',
   },
-  { 
+  {
     type: 'kbRetrieval',
     label: '知识库检索',
     description: '从知识库中检索信息',
@@ -650,7 +650,7 @@ function clearWorkflowCacheAndGoBack() {
           <button
             class="action-btn run-btn"
             @click="runSelectedNode"
-            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end' && selectedNode.type !== 'if_else' && selectedNode.type !== 'code'"
+            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end'"
             title="运行节点">
             <img
               src="https://api.iconify.design/material-symbols:play-circle.svg"
@@ -674,7 +674,7 @@ function clearWorkflowCacheAndGoBack() {
                 type="text"
                 v-model="selectedNode.name"
                 @input="updateNode(selectedNode)"
-                placeholder="请输入节点名称"
+                placeholder="节点名称（必填）"
                 class="edit-input"
               >
             </div>
@@ -683,9 +683,8 @@ function clearWorkflowCacheAndGoBack() {
               <textarea
                 v-model="selectedNode.description"
                 @input="updateNode(selectedNode)"
-                placeholder="请输入节点描述"
+                placeholder="节点描述（选填）"
                 class="edit-textarea"
-                rows="3"
               ></textarea>
             </div>
           </div>

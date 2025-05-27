@@ -273,9 +273,9 @@ async function fetchMessage() {
 async function clearMessage() {
   try {
     const response = await axios({
-      method: 'get',
+      method: 'post',
       url: 'agent/clearHistoryMessage',
-      params: {
+      data: {
         uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id,
       }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, defineProps, watch, onMounted } from 'vue'
+import { getAllUpstreamNodes } from '@/utils/getAllUpstreamNodes.ts'
 import axios from 'axios'
 
 interface Input {
   id: number
-  name: 'url'
-  type: 'string'
+  name: string
+  type: string
   value: {
     type: number // 0: 用户输入
     text: string
@@ -16,8 +17,9 @@ interface Input {
 
 interface Output {
   id: number
-  name: 'text'
-  type: 'string'
+  name: string
+  type: string
+  value?: string
 }
 
 const props = defineProps<{
@@ -32,59 +34,88 @@ const props = defineProps<{
   workflow_id: string
 }>()
 
+// 初始化输入
+const inputs = ref<Input[]>([])
+const outputs = ref<Output[]>([])
+
 const emit = defineEmits<{
   (e: 'update:node', node: any): void
 }>()
 
-// 初始化输入
-const input = ref<Input>(props.node.inputs?.[0] || {
-  id: 0,
-  name: 'url',
-  type: 'string',
-  value: {
-    type: 0,
-    text: '',
-    nodeId: -1,
-    outputId: -1
+// 监听变化并更新节点
+watch([inputs, outputs], () => {
+  emit('update:node', {
+    ...props.node,
+    inputs: inputs.value,
+    outputs: outputs.value,
+  })
+}, { deep: true })
+
+onMounted(() => {
+  if (props.node.inputs && props.node.inputs.length > 0) {
+    inputs.value = props.node.inputs;
+  } else {
+    inputs.value = [{
+      id: 0,
+      name: 'url',
+      type: 'string',
+      value: {
+        text: '',
+        type: 0,
+        nodeId: -1,
+        outputId: -1
+      }
+    }];
   }
+  outputs.value = [{
+    id: 0,
+    name: 'text',
+    type: 'string'
+  }]
 })
 
-// 运行相关状态
+// 获取所有上游节点
+const allUpstreamNodes = computed(() => {
+  return getAllUpstreamNodes(props.node, props.allNodes)
+})
+
+// 生成选择器的值
+function generateSelectValue(input: Input): string {
+  const val = input.value
+  if (val.type === 0) {
+    return 'manual'
+  }
+  if (val.type === 1 && val.nodeId !== -1 && val.outputId !== -1) {
+    const node = allUpstreamNodes.value.find(n => n.id === val.nodeId)
+    const outputExists = node?.outputs?.some((o: { id: number }) => o.id === val.outputId)
+    if (node && outputExists) {
+      return `${val.nodeId}|${val.outputId}`
+    }
+  }
+  return ''
+}
+
+// 运行相关
 const showRunPanel = ref(false)
 const isRunning = ref(false)
 const runStatus = ref<'running' | 'success' | 'error' | null>(null)
-const runResult = ref<string | null>(null)
+const runResult = ref<{ name: string; value: string }[]>([])
 const runError = ref<string | null>(null)
-const runInput = ref('')
-
-// 更新节点
-function updateNode() {
-  emit('update:node', {
-    ...props.node,
-    inputs: [input.value],
-    outputs: [{
-      id: 0,
-      name: 'text',
-      type: 'string'
-    }]
-  })
-}
+const runInputs = ref<Record<string, string>>({})
 
 // 运行爬虫
 async function run() {
   isRunning.value = true
   runStatus.value = 'running'
-  runResult.value = null
+  runResult.value = []
   runError.value = null
 
   try {
-    const formattedInputs = [
-      {
-        name: 'url',
-        type: 'string',
-        value: runInput.value
-      }
-    ]
+    const formattedInputs = inputs.value.map(input => ({
+      name: input.name,
+      type: input.type,
+      value: runInputs.value[input.name] || ''
+    }))
 
     const response = await axios({
       method: 'post',
@@ -95,10 +126,12 @@ async function run() {
         inputs: JSON.stringify(formattedInputs)
       }
     })
-
-    const data = response.data
+    const data = await response.data
     if (data.code === 0) {
-      runResult.value = data.result
+      runResult.value = outputs.value.map(output => ({
+        name: output.name,
+        value: data.result[output.id.toString()] ?? ''
+      }))
       runStatus.value = 'success'
     } else {
       runStatus.value = 'error'
@@ -112,83 +145,124 @@ async function run() {
   }
 }
 
+// 打开运行面板
+function openRunPanel() {
+  const isValid = isNodeValid()
+  if (isValid !== '') {
+    ElMessage.warning(isValid)
+    return
+  }
+  runInputs.value = {}
+  runResult.value = []
+  runStatus.value = null
+  runError.value = null
+  inputs.value.forEach(input => {
+    runInputs.value[input.name] = input.value.type === 0 ? input.value.text : ''
+  })
+  showRunPanel.value = true
+}
+
+// 验证节点配置
+function isNodeValid() {
+  if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
+  if (!inputs || inputs.value.length === 0) return '未配置输入变量！'
+  if (!outputs || outputs.value.length === 0) return '未配置输出变量！'
+
+  for (const input of inputs.value) {
+    if (!input.name || input.name.trim() === '') return '未配置输入变量的名称！'
+    const value = input.value
+    if (value?.type === 1) {
+      if (generateSelectValue(input).trim() === '') return '未选择输入变量的来源！'
+    } else if (value?.type === 0) {
+      if (!value.text || value.text.trim() === '') return '未配置输入变量的值！'
+    } else {
+      return '未知配置！'
+    }
+  }
+  return ''
+}
+
 // 暴露方法给父组件
 defineExpose({
-  openRunPanel: () => {
-    runInput.value = input.value.value.text || ''
-    showRunPanel.value = true
-  }
-})
-
-// 组件挂载时初始化
-onMounted(() => {
-  if (!props.node.inputs?.length) {
-    updateNode()
-  }
+  openRunPanel: openRunPanel
 })
 </script>
 
 <template>
   <div class="web-node-detail">
-    <!-- 输入配置 -->
+    <!-- 输入变量 -->
     <div class="section">
       <div class="section-header">
         <h4>输入变量</h4>
       </div>
-      
-      <div class="input-config">
-        <div class="form-group">
-          <label>URL</label>
-          <el-input
-            v-model="input.value.text"
-            placeholder="请输入要爬取的网页URL"
-            @input="updateNode"
-          />
-        </div>
 
-        <div class="input-info">
-          <div class="info-item">
-            <label>变量名称:</label>
-            <span>url</span>
+      <div class="input-list">
+        <div v-for="input in inputs" :key="input.id" class="input-item">
+          <div class="input-row">
+            <el-input
+                :placeholder="input.name"
+                size="small"
+                class="name-input"
+                disabled
+            />
+            <el-input
+                placeholder="手动输入"
+                size="small"
+                class="source-select"
+                disabled
+            />
           </div>
-          <div class="info-item">
-            <label>变量类型:</label>
-            <span>string</span>
+          <div class="input-row" style="margin-top: 8px;">
+            <el-input
+                v-model="input.value.text"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入要爬取的网页URL（必填）"
+            />
           </div>
         </div>
       </div>
     </div>
-    <!-- 输出信息 -->
+
+    <!-- 输出变量显示 -->
     <div class="section">
       <div class="section-header">
         <h4>输出变量</h4>
       </div>
-      
-      <div class="output-info">
-        <div class="info-item">
-          <label>变量名称:</label>
-          <span>text</span>
-        </div>
-        <div class="info-item">
-          <label>变量类型:</label>
-          <span>string</span>
+      <div class="output-list">
+        <div v-for="output in outputs" :key="output.id" class="output-item">
+          <div class="output-row">
+            <el-input
+                :placeholder="output.name"
+                size="small"
+                class="name-input"
+                disabled
+            />
+            <el-input
+                :placeholder="output.type"
+                size="small"
+                class="name-input"
+                disabled
+            />
+          </div>
         </div>
       </div>
     </div>
 
     <!-- 运行面板 -->
     <el-dialog
-      v-model="showRunPanel"
-      title="运行网页爬取"
-      width="500px"
-      :close-on-click-modal="false"
+        v-model="showRunPanel"
+        title="运行节点"
+        width="500px"
+        :close-on-click-modal="false"
     >
       <div class="run-panel">
-        <div class="run-input">
-          <label>URL</label>
+        <div v-for="(input, name) in runInputs" :key="name" class="run-input-item">
+          <label>{{ name }}</label>
           <el-input
-            v-model="runInput"
-            placeholder="请输入要爬取的网页URL"
+              v-model="runInputs[name]"
+              size="small"
+              :placeholder="`请输入 ${name}`"
           />
         </div>
       </div>
@@ -197,21 +271,32 @@ onMounted(() => {
         <div class="run-result-header">
           <h4>运行结果</h4>
           <span :class="['status-badge', runStatus]">
-            {{ runStatus === 'running' ? '运行中' : 
-               runStatus === 'success' ? '成功' : '失败' }}
+            {{ runStatus === 'running' ? '运行中' :
+              runStatus === 'success' ? '成功' : '失败' }}
           </span>
         </div>
-        
-        <div v-if="runStatus === 'success' && runResult" 
-             class="result-content success">
-          <pre>{{ runResult }}</pre>
+
+        <!-- 成功结果 -->
+        <div v-if="runStatus === 'success' && runResult.length">
+          <div class="result-list">
+            <div v-for="item in runResult" :key="item.name" class="result-item">
+              <div class="result-name">
+                <span class="name-label">{{ item.name }}</span>
+              </div>
+              <div class="result-value">
+                <div class="value-content">{{ item.value }}</div>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <div v-if="runStatus === 'error' && runError" 
+
+        <!-- 错误信息 -->
+        <div v-if="runStatus === 'error' && runError"
              class="result-content error">
           <pre>{{ runError }}</pre>
         </div>
-        
+
+        <!-- 加载动画 -->
         <div v-if="runStatus === 'running'" class="result-content loading">
           <div class="loading-spinner"></div>
           <span>正在运行中...</span>
@@ -221,9 +306,9 @@ onMounted(() => {
       <template #footer>
         <el-button @click="showRunPanel = false">取消</el-button>
         <el-button
-          type="primary"
-          :loading="isRunning"
-          @click="run"
+            type="primary"
+            :loading="isRunning"
+            @click="run"
         >
           运行
         </el-button>
@@ -245,6 +330,9 @@ onMounted(() => {
 }
 
 .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
 }
 
@@ -254,46 +342,48 @@ onMounted(() => {
   color: #2c3e50;
 }
 
-.form-group {
-  margin-bottom: 16px;
+.input-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-.input-info,
-.output-info {
-  background: #f5f7fa;
-  border-radius: 4px;
+.input-item {
+  background: #f8f9fa;
+  border-radius: 8px;
   padding: 12px;
 }
 
-.info-item {
+.input-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
+  align-items: center;
 }
 
-.info-item:last-child {
-  margin-bottom: 0;
+.name-input {
+  flex: 0.7;
 }
 
-.info-item label {
-  margin: 0;
-  color: #606266;
+.source-select {
+  flex: 0.8;
 }
 
-.info-item span {
-  color: #2c3e50;
-  font-family: monospace;
+.output-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.output-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.output-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .run-panel {
@@ -302,7 +392,7 @@ label {
   gap: 16px;
 }
 
-.run-input {
+.run-input-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -395,5 +485,93 @@ label {
 
 .model-select {
   width: 100%;
+}
+
+.result-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 12px;
+}
+
+.result-item {
+  background: #ffffff;
+  border: 1px solid #e6e8eb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.result-item:last-child {
+  margin-bottom: 0;
+}
+
+.result-name {
+  padding: 10px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e6e8eb;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.result-value {
+  padding: 12px 16px;
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1f2937;
+  background: #ffffff;
+  overflow-x: auto;
+}
+
+.result-value > div {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .result-item {
+    background: #1a1a1a;
+    border-color: #2d2d2d;
+  }
+
+  .result-name {
+    background: #1f1f1f;
+    border-color: #2d2d2d;
+    color: #e5e7eb;
+  }
+
+  .result-value {
+    color: #e5e7eb;
+    background: #1a1a1a;
+  }
+}
+
+/* 滚动条样式 */
+.result-list::-webkit-scrollbar,
+.result-value::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.result-list::-webkit-scrollbar-thumb,
+.result-value::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.result-list::-webkit-scrollbar-track,
+.result-value::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 暗色模式滚动条 */
+@media (prefers-color-scheme: dark) {
+  .result-list::-webkit-scrollbar-thumb,
+  .result-value::-webkit-scrollbar-thumb {
+    background: #4d4d4d;
+  }
 }
 </style>

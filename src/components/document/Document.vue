@@ -8,7 +8,6 @@ import BasicFAQ from "@/components/document/manual/FAQ/BasicFAQ.vue"
 import UseFAQ from "@/components/document/manual/FAQ/UseFAQ.vue"
 import OtherFAQ from "@/components/document/manual/FAQ/OtherFAQ.vue"
 import Product from "@/components/document/manual/introduction/Product.vue"
-import Developer from "@/components/document/manual/introduction/Developer.vue"
 import AviationQA from "@/components/document/manual/lab/AviationQA.vue"
 import RecommendAssistant from "@/components/document/manual/lab/RecommendAssistant.vue"
 import WeatherSuit from "@/components/document/manual/lab/WeatherSuit.vue"
@@ -51,11 +50,6 @@ const navItems: NavItem[] = [
         id: 'product',
         label: '产品简介',
         component: Product
-      },
-      {
-        id: 'developer',
-        label: '开发人员',
-        component: Developer
       }
     ]
   },
