@@ -704,50 +704,33 @@ onMounted(async () => {
         <!-- 分隔线 -->
         <div class="divider"></div>
 
-        <!-- 统计信息区域 -->
-        <div class="stats-section">
-          <div class="stats">
-            <div class="stat-item">
-              <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="action-icon like-active">
-              <span>{{ agentInfo.stats.likes }}</span>
-            </div>
-            <div class="stat-item">
-              <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="action-icon favorite-active">
-              <span>{{ agentInfo.stats.favorites }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 分隔线 -->
-        <div class="divider"></div>
-
         <!-- 作者信息区域 -->
         <div class="author-info">
-          <img 
-            :src="baseImageUrl + agentInfo.author.avatar"
-            alt="作者头像" 
-            class="author-avatar"
-            @click="navigateToProfile(agentInfo.author.id)"
+          <img
+              :src="baseImageUrl + agentInfo.author.avatar"
+              alt="作者头像"
+              class="author-avatar"
+              @click="navigateToProfile(agentInfo.author.id)"
           >
           <div class="author-meta">
-            <span 
-              class="author-name"
-              @click="navigateToProfile(agentInfo.author.id)"
+            <span
+                class="author-name"
+                @click="navigateToProfile(agentInfo.author.id)"
             >{{ agentInfo.author.name }}</span>
             <span class="author-id">{{ agentInfo.author.account }}</span>
           </div>
           <button
-            class="follow-btn"
-            v-if="uid !== agentInfo.author.id"
-            :class="{ 'followed': userActions.isFollowed }"
-            @click="handleFollow"
+              class="follow-btn"
+              v-if="uid !== agentInfo.author.id"
+              :class="{ 'followed': userActions.isFollowed }"
+              @click="handleFollow"
           >
-            <img 
-              :src="userActions.isFollowed 
+            <img
+                :src="userActions.isFollowed
                 ? 'https://api.iconify.design/material-symbols:person-check.svg'
-                : 'https://api.iconify.design/material-symbols:person-add-outline.svg'" 
-              alt="关注" 
-              class="action-icon"
+                : 'https://api.iconify.design/material-symbols:person-add-outline.svg'"
+                alt="关注"
+                class="action-icon"
             >
             <span>{{ userActions.isFollowed ? '已关注' : '关注' }}</span>
           </button>
@@ -756,33 +739,34 @@ onMounted(async () => {
         <!-- 分隔线 -->
         <div class="divider"></div>
 
-        <!-- 操作按钮区域 -->
-        <div class="action-buttons">
-          <button 
-            class="action-btn"
-            @click="handleLike"
-          >
-            <img 
-              src="https://api.iconify.design/material-symbols:favorite.svg" 
-              alt="点赞" 
-              class="action-icon"
-              :class="{ 'like-active': userActions.isLiked }"
-            >
-            <span>{{ userActions.isLiked ? '已点赞' : '点赞' }}</span>
-          </button>
-          <button 
-            class="action-btn"
-            @click="handleFavorite"
-          >
-            <img 
-              src="https://api.iconify.design/material-symbols:bookmark.svg" 
-              alt="收藏" 
-              class="action-icon"
-              :class="{ 'favorite-active': userActions.isFavorited }"
-            >
-            <span>{{ userActions.isFavorited ? '已收藏' : '收藏' }}</span>
-          </button>
+        <!-- 统计信息区域 -->
+        <div class="stats-section">
+          <div class="stats">
+            <div class="stat-item" @click="handleLike" :class="{ 'clickable': uid !== agentInfo.author.id }">
+              <img 
+                src="https://api.iconify.design/material-symbols:favorite.svg" 
+                alt="点赞" 
+                class="action-icon"
+                :class="{ 'like-active': userActions.isLiked }"
+              >
+              <span>{{ agentInfo.stats.likes }}</span>
+            </div>
+            <div class="stat-item" @click="handleFavorite" :class="{ 'clickable': uid !== agentInfo.author.id }">
+              <img 
+                src="https://api.iconify.design/material-symbols:bookmark.svg" 
+                alt="收藏" 
+                class="action-icon"
+                :class="{ 'favorite-active': userActions.isFavorited }"
+              >
+              <span>{{ agentInfo.stats.favorites }}</span>
+            </div>
+          </div>
         </div>
+
+        <!-- 分隔线 -->
+        <div class="divider"></div>
+
+        <!-- 操作按钮区域 -->
         <div class="action-buttons">
           <button class="action-btn secondary" @click="handleCopy">
             <img src="https://api.iconify.design/material-symbols:content-copy.svg" alt="复制" class="action-icon">
@@ -870,7 +854,7 @@ onMounted(async () => {
   display: flex;
   gap: 24px;
   padding: 24px;
-  min-height: 100vh;
+  height: 90vh;
   background: #fff;
 }
 
@@ -880,7 +864,7 @@ onMounted(async () => {
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  height: calc(100vh - 48px);
+  height: 90vh;
 }
 
 .agent-info {
@@ -898,6 +882,8 @@ onMounted(async () => {
 
 .basic-info {
   padding: 24px;
+  height: 500px;
+  overflow-y: auto;
 }
 
 .agent-chat-window {
@@ -1466,23 +1452,34 @@ onMounted(async () => {
   gap: 8px;
   color: #333;
   font-size: 14px;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.3s;
 }
 
-.stat-item svg {
+.stat-item.clickable {
+  cursor: pointer;
+}
+
+.stat-item.clickable:hover {
+  background: #f0f0f0;
+}
+
+.stat-item .action-icon {
   width: 20px;
   height: 20px;
+  opacity: 0.7;
+  transition: all 0.3s;
 }
 
-.stat-item svg.like-icon {
-  color: #e74c3c;
+.action-icon.like-active {
+  filter: invert(40%) sepia(79%) saturate(2269%) hue-rotate(338deg) brightness(100%) contrast(91%);
+  opacity: 1;
 }
 
-.stat-item svg.favorite-icon {
-  color: #f1c40f;
-}
-
-.stat-item svg.comment-icon {
-  color: #409EFF;
+.action-icon.favorite-active {
+  filter: invert(85%) sepia(24%) saturate(2529%) hue-rotate(359deg) brightness(103%) contrast(96%);
+  opacity: 1;
 }
 
 .author-info {
@@ -1629,8 +1626,7 @@ onMounted(async () => {
   background: white;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 518px);
-  min-height: 100px;
+  height: 400px;
   position: relative;
   border-radius: 12px;
 }
