@@ -45,11 +45,17 @@ interface AgentInfo {
   }
 }
 
-onMounted(() => {
-  getAgentInfo()
-  getKnowledgeBases()
-  getWorkflows()
-  fetchMessage()
+onMounted(async () => {
+  try {
+    await getAgentInfo()
+    await getKnowledgeBases()
+    await getWorkflows()
+    await fetchMessage()
+  } catch (err) {
+    console.error('请求失败', err)
+  } finally {
+    isLoading.value = false
+  }
 })
 
 onBeforeMount(() => {
@@ -371,7 +377,8 @@ const fileList = ref<File[]>([])
 const enableSearch = ref(false)
 
 // 添加加载状态
-const isLoading = ref(false)
+const isLoading = ref(true)
+const isMessageLoading = ref(false)
 
 const chatMessagesRef = ref<HTMLElement | null>(null)
 
@@ -424,7 +431,7 @@ function toggleThinkingChain(index: number) {
 const trySendMessage = () => {
   if (!messageInput.value.trim() && fileList.value.length === 0) return
 
-  isLoading.value = true
+  isMessageLoading.value = true
   sendMessage()
   chatHistory.value.push({
     sender: 'user',
@@ -477,7 +484,7 @@ async function sendMessage() {
   } catch (error) {
     console.error('信息发送失败:', error)
   } finally {
-    isLoading.value = false
+    isMessageLoading.value = false
   }
 }
 
@@ -557,7 +564,13 @@ function renderedMarkdown(content: string) {
 </script>
 
 <template>
-  <div class="agent-edit">
+  <div v-if="isLoading" class="agent-detail">
+    <div class="loading-container">
+      <img src="https://api.iconify.design/material-symbols:refresh.svg" alt="加载中" class="loading-icon">
+      <span class="loading-text">加载中...</span>
+    </div>
+  </div>
+  <div v-else class="agent-edit">
     <!-- 头部信息 -->
     <div class="agent-header">
       <div class="agent-info">
@@ -760,7 +773,7 @@ function renderedMarkdown(content: string) {
           </div>
 
           <!-- 添加加载提示 -->
-          <div v-if="isLoading" class="message assistant">
+          <div v-if="isMessageLoading" class="message assistant">
             <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
             <div class="message-content assistant-message">
               <div class="message-info">
@@ -1333,5 +1346,38 @@ function renderedMarkdown(content: string) {
 @keyframes typing {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
+}
+
+.loading-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+}
+
+.loading-icon {
+  width: 48px;
+  height: 48px;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  color: #666;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

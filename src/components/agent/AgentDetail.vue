@@ -79,7 +79,8 @@ const showReportDialog = ref(false)
 const reportDescription = ref('')
 
 // 添加加载状态
-const isLoading = ref(false)
+const isLoading = ref(true)
+const isMessageLoading = ref(false)
 
 const chatMessagesRef = ref<HTMLElement | null>(null)
 
@@ -180,7 +181,7 @@ const handleEnter = (e: KeyboardEvent) => {
 const trySendMessage = () => {
   if (!messageInput.value.trim() && fileList.value.length === 0) return
   
-  isLoading.value = true
+  isMessageLoading.value = true
   sendMessage()
   chatHistory.value.push({
     sender: 'user',
@@ -233,7 +234,7 @@ async function sendMessage() {
   } catch (error) {
     console.error('信息发送失败:', error)
   } finally {
-    isLoading.value = false
+    isMessageLoading.value = false
   }
 }
 
@@ -503,16 +504,28 @@ function navigateToProfile(userId: number) {
   router.push(`/profile/${userId}`)
 }
 
-onMounted(() => {
-  fetchAgentInfo()
-  fetchMessage()
-  fetchUserActions()
-  fetchComments()
+onMounted(async () => {
+  try {
+    await fetchAgentInfo()
+    await fetchMessage()
+    await fetchUserActions()
+    await fetchComments()
+  } catch (err) {
+    console.error('请求失败', err)
+  } finally {
+    isLoading.value = false
+  }
 })
 </script>
 
 <template>
-  <div class="agent-detail">
+  <div v-if="isLoading" class="agent-detail">
+    <div class="loading-container">
+      <img src="https://api.iconify.design/material-symbols:refresh.svg" alt="加载中" class="loading-icon">
+      <span class="loading-text">加载中...</span>
+    </div>
+  </div>
+  <div v-else class="agent-detail">
     <!-- 左侧智能体展示区 -->
     <div class="agent-preview">
       <div class="agent-chat-window">
@@ -541,11 +554,12 @@ onMounted(() => {
           >
             <!-- 用户消息 -->
             <template v-if="message.sender === 'user'">
-              <div class="message-avatar">
-                <img :src="userAvatar" alt="用户头像" />
-              </div>
-              <div class="message-content">
-                <div class="message-text">{{ message.content.response }}</div>
+              <div class="message-content user-message">
+                <div class="message-info">
+                  <span class="message-time">{{ message.time }}</span>
+                  <span class="sender-name">{{ message.sender }}</span>
+                </div>
+                <div class="message-text" style="white-space: pre-line;">{{ message.content.response }}</div>
                 <div v-if="message.file && message.file.length > 0" class="message-files">
                   <div v-for="file in message.file" :key="file" class="message-file">
                     <el-icon><Document /></el-icon>
@@ -557,7 +571,9 @@ onMounted(() => {
                   <span>已开启联网搜索</span>
                 </div>
               </div>
-              <div class="message-time">{{ message.time }}</div>
+              <div class="message-avatar">
+                <img :src="userAvatar" alt="用户头像" />
+              </div>
             </template>
 
             <!-- 助手消息 -->
@@ -565,7 +581,11 @@ onMounted(() => {
               <div class="message-avatar">
                 <img :src="'http://122.9.33.84:8000' + agentInfo.icon" alt="助手头像" />
               </div>
-              <div class="message-content">
+              <div class="message-content assistant-message">
+                <div class="message-info">
+                  <span class="sender-name">{{ message.sender }}</span>
+                  <span class="message-time">{{ message.time }}</span>
+                </div>
                 <div class="message-text">
                   <div v-if="message.content.thinking_chain" class="thinking-chain">
                     <div class="thinking-header" @click="toggleThinkingChain(index)">
@@ -579,16 +599,18 @@ onMounted(() => {
                   <div class="response" v-html="renderedMarkdown(message.content.response)"></div>
                 </div>
               </div>
-              <div class="message-time">{{ message.time }}</div>
             </template>
           </div>
 
           <!-- 在消息列表的最后添加加载动画 -->
-          <div v-if="isLoading" class="message assistant">
+          <div v-if="isMessageLoading" class="message assistant">
             <div class="message-avatar">
               <img :src="'http://122.9.33.84:8000' + agentInfo.icon" alt="助手头像" />
             </div>
-            <div class="message-content">
+            <div class="message-content assistant-message">
+              <div class="message-info">
+                <span class="sender-name">assistant</span>
+              </div>
               <div class="message-text">
                 <div class="typing-indicator">
                   <div class="typing-dot"></div>
@@ -621,7 +643,7 @@ onMounted(() => {
                   class="chat-input"
                   v-model="messageInput"
                   placeholder="输入消息... (Ctrl+Shift+Enter 发送)"
-                  rows="1"
+                  rows="3"
                   @keydown.enter.prevent="handleEnter"
                 ></textarea>
                 
@@ -686,12 +708,12 @@ onMounted(() => {
         <div class="stats-section">
           <div class="stats">
             <div class="stat-item">
-              <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="stat-icon">
-              <span>点赞 {{ agentInfo.stats.likes }}</span>
+              <img src="https://api.iconify.design/material-symbols:favorite.svg" alt="点赞" class="action-icon like-active">
+              <span>{{ agentInfo.stats.likes }}</span>
             </div>
             <div class="stat-item">
-              <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="stat-icon">
-              <span>收藏 {{ agentInfo.stats.favorites }}</span>
+              <img src="https://api.iconify.design/material-symbols:bookmark.svg" alt="收藏" class="action-icon favorite-active">
+              <span>{{ agentInfo.stats.favorites }}</span>
             </div>
           </div>
         </div>
@@ -737,30 +759,26 @@ onMounted(() => {
         <!-- 操作按钮区域 -->
         <div class="action-buttons">
           <button 
-            class="action-btn primary" 
-            :class="{ 'active': userActions.isLiked }"
+            class="action-btn"
             @click="handleLike"
           >
             <img 
-              :src="userActions.isLiked 
-                ? 'https://api.iconify.design/material-symbols:favorite.svg'
-                : 'https://api.iconify.design/material-symbols:favorite-outline.svg'" 
+              src="https://api.iconify.design/material-symbols:favorite.svg" 
               alt="点赞" 
               class="action-icon"
+              :class="{ 'like-active': userActions.isLiked }"
             >
             <span>{{ userActions.isLiked ? '已点赞' : '点赞' }}</span>
           </button>
           <button 
-            class="action-btn primary" 
-            :class="{ 'active': userActions.isFavorited }"
+            class="action-btn"
             @click="handleFavorite"
           >
             <img 
-              :src="userActions.isFavorited 
-                ? 'https://api.iconify.design/material-symbols:bookmark.svg'
-                : 'https://api.iconify.design/material-symbols:bookmark-outline.svg'" 
+              src="https://api.iconify.design/material-symbols:bookmark.svg" 
               alt="收藏" 
               class="action-icon"
+              :class="{ 'favorite-active': userActions.isFavorited }"
             >
             <span>{{ userActions.isFavorited ? '已收藏' : '收藏' }}</span>
           </button>
@@ -829,7 +847,6 @@ onMounted(() => {
         >
           <div class="report-dialog">
             <div class="form-group">
-              <label>举报描述</label>
               <el-input
                   v-model="reportDescription"
                   type="textarea"
@@ -854,7 +871,7 @@ onMounted(() => {
   gap: 24px;
   padding: 24px;
   min-height: 100vh;
-  background: #f5f6fa;
+  background: #fff;
 }
 
 .agent-preview {
@@ -896,7 +913,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f8f9fa;
+  background: #fff;
 }
 
 .chat-header-left {
@@ -922,7 +939,7 @@ onMounted(() => {
 
 .agent-name {
   font-weight: 600;
-  color: #2c3e50;
+  color: #333;
 }
 
 .status-badge {
@@ -938,7 +955,7 @@ onMounted(() => {
   display: inline-block;
   width: 6px;
   height: 6px;
-  background: #4caf50;
+  background: #409EFF;
   border-radius: 50%;
 }
 
@@ -948,24 +965,47 @@ onMounted(() => {
 }
 
 .action-btn {
-  background: none;
-  border: none;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s;
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  background: white;
+  color: #909399;
 }
 
 .action-btn:hover {
-  background: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.action-icon {
+.action-btn .action-icon {
   width: 20px;
   height: 20px;
+  order: -1;
   opacity: 0.7;
+  transition: all 0.3s;
+}
+
+.action-btn span {
+  white-space: nowrap;
+}
+
+.action-icon.like-active {
+  filter: invert(40%) sepia(79%) saturate(2269%) hue-rotate(338deg) brightness(100%) contrast(91%);
+  opacity: 1;
+}
+
+.action-icon.favorite-active {
+  filter: invert(85%) sepia(24%) saturate(2529%) hue-rotate(359deg) brightness(103%) contrast(96%);
+  opacity: 1;
 }
 
 .chat-content {
@@ -1007,25 +1047,61 @@ onMounted(() => {
 .message {
   display: flex;
   gap: 12px;
-  max-width: 88%;
-}
-
-.message.user {
-  margin-left: auto;
-  flex-direction: row-reverse;
-}
-
-.message.system {
-  margin: 0 auto;
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 16px;
+  margin-bottom: 20px;
   width: 100%;
 }
 
+.message.user {
+  justify-content: flex-end;
+}
+
+.message-content {
+  flex: 0 1 auto;
+  max-width: 70%;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.message.assistant {
+  justify-content: flex-start;
+}
+
+.assistant-message {
+  background: #f5f7fa;
+  border-radius: 0 8px 8px 8px;
+  margin-right: auto;
+}
+
+.user-message {
+  background: #ecf5ff;
+  border-radius: 8px 0 8px 8px;
+  margin-left: auto;
+}
+
+.message-info {
+  margin-bottom: 8px;
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.sender-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.message-time {
+  color: #999;
+}
+
+.message-text {
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .message-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -1035,33 +1111,6 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.message-content {
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.5;
-  position: relative;
-}
-
-.message.user .message-content {
-  background: #2c3e50;
-  color: white;
-  border-top-right-radius: 4px;
-}
-
-.message.assistant .message-content {
-  background: #f8f9fa;
-  color: #2c3e50;
-  border-top-left-radius: 4px;
-}
-
-.message-time {
-  font-size: 12px;
-  color: #999;
-  margin-top: 4px;
-  flex-shrink: 0;
 }
 
 .outline-block {
@@ -1094,7 +1143,7 @@ onMounted(() => {
 .typing-dot {
   width: 8px;
   height: 8px;
-  background: #2c3e50;
+  background: #409EFF;
   border-radius: 50%;
   animation: typing 1s infinite ease-in-out;
 }
@@ -1181,13 +1230,13 @@ onMounted(() => {
 .upload-icon {
   padding: 8px;
   font-size: 20px;
-  color: #2c3e50;
+  color: #909399;
   border-radius: 4px;
 }
 
 .upload-icon:hover {
   background: #f5f7fa;
-  color: #34495e;
+  color: #409EFF;
 }
 
 .upload-icon.disabled {
@@ -1202,21 +1251,22 @@ onMounted(() => {
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 14px;
-  color: #2c3e50;
-  border: 1px solid #2c3e50;
+  color: #909399;
+  border: 1px solid #dcdfe6;
   background: #fff;
   transition: all 0.3s;
   height: 32px;
 }
 
 .search-button:hover:not(:disabled) {
-  background: #2c3e50;
-  color: white;
+  color: #409EFF;
+  border-color: #409EFF;
 }
 
 .search-button.active {
-  background: #2c3e50;
-  color: white;
+  color: #409EFF;
+  border-color: #409EFF;
+  background: #ecf5ff;
 }
 
 .search-button:disabled {
@@ -1225,7 +1275,7 @@ onMounted(() => {
 }
 
 .send-button {
-  background: #2c3e50 !important;
+  background: #409EFF !important;
   border: none !important;
   border-radius: 6px;
   padding: 8px 20px;
@@ -1236,7 +1286,7 @@ onMounted(() => {
 }
 
 .send-button:hover:not(:disabled) {
-  background: #34495e !important;
+  background: #66b1ff !important;
 }
 
 .send-button:disabled {
@@ -1302,32 +1352,34 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  padding: 6px 12px;
+  background: #f0f2f5;
+  border-radius: 6px;
+  border: 1px solid #e5e5e5;
 }
 
 .message-file .el-icon {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  color: #909399;
 }
 
 .message-file .file-name {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #333;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.message.assistant .message-file {
-  background: rgba(0, 0, 0, 0.05);
+.message.user .message-file {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-.message.assistant .message-file .el-icon,
-.message.assistant .message-file .file-name {
-  color: #2c3e50;
+.message.user .message-file .el-icon,
+.message.user .message-file .file-name {
+  color: #333;
 }
 
 .message-search {
@@ -1336,10 +1388,10 @@ onMounted(() => {
   gap: 4px;
   margin-top: 8px;
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #ecf5ff;
   border-radius: 4px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #409EFF;
 }
 
 .message.assistant .message-search {
@@ -1386,7 +1438,7 @@ onMounted(() => {
 
 .agent-meta h2 {
   margin: 0 0 12px 0;
-  color: #2c3e50;
+  color: #333;
 }
 
 .description {
@@ -1412,14 +1464,25 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #2c3e50;
+  color: #333;
   font-size: 14px;
 }
 
-.stat-icon {
+.stat-item svg {
   width: 20px;
   height: 20px;
-  filter: invert(23%) sepia(19%) saturate(1111%) hue-rotate(182deg) brightness(95%) contrast(85%);
+}
+
+.stat-item svg.like-icon {
+  color: #e74c3c;
+}
+
+.stat-item svg.favorite-icon {
+  color: #f1c40f;
+}
+
+.stat-item svg.comment-icon {
+  color: #409EFF;
 }
 
 .author-info {
@@ -1454,13 +1517,13 @@ onMounted(() => {
 
 .author-name {
   font-weight: 600;
-  color: #2c3e50;
+  color: #333;
   cursor: pointer;
   transition: color 0.3s ease;
 }
 
 .author-name:hover {
-  color: #3498db;
+  color: #409EFF;
 }
 
 .author-id {
@@ -1473,10 +1536,10 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border: 1px solid #2c3e50;
+  border: 1px solid #dcdfe6;
   border-radius: 20px;
   background: transparent;
-  color: #2c3e50;
+  color: #909399;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -1484,17 +1547,18 @@ onMounted(() => {
 }
 
 .follow-btn:hover {
-  background: #2c3e50;
+  color: #666;
+  border-color: #666;
+}
+
+.follow-btn.followed {
+  background: #666;
   color: white;
+  border-color: #666;
 }
 
-.follow-btn:hover .action-icon {
+.follow-btn.followed .action-icon {
   filter: brightness(0) invert(1);
-}
-
-.follow-btn .action-icon {
-  width: 18px;
-  height: 18px;
 }
 
 .action-buttons {
@@ -1510,35 +1574,55 @@ onMounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 12px;
-  border: 1px solid #2c3e50;
+  border: 1px solid #dcdfe6;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.3s;
   background: white;
-  color: #2c3e50;
-}
-
-.action-btn .action-icon {
-  width: 20px;
-  height: 20px;
-  order: -1;
-}
-
-.action-btn span {
-  white-space: nowrap;
+  color: #909399;
 }
 
 .action-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  background: #2c3e50;
-  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.action-btn:hover .action-icon {
-  filter: brightness(0) invert(1);
+.action-btn:hover .like-icon {
+  filter: invert(40%) sepia(79%) saturate(2269%) hue-rotate(338deg) brightness(100%) contrast(91%);
+  opacity: 1;
+}
+
+.action-btn:hover .favorite-icon {
+  filter: invert(85%) sepia(24%) saturate(2529%) hue-rotate(359deg) brightness(103%) contrast(96%);
+  opacity: 1;
+}
+
+.action-btn.active {
+  border-width: 2px;
+}
+
+.action-btn.active:has(.like-icon) {
+  background: #fef2f2;
+  color: #e74c3c;
+  border-color: #e74c3c;
+}
+
+.action-btn.active:has(.favorite-icon) {
+  background: #fefbf0;
+  color: #f1c40f;
+  border-color: #f1c40f;
+}
+
+.action-btn.active .like-icon {
+  filter: invert(40%) sepia(79%) saturate(2269%) hue-rotate(338deg) brightness(100%) contrast(91%);
+  opacity: 1;
+}
+
+.action-btn.active .favorite-icon {
+  filter: invert(85%) sepia(24%) saturate(2529%) hue-rotate(359deg) brightness(103%) contrast(96%);
+  opacity: 1;
 }
 
 .comments-section {
@@ -1642,7 +1726,7 @@ onMounted(() => {
 }
 
 .comment-name:hover {
-  color: #3498db;
+  color: #409EFF;
 }
 
 .comment-id {
@@ -1699,7 +1783,7 @@ onMounted(() => {
 
 .comment-textarea:focus {
   outline: none;
-  border-color: #2c3e50;
+  border-color: #409EFF;
   background: white;
 }
 
@@ -1710,14 +1794,14 @@ onMounted(() => {
   padding: 8px;
   border: none;
   border-radius: 6px;
-  background: #2c3e50;
+  background: #409EFF;
   color: white;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .publish-btn:hover {
-  background: #34495e;
+  background: #66b1ff;
   transform: translateY(-2px);
 }
 
@@ -1728,17 +1812,21 @@ onMounted(() => {
 }
 
 .follow-btn.followed {
-  background: #2c3e50;
+  background: #666;
   color: white;
+  border-color: #666;
 }
 
-.follow-btn.followed .action-icon {
-  filter: brightness(0) invert(1);
+.action-btn.active:has(.like-icon) {
+  background: #e74c3c;
+  color: white;
+  border-color: #e74c3c;
 }
 
-.action-btn.active {
-  background: #2c3e50;
+.action-btn.active:has(.favorite-icon) {
+  background: #f1c40f;
   color: white;
+  border-color: #f1c40f;
 }
 
 .action-btn.active .action-icon {
@@ -1756,8 +1844,8 @@ onMounted(() => {
 }
 
 .thinking-chain {
-  background: #f8f9fa;
-  border-left: 3px solid #2c3e50;
+  background: #f5f7fa;
+  border-left: 3px solid #409EFF;
   padding: 12px;
   margin-bottom: 12px;
   border-radius: 0 4px 4px 0;
@@ -1788,7 +1876,7 @@ onMounted(() => {
 }
 
 .response {
-  color: #2c3e50;
+  color: #333;
 }
 
 .action-btn.warning:hover .el-icon {
@@ -1806,5 +1894,38 @@ onMounted(() => {
 .report-dialog label {
   margin-bottom: 8px;
   color: #606266;
+}
+
+.loading-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+}
+
+.loading-icon {
+  width: 48px;
+  height: 48px;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  color: #666;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
