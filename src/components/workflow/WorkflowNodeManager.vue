@@ -194,19 +194,24 @@ function stopConnection(event: MouseEvent) {
         (conn.sourceId === newConnection.targetId && conn.targetId === newConnection.sourceId)
     )
     if (!exists) {
-      emit('update:connections', [...props.connections, newConnection])
       // 更新目标节点的 beforeWorkflowNodeIds
       const targetNode = props.nodes.find(n => n.id === newConnection.targetId)
       const sourceNode = props.nodes.find(n => n.id === newConnection.sourceId)
-      if (targetNode && sourceNode) {
-        targetNode.beforeWorkflowNodeIds.push(sourceId)
-        sourceNode.nextWorkflowNodeIds.push(targetId)
-        // 更新节点
-        const updatedNodes = [...props.nodes]
-        const targetIndex = updatedNodes.findIndex(n => n.id === targetNode.id)
-        if (targetIndex !== -1) {
-          updatedNodes[targetIndex] = { ...targetNode }
-          emit('update:nodes', updatedNodes)
+      const isBranchSource = (sourceNode.type === 'classifier' || sourceNode.type === 'if_else')
+      const isSourceValid = isBranchSource || (sourceNode.nextWorkflowNodeIds.length === 0)
+      // 禁止多分支汇合和非多分支节点多分支
+      if (targetNode.beforeWorkflowNodeIds.length === 0 && isSourceValid) {
+        emit('update:connections', [...props.connections, newConnection])
+        if (targetNode && sourceNode) {
+          targetNode.beforeWorkflowNodeIds.push(sourceId)
+          sourceNode.nextWorkflowNodeIds.push(targetId)
+          // 更新节点
+          const updatedNodes = [...props.nodes]
+          const targetIndex = updatedNodes.findIndex(n => n.id === targetNode.id)
+          if (targetIndex !== -1) {
+            updatedNodes[targetIndex] = { ...targetNode }
+            emit('update:nodes', updatedNodes)
+          }
         }
       }
     }

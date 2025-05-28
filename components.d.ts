@@ -33,6 +33,7 @@ declare module 'vue' {
     ElAside: typeof import('element-plus/es')['ElAside']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
+    ElButtonGroup: typeof import('element-plus/es')['ElButtonGroup']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElContainer: typeof import('element-plus/es')['ElContainer']
     ElDialog: typeof import('element-plus/es')['ElDialog']
@@ -40,6 +41,8 @@ declare module 'vue' {
     ElDropdownItem: typeof import('element-plus/es')['ElDropdownItem']
     ElDropdownMenu: typeof import('element-plus/es')['ElDropdownMenu']
     ElFooter: typeof import('element-plus/es')['ElFooter']
+    ElForm: typeof import('element-plus/es')['ElForm']
+    ElFormItem: typeof import('element-plus/es')['ElFormItem']
     ElHeader: typeof import('element-plus/es')['ElHeader']
     ElIcon: typeof import('element-plus/es')['ElIcon']
     ElInput: typeof import('element-plus/es')['ElInput']
@@ -48,6 +51,8 @@ declare module 'vue' {
     ElOption: typeof import('element-plus/es')['ElOption']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElSelect: typeof import('element-plus/es')['ElSelect']
+    ElTable: typeof import('element-plus/es')['ElTable']
+    ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     End: typeof import('./src/components/document/manual/workflow/nodes/End.vue')['default']
@@ -97,5 +102,8 @@ declare module 'vue' {
     WorkflowOrchestration: typeof import('./src/components/document/manual/workflow/WorkflowOrchestration.vue')['default']
     WorkflowTest: typeof import('./src/components/document/manual/workflow/WorkflowTest.vue')['default']
     Workspace: typeof import('./src/components/workspace/Workspace.vue')['default']
+  }
+  export interface ComponentCustomProperties {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }
