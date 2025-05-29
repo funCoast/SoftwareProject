@@ -2880,7 +2880,7 @@ def community_agent_handle_copy(request):
                     kbs = node_content["data"]["kbs"]
                     for kb in kbs:
                         kb_id = kb["id"]
-                        kb = KnowledgeBase.objects.get(id=kb_id)
+                        kb = KnowledgeBase.objects.get(kb_id=kb_id)
                         clone_knowledge_base(user, kb_id, kb.kb_name + str(timezone.now()))
 
         kbs = AgentKnowledgeEntry.objects.filter(agent=original_agent)
