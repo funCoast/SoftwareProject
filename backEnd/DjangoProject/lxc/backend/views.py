@@ -1,3 +1,4 @@
+import ast
 import uuid
 import random
 
@@ -2868,6 +2869,15 @@ def community_agent_handle_copy(request):
                 agent=copied_agent,
                 workflow=new_workflow
             )
+
+            nodes = ast.literal_eval(workflow.workflow.nodes)
+            for node in nodes:
+                node_content = json.loads(node)
+                if node_content["type"] == "kbRetrieval":
+                    kbs = node_content["data"]["kbs"]
+                    for kb in kbs:
+                        kb_id = kb["id"]
+                        clone_knowledge_base(user, kb_id, kb.kb.kb_name + str(timezone.now()))
 
         kbs = AgentKnowledgeEntry.objects.filter(agent=original_agent)
         for kb in kbs:
