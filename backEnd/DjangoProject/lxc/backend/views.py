@@ -2098,7 +2098,8 @@ def workflow_create(request):
             description=description,
             icon_url=icon_url,  # 无论是否上传，都有值
             nodes=json.dumps([]),  # ✅ 初始化为空数组
-            edges=json.dumps([])
+            edges=json.dumps([]),
+            created_time=timezone.now()
         )
 
         return JsonResponse({
@@ -2210,7 +2211,8 @@ def workflow_fetchAll(request):
             "name": workflow.name,
             "description": workflow.description,
             "icon": workflow.icon_url if workflow.icon_url else "",
-            "updateTime":workflow.update_time.strftime('%Y-%m-%d %H:%M:%S')
+            "updateTime":workflow.update_time.strftime('%Y-%m-%d %H:%M:%S'),
+            "createTime":workflow.created_time.strftime('%Y-%m-%d %H:%M:%S')
         })
 
     return JsonResponse({
@@ -2365,6 +2367,7 @@ def agent_fetch_all(request):
                 "publishedTime": agent.publish_time.strftime('%Y-%m-%d %H:%M:%S') if agent.publish_time else None,
                 "createTime": localtime(agent.created_time).strftime('%Y-%m-%d %H:%M:%S'),
                 "modifyTime": localtime(agent.updated_time).strftime('%Y-%m-%d %H:%M:%S'),
+                "category":agent.category,
             })
 
         return JsonResponse({
