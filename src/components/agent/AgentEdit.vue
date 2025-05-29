@@ -280,6 +280,10 @@ async function handleRemove() {
 
 // 更新智能体信息
 async function updateAgentInfo() {
+  if (agentInfo.value.status === 2) {
+    ElMessage.warning('请先下架智能体再编辑！')
+    return
+  }
   try {
     const response = await axios({
       method: 'post',
@@ -368,7 +372,7 @@ interface Message {
     response: string
   }
   time: string
-  files?: string[]
+  file?: string[]
   search?: boolean
   showThinking?: boolean
 }
@@ -376,8 +380,7 @@ interface Message {
 // 聊天相关
 const messageInput = ref('')
 const chatHistory = ref<Message[]>([])
-const uploadRef = ref<UploadInstance>()
-const fileList = ref<UploadFile[]>([])
+const fileList = ref<File[]>([])
 const enableSearch = ref(false)
 
 // 添加加载状态
@@ -401,14 +404,11 @@ const handleFileUpload = (file: File) => {
     ElMessage.warning('请先关闭联网搜索')
     return false
   }
-  fileList.value.push({
-    ...file,
-    raw: file
-  } as UploadFile)
+  fileList.value.push(file)
   return false // 阻止自动上传
 }
 
-const removeFile = (file: UploadFile) => {
+const removeFile = (file: File) => {
   const index = fileList.value.indexOf(file)
   if (index !== -1) {
     fileList.value.splice(index, 1)
@@ -443,8 +443,11 @@ const trySendMessage = () => {
       thinking_chain: '',
       response: messageInput.value
     },
-    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    files: fileList.value.map(file => file.name),
+    time: new Date(Date.now() + 8 * 60 * 60 * 1000) // 当前时间加8小时
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 19),
+    file: fileList.value.map(file => file.name),
     search: enableSearch.value,
     showThinking: true
   })
@@ -464,7 +467,6 @@ async function sendMessage() {
     formData.append('search', enableSearch.value.toString())
 
     for (const file of fileList.value) {
-      console.log('file:', file)
       formData.append('file', file.raw)
     }
     const response = await axios({
@@ -756,8 +758,8 @@ function handleWorkflowSelect(id: number) {
                   <span class="sender-name">{{ message.sender }}</span>
                 </div>
                 <div class="message-text" style="white-space: pre-line;">{{ message.content.response }}</div>
-                <div v-if="message.files && message.files.length > 0" class="message-files">
-                  <div v-for="file in message.files" :key="file" class="message-file">
+                <div v-if="message.file && message.file.length > 0" class="message-files">
+                  <div v-for="file in message.file" :key="file" class="message-file">
                     <el-icon><Document /></el-icon>
                     <span class="file-name">{{ file }}</span>
                   </div>
@@ -838,15 +840,12 @@ function handleWorkflowSelect(id: number) {
 
                 <div class="input-actions">
                   <el-upload
-                    ref="uploadRef"
-                    class="upload-button"
-                    action=""
-                    accept=".txt,.pdf,.doc,.docx,.md,.xls,.xlsx"
-                    :auto-upload="false"
-                    :show-file-list="false"
-                    :on-change="handleFileUpload"
-                    :on-remove="removeFile"
-                    :disabled="enableSearch"
+                      class="upload-button"
+                      :auto-upload="false"
+                      :show-file-list="false"
+                      :on-change="handleFileUpload"
+                      :disabled="enableSearch"
+                      accept=".txt,.pdf,.doc,.docx,.md,.xls,.xlsx"
                   >
                     <el-button type="text" class="upload-icon" :class="{ 'disabled': enableSearch }">
                       <el-icon><Plus /></el-icon>

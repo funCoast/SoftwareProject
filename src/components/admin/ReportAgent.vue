@@ -62,7 +62,11 @@ async function processReport(reportId: number, result: string) {
       result: result
     })
     if (res.data.code === 0) {
-      ElMessage.success('处理成功')
+      if (result === '举报有效，已处理') {
+        ElMessage.success('下架该智能体成功！')
+      } else {
+        ElMessage.success('处理成功')
+      }
       await fetchReports()
     } else {
       ElMessage.error('处理失败：' + res.data.message)

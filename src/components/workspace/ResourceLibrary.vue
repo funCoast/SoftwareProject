@@ -94,6 +94,7 @@ async function getWorkflows() {
             description: item.description,
             icon: item.icon,
             updateTime: item.updateTime,
+            createTime: item.createTime,
             hover: false
           }))
       )

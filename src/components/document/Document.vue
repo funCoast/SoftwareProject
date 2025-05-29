@@ -152,27 +152,27 @@ const navItems: NavItem[] = [
       }
     ]
   },
-  {
-    id: 'lab',
-    label: '动手实验室',
-    children: [
-      {
-        id: 'aviation',
-        label: '航概问答助手',
-        component: AviationQA
-      },
-      {
-        id: 'recommend',
-        label: '影视音乐推荐助手',
-        component: RecommendAssistant
-      },
-      {
-        id: 'suit',
-        label: '天气穿搭助手',
-        component: WeatherSuit
-      }
-    ]
-  },
+  // {
+  //   id: 'lab',
+  //   label: '动手实验室',
+  //   children: [
+  //     {
+  //       id: 'aviation',
+  //       label: '航概问答助手',
+  //       component: AviationQA
+  //     },
+  //     {
+  //       id: 'recommend',
+  //       label: '影视音乐推荐助手',
+  //       component: RecommendAssistant
+  //     },
+  //     {
+  //       id: 'suit',
+  //       label: '天气穿搭助手',
+  //       component: WeatherSuit
+  //     }
+  //   ]
+  // },
   {
     id: 'faq',
     label: '常见问题',

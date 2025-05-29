@@ -215,7 +215,7 @@ function isNodeValid() {
     if (value?.type === 1) {
       if (generateSelectValue(input).trim() === '') return '未选择输入变量的来源！'
     } else if (value?.type === 0) {
-      if (!value.text || value.text.trim() === '') return '未配置输入变量的值！'
+      if (input.name === 'user_prompt' && (!value.text || value.text.trim() === '')) return '未配置输入变量的值！'
     } else {
       return '未知配置！'
     }
@@ -273,7 +273,7 @@ defineExpose({
                 v-model="input.value.text"
                 type="textarea"
                 :rows="3"
-                :placeholder="input.name === 'system_prompt' ? '请输入系统提示词（必填）' : '请输入用户提示词（必填）'"
+                :placeholder="input.name === 'system_prompt' ? '请输入系统提示词' : '请输入用户提示词（必填）'"
             />
           </div>
         </div>
