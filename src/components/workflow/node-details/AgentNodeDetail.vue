@@ -241,6 +241,7 @@ function isNodeValid() {
       return '未知配置！'
     }
   }
+  if (props.node.data.agent_id === null) return '未配置智能体！'
   return ''
 }
 
