@@ -28,7 +28,7 @@ const editForm = ref({
   id: 0,
   name: '',
   description: '',
-  icon: '',
+  icon: null as File | null,
   iconPreview: ''
 });
 
@@ -200,7 +200,7 @@ function openEditDialog(agent: agent) {
     id: agent.id,
     name: agent.name,
     description: agent.description,
-    icon: agent.icon,
+    icon: null,
     iconPreview: baseImageUrl + agent.icon
   };
   editDialogVisible.value = true;
@@ -218,6 +218,7 @@ function handleEditImageUpload(event: Event) {
     reader.onload = (e) => {
       editForm.value.iconPreview = e.target?.result as string;
     };
+    editForm.value.icon = file;
     reader.readAsDataURL(file);
   }
 }
