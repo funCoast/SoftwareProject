@@ -2875,7 +2875,7 @@ def community_agent_handle_copy(request):
 
             nodes = ast.literal_eval(workflow.workflow.nodes)
             for node in nodes:
-                node_content = json.loads(node)
+                node_content = json.loads(str(node))
                 if node_content["type"] == "kbRetrieval":
                     kbs = node_content["data"]["kbs"]
                     for kb in kbs:
