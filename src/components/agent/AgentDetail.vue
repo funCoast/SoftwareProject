@@ -189,7 +189,10 @@ const trySendMessage = () => {
       thinking_chain: '',
       response: messageInput.value
     },
-    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    time: new Date(Date.now() + 8 * 60 * 60 * 1000) // 当前时间加8小时
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 19),
     file: fileList.value.map(file => file.name),
     search: enableSearch.value,
     showThinking: true

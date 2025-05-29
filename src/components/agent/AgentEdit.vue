@@ -376,8 +376,7 @@ interface Message {
 // 聊天相关
 const messageInput = ref('')
 const chatHistory = ref<Message[]>([])
-const uploadRef = ref<UploadInstance>()
-const fileList = ref<UploadFile[]>([])
+const fileList = ref<File[]>([])
 const enableSearch = ref(false)
 
 // 添加加载状态
@@ -401,14 +400,11 @@ const handleFileUpload = (file: File) => {
     ElMessage.warning('请先关闭联网搜索')
     return false
   }
-  fileList.value.push({
-    ...file,
-    raw: file
-  } as UploadFile)
+  fileList.value.push(file)
   return false // 阻止自动上传
 }
 
-const removeFile = (file: UploadFile) => {
+const removeFile = (file: File) => {
   const index = fileList.value.indexOf(file)
   if (index !== -1) {
     fileList.value.splice(index, 1)
@@ -443,7 +439,10 @@ const trySendMessage = () => {
       thinking_chain: '',
       response: messageInput.value
     },
-    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    time: new Date(Date.now() + 8 * 60 * 60 * 1000) // 当前时间加8小时
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 19),
     files: fileList.value.map(file => file.name),
     search: enableSearch.value,
     showThinking: true
@@ -464,7 +463,6 @@ async function sendMessage() {
     formData.append('search', enableSearch.value.toString())
 
     for (const file of fileList.value) {
-      console.log('file:', file)
       formData.append('file', file.raw)
     }
     const response = await axios({
@@ -838,15 +836,12 @@ function handleWorkflowSelect(id: number) {
 
                 <div class="input-actions">
                   <el-upload
-                    ref="uploadRef"
-                    class="upload-button"
-                    action=""
-                    accept=".txt,.pdf,.doc,.docx,.md,.xls,.xlsx"
-                    :auto-upload="false"
-                    :show-file-list="false"
-                    :on-change="handleFileUpload"
-                    :on-remove="removeFile"
-                    :disabled="enableSearch"
+                      class="upload-button"
+                      :auto-upload="false"
+                      :show-file-list="false"
+                      :on-change="handleFileUpload"
+                      :disabled="enableSearch"
+                      accept=".txt,.pdf,.doc,.docx,.md,.xls,.xlsx"
                   >
                     <el-button type="text" class="upload-icon" :class="{ 'disabled': enableSearch }">
                       <el-icon><Plus /></el-icon>
