@@ -11,7 +11,7 @@ const route = useRoute()
 const router = useRouter()
 const agent_id = route.params.id
 const uid = Number(localStorage.getItem('LingXi_uid'))
-const baseImageUrl = "http://122.9.33.84:8000"
+const baseImageUrl = "http://101.201.208.165"
 
 // 智能体基本信息
 interface Author {
@@ -579,7 +579,7 @@ onMounted(async () => {
             <!-- 助手消息 -->
             <template v-else-if="message.sender === 'assistant'">
               <div class="message-avatar">
-                <img :src="'http://122.9.33.84:8000' + agentInfo.icon" alt="助手头像" />
+                <img :src="'http://101.201.208.165' + agentInfo.icon" alt="助手头像" />
               </div>
               <div class="message-content assistant-message">
                 <div class="message-info">
@@ -605,7 +605,7 @@ onMounted(async () => {
           <!-- 在消息列表的最后添加加载动画 -->
           <div v-if="isMessageLoading" class="message assistant">
             <div class="message-avatar">
-              <img :src="'http://122.9.33.84:8000' + agentInfo.icon" alt="助手头像" />
+              <img :src="'http://101.201.208.165' + agentInfo.icon" alt="助手头像" />
             </div>
             <div class="message-content assistant-message">
               <div class="message-info">

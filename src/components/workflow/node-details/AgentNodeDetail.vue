@@ -108,7 +108,7 @@ const runInputs = ref<Record<string, string>>({})
 
 // 添加弹窗控制变量
 const showAgentDialog = ref(false)
-const baseImageUrl = 'http://122.9.33.84:8000'
+const baseImageUrl = 'http://101.201.208.165'
 
 // 获取智能体列表
 async function fetchAgents() {

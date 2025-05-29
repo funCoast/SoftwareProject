@@ -66,7 +66,7 @@ function uploadAvatar() {
     },
   }).then(function (response) {
     if (response.data.code === 0) {
-      refreshAvatar('http://122.9.33.84:8000' + response.data.avatar + '?' + Date.now())
+      refreshAvatar('http://101.201.208.165' + response.data.avatar + '?' + Date.now())
       newAvatar.value = ''
       ElMessage.success(response.data.message)
     } else {

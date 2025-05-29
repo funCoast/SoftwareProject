@@ -58,7 +58,7 @@ const allUpstreamNodes = computed(() => {
   return getAllUpstreamNodes(props.node, props.allNodes)
 })
 
-const baseImageUrl = 'http://122.9.33.84:8000'
+const baseImageUrl = 'http://101.201.208.165'
 const inputs = ref<Input[]>([])
 const outputs = ref<Output[]>([])
 

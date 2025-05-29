@@ -19,7 +19,7 @@ interface agent {
 const agents = ref<agent[]> ([])
 const isCreateAgentVisible = ref(false)
 const router = useRouter();
-const baseImageUrl = "http://122.9.33.84:8000"
+const baseImageUrl = "http://101.201.208.165"
 const deleteDialog = ref(false);
 const deleteTarget = ref<{ id: number, name: string } | null>(null)
 const editDialogVisible = ref(false)

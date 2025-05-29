@@ -126,7 +126,7 @@ async function getKnowledgeBases() {
     if (response.data.code === 0) {
       knowledgeBases.value = response.data.knowledgeBases.map((kb: KnowledgeBase) => ({
         ...kb,
-        icon: 'http://122.9.33.84:8000' + kb.icon
+        icon: 'http://101.201.208.165' + kb.icon
       }))
       console.log('获取知识库列表成功')
     } else {
@@ -159,7 +159,7 @@ async function getWorkflows() {
     if (response.data.code === 0) {
       workflows.value = response.data.workflows.map((workflow: Workflow) => ({
         ...workflow,
-        icon: 'http://122.9.33.84:8000' + workflow.icon,
+        icon: 'http://101.201.208.165' + workflow.icon,
         hover: false
       }))
       console.log('获取工作流列表成功')
@@ -602,7 +602,7 @@ function handleWorkflowSelect(id: number) {
     <!-- 头部信息 -->
     <div class="agent-header">
       <div class="agent-info">
-        <el-avatar :size="50" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
+        <el-avatar :size="50" :src="'http://101.201.208.165' + agentInfo.icon" />
         <div class="agent-meta">
           <h2>{{ agentInfo.name }}</h2>
           <p>{{ agentInfo.description }}</p>
@@ -770,7 +770,7 @@ function handleWorkflowSelect(id: number) {
               <el-avatar class="user-avatar" :size="40" :src="userAvatar" />
             </template>
             <template v-else>
-              <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
+              <el-avatar class="assistant-avatar" :size="40" :src="'http://101.201.208.165' + agentInfo.icon" />
               <div class="message-content assistant-message">
                 <div class="message-info">
                   <span class="sender-name">{{ message.sender }}</span>
@@ -794,7 +794,7 @@ function handleWorkflowSelect(id: number) {
 
           <!-- 添加加载提示 -->
           <div v-if="isMessageLoading" class="message assistant">
-            <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
+            <el-avatar class="assistant-avatar" :size="40" :src="'http://101.201.208.165' + agentInfo.icon" />
             <div class="message-content assistant-message">
               <div class="message-info">
                 <span class="sender-name">assistant</span>

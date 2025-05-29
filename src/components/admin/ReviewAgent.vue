@@ -4,7 +4,7 @@ import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
-const baseImageUrl = "http://122.9.33.84:8000"
+const baseImageUrl = "http://101.201.208.165"
 
 // 待审核智能体相关
 const pendingAgents = ref<{

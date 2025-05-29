@@ -27,7 +27,7 @@ interface User {
 
 const users = ref<User[]>([])
 const loading = ref(false)
-const baseImageUrl = 'http://122.9.33.84:8000'
+const baseImageUrl = 'http://101.201.208.165'
 const searchQuery = ref('')
 const selectedUser = ref<User | null>(null)
 
