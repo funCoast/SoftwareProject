@@ -3565,7 +3565,10 @@ def process_agent_report(request):
 
     if report.is_processed:
         return JsonResponse({"code": -1, "message": "该举报已被处理"})
-
+    if result == "举报有效，已处理":
+        agent = report.agent
+        agent.status = 'private'
+        agent.save()
     report.is_processed = True
     report.process_result = result
     report.processed_by = admin
