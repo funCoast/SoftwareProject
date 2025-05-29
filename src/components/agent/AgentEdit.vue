@@ -372,7 +372,7 @@ interface Message {
     response: string
   }
   time: string
-  files?: string[]
+  file?: string[]
   search?: boolean
   showThinking?: boolean
 }
@@ -447,7 +447,7 @@ const trySendMessage = () => {
         .toISOString()
         .replace('T', ' ')
         .slice(0, 19),
-    files: fileList.value.map(file => file.name),
+    file: fileList.value.map(file => file.name),
     search: enableSearch.value,
     showThinking: true
   })
@@ -758,8 +758,8 @@ function handleWorkflowSelect(id: number) {
                   <span class="sender-name">{{ message.sender }}</span>
                 </div>
                 <div class="message-text" style="white-space: pre-line;">{{ message.content.response }}</div>
-                <div v-if="message.files && message.files.length > 0" class="message-files">
-                  <div v-for="file in message.files" :key="file" class="message-file">
+                <div v-if="message.file && message.file.length > 0" class="message-files">
+                  <div v-for="file in message.file" :key="file" class="message-file">
                     <el-icon><Document /></el-icon>
                     <span class="file-name">{{ file }}</span>
                   </div>
