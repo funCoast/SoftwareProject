@@ -163,7 +163,7 @@ class AgentFetchAgentMessageView(View):
                         "response": agent.opening_line,
                         "thinking_chain": "",
                     },
-                    "time": agent.publish_time,
+                    "time": agent.publish_time.strftime("%Y-%m-%d %H:%M:%S"),
                     "file": [],
                     "search": False,
                 })
@@ -175,7 +175,7 @@ class AgentFetchAgentMessageView(View):
                         "response": msg.content,
                         "thinking_chain": msg.thinking_chain,
                     },
-                    "time": msg.timestamp,
+                    "time": msg.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                     "file": msg.files_name,
                     "search": msg.search,
                 })

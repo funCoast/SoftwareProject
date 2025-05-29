@@ -55,8 +55,7 @@ def run_classifier_node(node,inputs):
     outputs = {}
     for output in node.get("outputs", []):
         id = output["id"]
-        outputs[id] = result  # 所有输出都给一样的结果（你也可以按 name 分别生成）
-    outputs["0"] = next_node
+        outputs[id] = next_node  # 所有输出都给一样的结果（你也可以按 name 分别生成）
     return outputs
 # 示例调用
 if __name__ == '__main__':
