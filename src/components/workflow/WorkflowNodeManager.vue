@@ -5,7 +5,16 @@ const props = defineProps<{
   nodes: any[],
   selectedNode: any,
   connections: any[],
-  zoom: number
+  zoom: number,
+  nodeResults: Map<number, {
+    outputs: {
+      [outputId: string]: {
+        value: any
+        name?: string
+      }
+    }
+    expanded: boolean
+  }>
 }>()
 
 const emit = defineEmits<{
@@ -13,6 +22,8 @@ const emit = defineEmits<{
   (e: 'update:connections', connections: any[]): void
   (e: 'node-click', node: any): void
   (e: 'run-node', node: any): void
+  (e: 'toggle-result-expanded', nodeId: number): void
+  (e: 'close-node-result', nodeId: number): void
 }>()
 
 // 拖拽相关
@@ -183,19 +194,24 @@ function stopConnection(event: MouseEvent) {
         (conn.sourceId === newConnection.targetId && conn.targetId === newConnection.sourceId)
     )
     if (!exists) {
-      emit('update:connections', [...props.connections, newConnection])
       // 更新目标节点的 beforeWorkflowNodeIds
       const targetNode = props.nodes.find(n => n.id === newConnection.targetId)
       const sourceNode = props.nodes.find(n => n.id === newConnection.sourceId)
-      if (targetNode && sourceNode) {
-        targetNode.beforeWorkflowNodeIds.push(sourceId)
-        sourceNode.nextWorkflowNodeIds.push(targetId)
-        // 更新节点
-        const updatedNodes = [...props.nodes]
-        const targetIndex = updatedNodes.findIndex(n => n.id === targetNode.id)
-        if (targetIndex !== -1) {
-          updatedNodes[targetIndex] = { ...targetNode }
-          emit('update:nodes', updatedNodes)
+      const isBranchSource = (sourceNode.type === 'classifier' || sourceNode.type === 'if_else')
+      const isSourceValid = isBranchSource || (sourceNode.nextWorkflowNodeIds.length === 0)
+      // 禁止多分支汇合和非多分支节点多分支
+      if (targetNode.beforeWorkflowNodeIds.length === 0 && isSourceValid) {
+        emit('update:connections', [...props.connections, newConnection])
+        if (targetNode && sourceNode) {
+          targetNode.beforeWorkflowNodeIds.push(sourceId)
+          sourceNode.nextWorkflowNodeIds.push(targetId)
+          // 更新节点
+          const updatedNodes = [...props.nodes]
+          const targetIndex = updatedNodes.findIndex(n => n.id === targetNode.id)
+          if (targetIndex !== -1) {
+            updatedNodes[targetIndex] = { ...targetNode }
+            emit('update:nodes', updatedNodes)
+          }
         }
       }
     }
@@ -363,6 +379,7 @@ function deleteNode() {
   const endNodes = props.nodes.filter(n => n.type === 'end')
   // 如果该节点是唯一的结束节点，不允许删除
   if (endNodes.length === 1 && endNodes[0].id === nodeId) {
+    ElMessage.warning('工作流中至少包含一个结束节点！')
     hideContextMenu()
     return
   }
@@ -426,11 +443,6 @@ function showConnectionContextMenu(connection: any, event: MouseEvent) {
 function hideConnectionContextMenu() {
   connectionContextMenu.value.show = false
   document.removeEventListener('click', hideConnectionContextMenu)
-}
-
-// 添加运行节点的函数
-function runNode(node: any) {
-  emit('run-node', node)
 }
 
 // 在 setup 中添加初始化函数
@@ -502,20 +514,121 @@ onMounted(async () => {
         </div>
 
         <!-- 运行结果显示 -->
-        <div v-if="node.runResult" class="node-result">
-          <div class="result-header">
-            <span class="result-title">运行结果</span>
-            <span class="result-type">{{ typeof node.runResult === 'object' ? 'Object' : typeof node.runResult }}</span>
+        <div v-if="nodeResults.has(node.id)" 
+             class="node-result" 
+             :class="{ 'expanded': nodeResults.get(node.id)?.expanded }"
+             @mousedown.stop
+             @mousemove.stop
+             @mouseup.stop
+             @click.stop>
+          <div class="result-header"
+               @mousedown.stop
+               @mousemove.stop
+               @mouseup.stop>
+            <div class="result-title-section">
+              <span class="result-title">运行结果</span>
+            </div>
+            <div class="result-actions">
+              <button class="result-action-btn" 
+                      @click.stop="emit('toggle-result-expanded', node.id)" 
+                      @mousedown.stop
+                      :title="nodeResults.get(node.id)?.expanded ? '收起' : '展开'">
+                <img :src="nodeResults.get(node.id)?.expanded ? 'https://api.iconify.design/material-symbols:unfold-less.svg' : 'https://api.iconify.design/material-symbols:unfold-more.svg'" 
+                     alt="展开/收起" 
+                     class="action-icon">
+              </button>
+              <button class="result-action-btn" 
+                      @click.stop="emit('close-node-result', node.id)" 
+                      @mousedown.stop
+                      title="关闭">
+                <img src="https://api.iconify.design/material-symbols:close.svg" 
+                     alt="关闭" 
+                     class="action-icon">
+              </button>
+            </div>
           </div>
-          <div class="result-content" :class="{ 'result-string': typeof node.runResult === 'string' }">
-            <template v-if="typeof node.runResult === 'object'">
-              <pre>{{ JSON.stringify(node.runResult, null, 2) }}</pre>
-            </template>
-            <template v-else>
-              {{ node.runResult }}
-            </template>
+          <div class="result-content"
+               @mousedown.stop
+               @mousemove.stop
+               @mouseup.stop>
+            <div v-for="(output, outputId) in nodeResults.get(node.id)?.outputs" 
+                 :key="outputId" 
+                 class="output-item">
+              <div class="output-header">
+                <span class="output-name">{{ output.name || `输出 ${outputId}` }}</span>
+              </div>
+              <div class="output-value" 
+                   :class="{ 'output-string': typeof output.value === 'string' }"
+                   @click.stop>
+                <template v-if="typeof output.value === 'object'">
+                  <pre>{{ JSON.stringify(output.value, null, 2) }}</pre>
+                </template>
+                <template v-else>
+                  {{ output.value }}
+                </template>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- 全屏结果显示 -->
+        <Teleport to="body">
+          <div v-if="nodeResults.has(node.id) && nodeResults.get(node.id)?.expanded" 
+               class="result-modal"
+               @mousedown.stop
+               @mousemove.stop
+               @mouseup.stop
+               @click.stop>
+            <div class="result-header"
+                 @mousedown.stop
+                 @mousemove.stop
+                 @mouseup.stop>
+              <div class="result-title-section">
+                <span class="result-title">运行结果</span>
+              </div>
+              <div class="result-actions">
+                <button class="result-action-btn" 
+                        @click.stop="emit('toggle-result-expanded', node.id)" 
+                        @mousedown.stop
+                        title="收起">
+                  <img src="https://api.iconify.design/material-symbols:unfold-less.svg" 
+                       alt="收起" 
+                       class="action-icon">
+                </button>
+                <button class="result-action-btn" 
+                        @click.stop="emit('close-node-result', node.id)" 
+                        @mousedown.stop
+                        title="关闭">
+                  <img src="https://api.iconify.design/material-symbols:close.svg" 
+                       alt="关闭" 
+                       class="action-icon">
+                </button>
+              </div>
+            </div>
+            <div class="result-content"
+                 @mousedown.stop
+                 @mousemove.stop
+                 @mouseup.stop>
+              <div v-for="(output, outputId) in nodeResults.get(node.id)?.outputs"
+                   :key="outputId"
+                   class="output-item">
+                <div class="output-header">
+                  <span class="output-name">{{ output.name || `输出 ${outputId}` }}</span>
+                </div>
+                <div class="output-value"
+                     :class="{ 'output-string': typeof output.value === 'string' }">
+                  <template v-if="typeof output.value === 'object'">
+                    <pre>{{ JSON.stringify(output.value, null, 2) }}</pre>
+                  </template>
+                  <template v-else>
+                    {{ output.value }}
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Teleport>
+
       </div>
     </div>
 
@@ -793,48 +906,86 @@ onMounted(async () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   width: 100%;
   z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+.result-modal {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #fff;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
 }
 
 .result-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
+  padding: 6px 16px;
   background: #e9ecef;
   border-bottom: 1px solid #dee2e6;
-}
-
-.result-title {
-  font-size: 12px;
-  font-weight: 500;
-  color: #495057;
-}
-
-.result-type {
-  font-size: 11px;
-  color: #6c757d;
-  background: #fff;
-  padding: 2px 6px;
-  border-radius: 4px;
+  height: 40px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .result-content {
-  padding: 8px 10px;
-  font-size: 12px;
-  color: #495057;
-  max-height: 120px;
-  overflow: auto;
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
   background: white;
+  user-select: text;
 }
 
-.result-content pre {
-  margin: 0;
+.output-item {
+  border-bottom: 1px solid #e9ecef;
+  background: white;
+  margin-bottom: 16px;
+}
+
+.output-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.output-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.output-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.output-value {
+  font-size: 14px;
+  color: #2c3e50;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
   white-space: pre-wrap;
   word-break: break-all;
+  user-select: text;
+  cursor: text;
+}
+
+.output-value.output-string {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
 }
 
-.result-string {
+.output-value pre {
+  margin: 0;
   white-space: pre-wrap;
   word-break: break-all;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
@@ -842,22 +993,56 @@ onMounted(async () => {
 
 /* 自定义滚动条样式 */
 .result-content::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .result-content::-webkit-scrollbar-track {
   background: #f1f3f5;
-  border-radius: 3px;
 }
 
 .result-content::-webkit-scrollbar-thumb {
   background: #ced4da;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .result-content::-webkit-scrollbar-thumb:hover {
   background: #adb5bd;
+}
+
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.result-action-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.result-action-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.action-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.result-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #2c3e50;
 }
 
 .menu-icon {

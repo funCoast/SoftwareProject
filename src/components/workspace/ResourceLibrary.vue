@@ -44,10 +44,10 @@ const editForm = ref({
 })
 
 const defaultIcons = {
-  text: 'http://122.9.33.84:8000/media/kb_icons/Text.svg', // 文本知识库默认图标
-  table: 'http://122.9.33.84:8000/media/kb_icons/Table.svg', // 表格知识库默认图标
-  picture: 'http://122.9.33.84:8000/media/kb_icons/Picture.svg', // 图像知识库默认图标
-  workflow: 'http://122.9.33.84:8000/media/workflow_icons/defaultWorkFlow.svg'
+  text: 'http://101.201.208.165/media/kb_icons/Text.svg', // 文本知识库默认图标
+  table: 'http://101.201.208.165/media/kb_icons/Table.svg', // 表格知识库默认图标
+  picture: 'http://101.201.208.165/media/kb_icons/Picture.svg', // 图像知识库默认图标
+  workflow: 'http://101.201.208.165/media/workflow_icons/defaultWorkFlow.svg'
 }
 
 onMounted(() => {
@@ -289,7 +289,7 @@ function openEditDialog(resource: resource) {
   editForm.value.type = resource.type;
   editForm.value.name = resource.name;
   editForm.value.description = resource.description;
-  editForm.value.iconPreview = 'http://122.9.33.84:8000' + resource.icon;
+  editForm.value.iconPreview = 'http://101.201.208.165' + resource.icon;
   editForm.value.icon = null;
   editDialog.value = true;
 }
@@ -456,7 +456,7 @@ const filteredResources = computed(() => {
           @mouseleave="resource.hover = false"
       >
         <div class="resource-icon">
-          <img :src="'http://122.9.33.84:8000' + resource.icon" :alt="resource.name">
+          <img :src="'http://101.201.208.165' + resource.icon" :alt="resource.name">
           <div class="resource-type">{{ resource.type }}</div>
         </div>
         <div class="resource-info">
@@ -564,7 +564,7 @@ const filteredResources = computed(() => {
 
         <!-- 描述 -->
         <div class="form-row">
-          <label class="form-label">功能介绍</label>
+          <label class="form-label">功能介绍 <span class="required">*</span></label>
           <el-input
             v-model="WFForm.description"
             type="textarea"

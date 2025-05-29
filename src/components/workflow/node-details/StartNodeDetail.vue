@@ -11,6 +11,7 @@ interface Output {
 const props = defineProps<{
   node: {
     id: number
+    name: string
     type: string
     label: string
     x: number
@@ -32,9 +33,19 @@ const outputs = ref<Output[]>(props.node.outputs || [])
 
 // 监听输出变化并更新节点
 watch(outputs, () => {
+  const outputsWithValue = outputs.value.map(o => ({
+    ...o,
+    value: {
+      type: 0,
+      text: '',
+      nodeId: -1,
+      outputId: -1
+    }
+  }))
   emit('update:node', {
     ...props.node,
-    outputs: outputs.value
+    outputs: outputs.value,
+    inputs: outputsWithValue
   })
 }, { deep: true })
 
@@ -58,6 +69,21 @@ function removeOutput(id: number) {
     outputs.value.splice(index, 1)
   }
 }
+
+function isNodeValid() {
+  if (!props.node.name || props.node.name.length === 0) return '未配置节点名称'
+  if (!props.node.outputs || props.node.outputs.length === 0) return '未配置输入变量！'
+
+  for (const output of props.node.outputs) {
+    if (!output.name || output.name.trim() === '') return '未配置输入变量的名称！'
+    if (!output.description || output.description.trim() === '') return '未配置输入变量的描述！'
+  }
+  return ''
+}
+
+defineExpose({
+  isNodeValid: isNodeValid
+})
 </script>
 
 <template>
@@ -77,7 +103,7 @@ function removeOutput(id: number) {
           <div class="output-row">
             <el-input
               v-model="output.name"
-              placeholder="变量名称"
+              placeholder="变量名称（必填）"
               size="small"
               class="name-input"
             />
@@ -108,7 +134,7 @@ function removeOutput(id: number) {
               v-model="output.description"
               type="textarea"
               :rows="2"
-              placeholder="请输入变量描述"
+              placeholder="请输入变量描述（必填）"
               size="small"
               class="description-input"
             />
@@ -184,11 +210,11 @@ function removeOutput(id: number) {
 }
 
 .name-input {
-  flex: 2;
+  flex: 0.7;
 }
 
 .type-select {
-  flex: 1;
+  flex: 0.8;
 }
 
 .remove-btn {

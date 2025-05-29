@@ -14,7 +14,6 @@ import WebNodeDetail from "./node-details/WebNodeDetail.vue"
 import AgentNodeDetail from "./node-details/AgentNodeDetail.vue";
 import {useRouter, useRoute} from "vue-router"
 import axios from "axios"
-import { ArrowLeft, Check } from "@element-plus/icons-vue"
 
 const router = useRouter()
 const route = useRoute()
@@ -33,31 +32,31 @@ interface nodeType {
 }
 
 const nodeTypes = ref<nodeType[]>([
-  { 
+  {
     type: 'llm',
     label: '大模型',
     description: '使用AI大模型处理任务',
     image: 'https://api.iconify.design/carbon:machine-learning-model.svg',
   },
-  { 
+  {
     type: 'code',
     label: '代码',
     description: '执行自定义代码逻辑',
     image: 'https://api.iconify.design/material-symbols:code.svg',
   },
-  { 
+  {
     type: 'if_else',
     label: '条件分支',
     description: '根据条件选择执行路径',
     image: 'https://api.iconify.design/material-symbols:fork-right.svg',
   },
-  { 
+  {
     type: 'classifier',
     label: '问题分类器',
     description: '对输入内容进行分类',
     image: 'https://api.iconify.design/material-symbols:category.svg',
   },
-  { 
+  {
     type: 'kbRetrieval',
     label: '知识库检索',
     description: '从知识库中检索信息',
@@ -129,6 +128,7 @@ interface Output {
   name: string
   type: string
   value?: any
+  description?: string
 }
 
 interface Connection {
@@ -152,8 +152,22 @@ const isAddingNode = ref(false)
 const isDraggingCanvas = ref(false)
 // 记录按下鼠标时的鼠标位置
 const lastMousePosition = ref({ x: 0, y: 0 })
-// 运行节点
+// 运行节点详情面板
 const nodeComponentRefs = new Map<number, any>()
+// 所有节点详情面板组件实例
+const allNodeComponentRefs = new Map<number, any>()
+
+interface NodeResult {
+  outputs: {
+    [outputId: string]: {
+      value: any
+      name?: string
+    }
+  }
+  expanded: boolean
+}
+
+const nodeResults = ref(new Map<number, NodeResult>())
 
 // 试运行相关
 const showRunDialog = ref(false)
@@ -180,7 +194,7 @@ onMounted(async () => {
       workflowNodes.value = response.data.nodes
       connections.value = response.data.edges
       name.value = response.data.name
-      icon.value = "http://122.9.33.84:8000" + response.data.icon
+      icon.value = "http://101.201.208.165" + response.data.icon
       console.log("iconUrl: ", icon.value)
       if (workflowNodes.value.length === 0) {
         workflowNodes.value.push(
@@ -389,22 +403,37 @@ async function updateConnections(newConnections: Connection[]) {
 
 // 打开试运行弹窗
 function runTest() {
-  if (!startNode.value) {
-    ElMessage.error('未找到开始节点')
-    return
+  for (const [id, component] of allNodeComponentRefs.entries()) {
+    if (typeof component.isNodeValid === 'function') {
+      const valid = component.isNodeValid()
+      if (valid !== '') {
+        const invalidNode = workflowNodes.value.find(n => n.id === id)
+        if (invalidNode) {
+          ElMessage.warning((invalidNode.name || invalidNode.label) + valid)
+          selectedNode.value = invalidNode
+          return
+        }
+      }
+    }
   }
   // 初始化输入值
+  runStatus.value = null
   runInputs.value = {}
   showRunDialog.value = true
 }
 
 // 执行试运行
 async function executeRun() {
-  if (!startNode.value) return
+  if (!startNode.value) {
+    ElMessage.warning('未找到开始节点')
+    return
+  }
+  
   startNode.value.inputs = startNode.value.outputs.map(output => ({
     id: output.id,
     name: output.name,
     type: output.type,
+    description: output.description,
     value: {
       type: 0,
       text: runInputs.value[output.name] || '',
@@ -412,8 +441,6 @@ async function executeRun() {
       outputId: -1
     }
   }))
-  console.log("nodes:", workflowNodes.value)
-  console.log("connections: ", connections.value)
   runStatus.value = 'running'
   try {
     const response = await axios({
@@ -426,21 +453,28 @@ async function executeRun() {
         edges: connections.value,
       }
     })
-    console.log("response: ", response.data)
-    const results = response.data['result']
+    const results = response.data['result'] as Record<string, Record<string, any>>
     console.log(results)
-    workflowNodes.value = workflowNodes.value.map(node => {
-      if (results[node.id]) {
-        return {
-          ...node,
-          runResult: results[node.id]["0"]
+    // 更新运行结果
+    nodeResults.value.clear()
+    for (const [nodeId, outputs] of Object.entries(results)) {
+      const node = workflowNodes.value.find(n => n.id === Number(nodeId))
+      if (!node) continue
+      
+      const processedOutputs: NodeResult['outputs'] = {}
+      for (const [outputId, value] of Object.entries(outputs)) {
+        const output = node.outputs[Number(outputId)]
+        processedOutputs[outputId] = {
+          value,
+          name: output?.name
         }
       }
-      return {
-        ...node,
-        runResult: null
-      }
-    })
+      
+      nodeResults.value.set(Number(nodeId), {
+        outputs: processedOutputs,
+        expanded: false
+      })
+    }
     runStatus.value = 'success'
     showRunDialog.value = false
   } catch (error) {
@@ -448,6 +482,22 @@ async function executeRun() {
     runStatus.value = 'error'
     showRunDialog.value = false
   }
+}
+
+// 切换结果展开状态
+function toggleResultExpanded(nodeId: number) {
+  const result = nodeResults.value.get(nodeId)
+  if (result) {
+    nodeResults.value.set(nodeId, {
+      ...result,
+      expanded: !result.expanded
+    })
+  }
+}
+
+// 关闭运行结果
+function closeNodeResult(nodeId: number) {
+  nodeResults.value.delete(nodeId)
 }
 
 // 保存工作流
@@ -499,8 +549,18 @@ async function saveWorkflowMessage() {
 
 function setNodeComponentRef(id: number) {
   return (el: any) => {
-    if (el) nodeComponentRefs.set(id, el)
-    else nodeComponentRefs.delete(id)
+    if (el) {
+      nodeComponentRefs.set(id, el)
+    } else {
+      nodeComponentRefs.delete(id)
+    }
+  }
+}
+
+function setAllNodeComponentRef(id: number) {
+  return (el: any) => {
+    if (el) allNodeComponentRefs.set(id, el)
+    else allNodeComponentRefs.delete(id)
   }
 }
 
@@ -581,10 +641,13 @@ function clearWorkflowCacheAndGoBack() {
           :connections="connections"
           :nodeTypes="nodeTypes"
           :zoom="zoom"
+          :nodeResults="nodeResults"
           @update:nodes="updateNodes"
           @update:connections="updateConnections"
           @node-click="handleNodeClick"
           @run-node="runSelectedNode"
+          @toggle-result-expanded="toggleResultExpanded"
+          @close-node-result="closeNodeResult"
       />
 
       <!-- 临时节点 -->
@@ -642,6 +705,21 @@ function clearWorkflowCacheAndGoBack() {
       </div>
     </div>
 
+    <!-- 隐藏的节点组件容器 -->
+    <div style="display: none;">
+      <template v-for="node in workflowNodes" :key="node.id">
+        <component
+          v-if="getNodeDetailComponent(node.type)"
+          :is="getNodeDetailComponent(node.type)"
+          :node="node"
+          :allNodes="workflowNodes"
+          :workflow_id="workflow_id"
+          :uid="uid"
+          :ref="setAllNodeComponentRef(node.id)"
+        />
+      </template>
+    </div>
+
     <!-- 节点详情面板 -->
     <div v-if="selectedNode" class="node-detail-panel">
       <div class="node-detail-header">
@@ -650,7 +728,7 @@ function clearWorkflowCacheAndGoBack() {
           <button
             class="action-btn run-btn"
             @click="runSelectedNode"
-            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end' && selectedNode.type !== 'if_else' && selectedNode.type !== 'code'"
+            v-if="selectedNode.type !== 'start' && selectedNode.type !== 'end'"
             title="运行节点">
             <img
               src="https://api.iconify.design/material-symbols:play-circle.svg"
@@ -674,7 +752,7 @@ function clearWorkflowCacheAndGoBack() {
                 type="text"
                 v-model="selectedNode.name"
                 @input="updateNode(selectedNode)"
-                placeholder="请输入节点名称"
+                placeholder="节点名称（必填）"
                 class="edit-input"
               >
             </div>
@@ -683,9 +761,8 @@ function clearWorkflowCacheAndGoBack() {
               <textarea
                 v-model="selectedNode.description"
                 @input="updateNode(selectedNode)"
-                placeholder="请输入节点描述"
+                placeholder="节点描述（选填）"
                 class="edit-textarea"
-                rows="3"
               ></textarea>
             </div>
           </div>
@@ -723,30 +800,13 @@ function clearWorkflowCacheAndGoBack() {
             <div v-for="output in startNode.outputs" :key="output.id" class="input-item">
               <label>{{ output.name }}</label>
               <div class="input-field">
-                <template v-if="output.type === 'string'">
+                <template v-if="output.type !== 's'">
                   <el-input
                     v-model="runInputs[output.name]"
                     :placeholder="`请输入${output.name}`"
                     type="textarea"
                     :rows="3"
                   />
-                </template>
-                <template v-else-if="output.type === 'number'">
-                  <el-input-number
-                    v-model="runInputs[output.name]"
-                    :placeholder="`请输入${output.name}`"
-                    :controls="true"
-                  />
-                </template>
-                <template v-else-if="output.type === 'Array[File]'">
-                  <el-upload
-                    action="/api/upload"
-                    multiple
-                    :on-success="(res) => runInputs[output.name] = [...(runInputs[output.name] || []), res.file]"
-                    :on-remove="(file) => runInputs[output.name] = runInputs[output.name].filter(f => f.id !== file.id)"
-                  >
-                    <el-button type="primary">上传文件</el-button>
-                  </el-upload>
                 </template>
               </div>
             </div>
@@ -1375,4 +1435,4 @@ function clearWorkflowCacheAndGoBack() {
     transform: rotate(360deg);
   }
 }
-</style> 
+</style>

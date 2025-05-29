@@ -129,7 +129,7 @@ function confirmDelete() {
         @mouseleave="picture.hover = false"
       >
         <div class="picture-image">
-          <img :src="'http://122.9.33.84:8000' + picture.url" :alt="picture.name" />
+          <img :src="'http://101.201.208.165' + picture.url" :alt="picture.name" />
         </div>
         <div class="picture-info">
           <h3>{{ picture.name }}</h3>
@@ -156,7 +156,7 @@ function confirmDelete() {
   <div class="edit-dialog-content">
     <!-- 图片展示 -->
     <div class="image-preview-container">
-      <img class="image-preview" :src="'http://122.9.33.84:8000' + editTarget!.url" alt="图像预览" />
+      <img class="image-preview" :src="'http://101.201.208.165' + editTarget!.url" alt="图像预览" />
     </div>
 
     <!-- 描述编辑 -->

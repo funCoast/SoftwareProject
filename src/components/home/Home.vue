@@ -9,7 +9,7 @@ const router = useRouter()
 const currentAgentTab = ref<string>('hot')
 const currentPage = ref(1)
 const itemsPerPage = ref(9)
-const baseImageUrl = 'http://122.9.33.84:8000'
+const baseImageUrl = 'http://101.201.208.165'
 
 interface announcement {
   id: number

@@ -4,6 +4,14 @@ import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import * as echarts from 'echarts'
 
+const timeRange = ref(7) // 默认7天
+
+const timeOptions = [
+  { label: '最近一星期', value: 7 },
+  { label: '最近一个月', value: 30 },
+  { label: '最近三个月', value: 90 }
+]
+
 interface User {
   uid: number
   email: string
@@ -19,7 +27,7 @@ interface User {
 
 const users = ref<User[]>([])
 const loading = ref(false)
-const baseImageUrl = 'http://122.9.33.84:8000'
+const baseImageUrl = 'http://101.201.208.165'
 const searchQuery = ref('')
 const selectedUser = ref<User | null>(null)
 
@@ -116,16 +124,21 @@ function formatDate(dateStr: string) {
 const loginData = ref<number[]>([]);
 const dates = ref<string[]>([]);
 
+import dayjs from 'dayjs'
+
 async function initInfo() {
   try {
-    const response = await axios({
-      method: 'get',
-      url: 'admin/cntInfo'
-    })
+    const response = await axios.get('admin/cntInfo')
     if (response.data.code === 0) {
-      console.log('获取信息成功', Object.keys(response.data.data.login), Object.values(response.data.data.login))
-      dates.value = Object.keys(response.data.data.login)
-      loginData.value = Object.values(response.data.data.login)
+      const allData = response.data.data.login
+      // 生成最近 N 天的日期（含今天）
+      const today = dayjs()
+      const recentNDates = Array.from({ length: timeRange.value }, (_, i) =>
+        today.subtract(timeRange.value - 1 - i, 'day').format('YYYY-MM-DD')
+      )
+      // 补全数据
+      dates.value = recentNDates
+      loginData.value = recentNDates.map(date => allData[date] || 0)
     } else {
       ElMessage.error('获取信息失败：' + response.data.message)
     }
@@ -135,6 +148,11 @@ async function initInfo() {
   }
   initChart()
 }
+
+watch(timeRange, () => {
+  initInfo()
+})
+
 
 // 初始化折线图
 let myChart: any = null
@@ -153,7 +171,7 @@ function initChart() {
       myChart = echarts.init(chartDom)
       const option = {
         title: {
-          text: '最近七日用户登录次数',
+          text: '用户登录次数',
           left: 'center'
         },
         tooltip: {
@@ -346,11 +364,11 @@ function initCharts(containerId: string, data: ChartData) {
       const behaviors = ['create', 'favorite', 'like', 'login', 'use']
       const behaviorData = behaviors.map(type => ({
         name: {
-          'create': '创建智能体',
-          'favorite': '收藏智能体',
-          'like': '点赞智能体',
-          'login': '登录系统',
-          'use': '使用智能体'
+          'create': '创建',
+          'favorite': '收藏',
+          'like': '点赞',
+          'login': '登录',
+          'use': '使用'
         }[type],
         value: Object.values(data[type] || {}).reduce((a, b) => a + b, 0)
       })).filter(item => item.value > 0) // 过滤掉数值为0的行为
@@ -622,6 +640,16 @@ onUnmounted(() => {
       </div>
 
       <!-- 图表区域 -->
+      <el-button-group style="margin-bottom: 16px">
+        <el-button
+          v-for="option in timeOptions"
+          :key="option.value"
+          :type="timeRange === option.value ? 'primary' : 'default'"
+          @click="timeRange = option.value"
+        >
+          {{ option.label }}
+        </el-button>
+      </el-button-group>
       <div class="chart-section">
         <div class="chart-card">
           <div id="loginChart"></div>

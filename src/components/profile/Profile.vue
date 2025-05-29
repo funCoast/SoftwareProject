@@ -6,7 +6,7 @@ import {useRoute} from "vue-router";
 import { ElMessage } from 'element-plus'
 
 const avatar = ref<string>('')
-const baseImageUrl = 'http://122.9.33.84:8000'
+const baseImageUrl = 'http://101.201.208.165'
 
 const currentTab = ref('works')
 const tabs = ref([
@@ -120,7 +120,7 @@ function getAvatar() {
     }
   }).then(function (response) {
     if (response.data.code === 0) {
-      avatar.value = 'http://122.9.33.84:8000' + response.data.avatar + '?' + Date.now()
+      avatar.value = 'http://101.201.208.165' + response.data.avatar + '?' + Date.now()
     } else {
       ElMessage.error(response.data.message)
     }

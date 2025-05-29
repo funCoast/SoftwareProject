@@ -6,7 +6,7 @@ import axios from "axios";
 const currentTag = ref('all')
 const currentPage = ref(1)
 const itemsPerPage = ref(12)
-const baseImageUrl = "http://122.9.33.84:8000"
+const baseImageUrl = "http://101.201.208.165"
 
 const categoryIcons: Record<string, string> = {
   all: 'https://api.iconify.design/material-symbols:category.svg',

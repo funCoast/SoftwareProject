@@ -45,11 +45,21 @@ interface AgentInfo {
   }
 }
 
-onMounted(() => {
-  getAgentInfo()
-  getKnowledgeBases()
-  getWorkflows()
-  fetchMessage()
+interface UploadFile extends File {
+  raw: File
+}
+
+onMounted(async () => {
+  try {
+    await getAgentInfo()
+    await getKnowledgeBases()
+    await getWorkflows()
+    await fetchMessage()
+  } catch (err) {
+    console.error('请求失败', err)
+  } finally {
+    isLoading.value = false
+  }
 })
 
 onBeforeMount(() => {
@@ -116,7 +126,7 @@ async function getKnowledgeBases() {
     if (response.data.code === 0) {
       knowledgeBases.value = response.data.knowledgeBases.map((kb: KnowledgeBase) => ({
         ...kb,
-        icon: 'http://122.9.33.84:8000' + kb.icon
+        icon: 'http://101.201.208.165' + kb.icon
       }))
       console.log('获取知识库列表成功')
     } else {
@@ -149,7 +159,7 @@ async function getWorkflows() {
     if (response.data.code === 0) {
       workflows.value = response.data.workflows.map((workflow: Workflow) => ({
         ...workflow,
-        icon: 'http://122.9.33.84:8000' + workflow.icon,
+        icon: 'http://101.201.208.165' + workflow.icon,
         hover: false
       }))
       console.log('获取工作流列表成功')
@@ -309,7 +319,7 @@ async function updateAgentInfo() {
 const selectedKbs = ref<number[]>([])
 const selectedWorkflows = ref<number[]>([])
 
-// 监听agentInfo的变化，更新选中的知识库和大模型
+// 监听agentInfo的变化，更新选中的知识库和工作流
 watch(() => agentInfo.value.config.selectedKbs, (newVal) => {
   if (JSON.stringify(newVal) !== JSON.stringify(selectedKbs.value)) {
     selectedKbs.value = [...newVal]
@@ -322,7 +332,7 @@ watch(() => agentInfo.value.config.selectedWorkflows, (newVal) => {
   }
 }, { immediate: true })
 
-// 监听选中的知识库和大模型变化，更新agentInfo
+// 监听选中的知识库和工作流变化，更新agentInfo
 watch(selectedKbs, (newVal) => {
   if (JSON.stringify(newVal) !== JSON.stringify(agentInfo.value.config.selectedKbs)) {
     agentInfo.value.config.selectedKbs = [...newVal]
@@ -367,11 +377,12 @@ interface Message {
 const messageInput = ref('')
 const chatHistory = ref<Message[]>([])
 const uploadRef = ref<UploadInstance>()
-const fileList = ref<File[]>([])
+const fileList = ref<UploadFile[]>([])
 const enableSearch = ref(false)
 
 // 添加加载状态
-const isLoading = ref(false)
+const isLoading = ref(true)
+const isMessageLoading = ref(false)
 
 const chatMessagesRef = ref<HTMLElement | null>(null)
 
@@ -384,20 +395,20 @@ function scrollToBottom() {
   })
 }
 
-// 文件上传前的钩子，用于校验文件类型和大小
-function handleChange(file: File) {
-  const isLt5M = file.size / 1024 / 1024 < 20
-  if (!isLt5M) {
-    ElMessage.warning("文件大小不能超过 20MB！")
-    fileList.value.splice(fileList.value.indexOf(file), 1)
-    return
+// 文件上传相关
+const handleFileUpload = (file: File) => {
+  if (enableSearch.value) {
+    ElMessage.warning('请先关闭联网搜索')
+    return false
   }
-  // 将文件添加到fileList中
-  fileList.value.push(file)
-  console.log('fileList:', fileList.value)
+  fileList.value.push({
+    ...file,
+    raw: file
+  } as UploadFile)
+  return false // 阻止自动上传
 }
 
-function handleFileRemove(file: File) {
+const removeFile = (file: UploadFile) => {
   const index = fileList.value.indexOf(file)
   if (index !== -1) {
     fileList.value.splice(index, 1)
@@ -424,7 +435,7 @@ function toggleThinkingChain(index: number) {
 const trySendMessage = () => {
   if (!messageInput.value.trim() && fileList.value.length === 0) return
 
-  isLoading.value = true
+  isMessageLoading.value = true
   sendMessage()
   chatHistory.value.push({
     sender: 'user',
@@ -477,7 +488,7 @@ async function sendMessage() {
   } catch (error) {
     console.error('信息发送失败:', error)
   } finally {
-    isLoading.value = false
+    isMessageLoading.value = false
   }
 }
 
@@ -510,9 +521,9 @@ async function fetchMessage() {
 async function clearMessage() {
   try {
     const response = await axios({
-      method: 'get',
+      method: 'post',
       url: 'agent/clearHistoryMessage',
-      params: {
+      data: {
         uid: localStorage.getItem('LingXi_uid'),
         agent_id: agent_id,
       }
@@ -554,14 +565,44 @@ const handleEnter = (e: KeyboardEvent) => {
 function renderedMarkdown(content: string) {
   return marked(content)
 }
+
+// 知识库选择弹窗
+const showKbDialog = ref(false)
+
+// 工作流选择弹窗
+const showWorkflowDialog = ref(false)
+
+function handleKbSelect(id: number) {
+  const index = selectedKbs.value.indexOf(id)
+  if (index > -1) {
+    selectedKbs.value = selectedKbs.value.filter(i => i !== id)
+  } else {
+    selectedKbs.value = [...selectedKbs.value, id]
+  }
+}
+
+function handleWorkflowSelect(id: number) {
+  const index = selectedWorkflows.value.indexOf(id)
+  if (index > -1) {
+    selectedWorkflows.value = selectedWorkflows.value.filter(i => i !== id)
+  } else {
+    selectedWorkflows.value = [...selectedWorkflows.value, id]
+  }
+}
 </script>
 
 <template>
-  <div class="agent-edit">
+  <div v-if="isLoading" class="agent-edit">
+    <div class="loading-container">
+      <img src="https://api.iconify.design/material-symbols:refresh.svg" alt="加载中" class="loading-icon">
+      <span class="loading-text">加载中...</span>
+    </div>
+  </div>
+  <div v-else class="agent-edit">
     <!-- 头部信息 -->
     <div class="agent-header">
       <div class="agent-info">
-        <el-avatar :size="50" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
+        <el-avatar :size="50" :src="'http://101.201.208.165' + agentInfo.icon" />
         <div class="agent-meta">
           <h2>{{ agentInfo.name }}</h2>
           <p>{{ agentInfo.description }}</p>
@@ -606,82 +647,74 @@ function renderedMarkdown(content: string) {
 
         <div class="config-section">
           <h3>知识库配置</h3>
-          <el-select
-            v-model="selectedKbs"
-            multiple
-            filterable
-            placeholder="选择知识库"
-            class="full-width"
-            popper-class="custom-select-dropdown"
+          <el-button
+            type="primary"
+            size="small"
+            class="select-kb-btn"
+            @click="showKbDialog = true"
           >
-            <el-option
-              v-for="kb in knowledgeBases"
-              :key="kb.id"
-              :label="kb.name"
-              :value="kb.id"
-            >
-              <div class="option-item">
-                <el-avatar :size="24" :src="kb.icon" style="margin-top: -6px;"/>
-                <div class="option-info">
-                  <div class="option-name" style="margin-top: -3px;">{{ kb.name }}</div>
-                </div>
-              </div>
-            </el-option>
-          </el-select>
+            选择知识库 (已选择 {{ selectedKbs.length }} 个)
+          </el-button>
 
-          <div class="selected-items">
-            <div v-for="kb in selectedKbs"
-                 :key="kb"
-                 class="selected-item"
-                 @click="goToKBEdit(kb, knowledgeBases.find(k => k.id === kb)?.type)"
-                 style="cursor: pointer;"
+          <div v-if="selectedKbs.length > 0" class="selected-kbs">
+            <div
+              v-for="kb in knowledgeBases.filter(kb => selectedKbs.includes(kb.id))"
+              :key="kb.id"
+              class="kb-item"
             >
-              <el-avatar :size="32" :src="knowledgeBases.find(k => k.id === kb)?.icon"/>
-              <div class="item-info">
-                <div class="item-name">{{ knowledgeBases.find(k => k.id === kb)?.name }}</div>
-                <div class="item-desc">{{ knowledgeBases.find(k => k.id === kb)?.description }}</div>
-                <div class="item-type">{{ knowledgeBases.find(k => k.id === kb)?.type }}</div>
+              <el-avatar
+                :size="32"
+                :src="kb.icon"
+                class="kb-icon"
+              />
+              <div class="kb-info">
+                <div class="kb-name">{{ kb.name }}</div>
+                <div class="kb-type">{{ kb.type }}</div>
               </div>
+              <el-button
+                type="text"
+                class="remove-btn"
+                @click="selectedKbs = selectedKbs.filter(id => id !== kb.id)"
+              >
+                移除
+              </el-button>
             </div>
           </div>
         </div>
 
         <div class="config-section">
           <h3>工作流配置</h3>
-          <el-select
-            v-model="selectedWorkflows"
-            multiple
-            filterable
-            placeholder="选择工作流"
-            class="full-width"
-            popper-class="custom-select-dropdown"
+          <el-button
+            type="primary"
+            size="small"
+            class="select-kb-btn"
+            @click="showWorkflowDialog = true"
           >
-            <el-option
-              v-for="workflow in workflows"
-              :key="workflow.id"
-              :label="workflow.name"
-              :value="workflow.id"
-            >
-              <div class="option-item">
-                <el-avatar :size="24" :src="workflow.icon" style="margin-top: -6px;"/>
-                <div class="option-info">
-                  <div class="option-name" style="margin-top: -3px;">{{ workflow.name }}</div>
-                </div>
-              </div>
-            </el-option>
-          </el-select>
+            选择工作流 (已选择 {{ selectedWorkflows.length }} 个)
+          </el-button>
 
-          <div class="selected-items">
-            <div v-for="workflow in selectedWorkflows"
-                 :key="workflow"
-                 class="selected-item"
-                 @click="goToWorkflowEdit(workflow)"
-                 style="cursor: pointer;">
-              <el-avatar :size="32" :src="workflows.find(w => w.id === workflow)?.icon" />
-              <div class="item-info">
-                <div class="item-name">{{ workflows.find(w => w.id === workflow)?.name }}</div>
-                <div class="item-desc">{{ workflows.find(w => w.id === workflow)?.description }}</div>
+          <div v-if="selectedWorkflows.length > 0" class="selected-kbs">
+            <div
+              v-for="workflow in workflows.filter(w => selectedWorkflows.includes(w.id))"
+              :key="workflow.id"
+              class="kb-item"
+            >
+              <el-avatar
+                :size="32"
+                :src="workflow.icon"
+                class="kb-icon"
+              />
+              <div class="kb-info">
+                <div class="kb-name">{{ workflow.name }}</div>
+                <div class="kb-description">{{ workflow.description }}</div>
               </div>
+              <el-button
+                type="text"
+                class="remove-btn"
+                @click="selectedWorkflows = selectedWorkflows.filter(id => id !== workflow.id)"
+              >
+                移除
+              </el-button>
             </div>
           </div>
         </div>
@@ -737,7 +770,7 @@ function renderedMarkdown(content: string) {
               <el-avatar class="user-avatar" :size="40" :src="userAvatar" />
             </template>
             <template v-else>
-              <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
+              <el-avatar class="assistant-avatar" :size="40" :src="'http://101.201.208.165' + agentInfo.icon" />
               <div class="message-content assistant-message">
                 <div class="message-info">
                   <span class="sender-name">{{ message.sender }}</span>
@@ -760,8 +793,8 @@ function renderedMarkdown(content: string) {
           </div>
 
           <!-- 添加加载提示 -->
-          <div v-if="isLoading" class="message assistant">
-            <el-avatar class="assistant-avatar" :size="40" :src="'http://122.9.33.84:8000' + agentInfo.icon" />
+          <div v-if="isMessageLoading" class="message assistant">
+            <el-avatar class="assistant-avatar" :size="40" :src="'http://101.201.208.165' + agentInfo.icon" />
             <div class="message-content assistant-message">
               <div class="message-info">
                 <span class="sender-name">assistant</span>
@@ -785,7 +818,7 @@ function renderedMarkdown(content: string) {
                   <div v-for="file in fileList" :key="file.name" class="file-item">
                     <el-icon><Document /></el-icon>
                     <span class="file-name">{{ file.name }}</span>
-                    <el-button type="text" class="remove-file" @click="handleFileRemove(file)">
+                    <el-button type="text" class="remove-file" @click="removeFile(file)">
                       <el-icon><Close /></el-icon>
                     </el-button>
                   </div>
@@ -811,8 +844,8 @@ function renderedMarkdown(content: string) {
                     accept=".txt,.pdf,.doc,.docx,.md,.xls,.xlsx"
                     :auto-upload="false"
                     :show-file-list="false"
-                    :on-change="handleChange"
-                    :on-remove="handleFileRemove"
+                    :on-change="handleFileUpload"
+                    :on-remove="removeFile"
                     :disabled="enableSearch"
                   >
                     <el-button type="text" class="upload-icon" :class="{ 'disabled': enableSearch }">
@@ -845,13 +878,90 @@ function renderedMarkdown(content: string) {
         </div>
       </div>
     </div>
+
+    <!-- 知识库选择弹窗 -->
+    <el-dialog
+      v-model="showKbDialog"
+      title="选择知识库"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div class="kb-dialog-content">
+        <div class="kb-list">
+          <div
+            v-for="kb in knowledgeBases"
+            :key="kb.id"
+            class="kb-dialog-item"
+            :class="{ 'selected': selectedKbs.includes(kb.id) }"
+            @click="handleKbSelect(kb.id)"
+          >
+            <div class="kb-header">
+              <el-avatar :size="40" :src="kb.icon" class="kb-icon" />
+              <div class="kb-title">
+                <div class="kb-name">{{ kb.name }}</div>
+                <div class="kb-type">{{ kb.type }}</div>
+              </div>
+            </div>
+            <div class="kb-description">{{ kb.description }}</div>
+            <div class="kb-select-status">
+              <el-checkbox
+                :model-value="selectedKbs.includes(kb.id)"
+                @click.stop="handleKbSelect(kb.id)"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showKbDialog = false">取消</el-button>
+        <el-button type="primary" @click="showKbDialog = false">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 工作流选择弹窗 -->
+    <el-dialog
+      v-model="showWorkflowDialog"
+      title="选择工作流"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div class="kb-dialog-content">
+        <div class="kb-list">
+          <div
+            v-for="workflow in workflows"
+            :key="workflow.id"
+            class="kb-dialog-item"
+            :class="{ 'selected': selectedWorkflows.includes(workflow.id) }"
+            @click="handleWorkflowSelect(workflow.id)"
+          >
+            <div class="kb-header">
+              <el-avatar :size="40" :src="workflow.icon" class="kb-icon" />
+              <div class="kb-title">
+                <div class="kb-name">{{ workflow.name }}</div>
+              </div>
+            </div>
+            <div class="kb-description">{{ workflow.description }}</div>
+            <div class="kb-select-status">
+              <el-checkbox
+                :model-value="selectedWorkflows.includes(workflow.id)"
+                @click.stop="handleWorkflowSelect(workflow.id)"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showWorkflowDialog = false">取消</el-button>
+        <el-button type="primary" @click="showWorkflowDialog = false">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
 .agent-edit {
   padding: 20px;
-  height: 100vh;
+  height: 90vh;
   display: flex;
   flex-direction: column;
 }
@@ -1333,5 +1443,192 @@ function renderedMarkdown(content: string) {
 @keyframes typing {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
+}
+
+.loading-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+}
+
+.loading-icon {
+  width: 48px;
+  height: 48px;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  color: #666;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.selected-kbs {
+  margin-top: 16px;
+}
+
+.kb-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.kb-item:hover {
+  background: #f0f2f5;
+}
+
+.kb-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.kb-info .kb-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.kb-info .kb-type,
+.kb-info .kb-description {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.kb-info .kb-type {
+  color: #409EFF;
+}
+
+.remove-btn {
+  padding: 4px 8px;
+  color: #909399;
+  transition: all 0.3s;
+}
+
+.remove-btn:hover {
+  color: #f56c6c;
+  background: rgba(245, 108, 108, 0.1);
+  border-radius: 4px;
+}
+
+.select-kb-btn {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.kb-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+:deep(.el-checkbox__inner) {
+  border-radius: 4px;
+}
+
+:deep(.el-dialog__body) {
+  padding: 0;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 16px 20px;
+  border-top: 1px solid #e4e7ed;
+}
+
+.kb-dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.kb-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 16px;
+}
+
+.kb-dialog-item {
+  position: relative;
+  padding: 16px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.kb-dialog-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.kb-dialog-item.selected {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.kb-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.kb-title {
+  margin-left: 12px;
+  flex: 1;
+}
+
+.kb-name {
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.kb-type {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #409EFF;
+}
+
+.kb-description {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.kb-select-status {
+  position: absolute;
+  top: 16px;
+  right: 16px;
 }
 </style>
