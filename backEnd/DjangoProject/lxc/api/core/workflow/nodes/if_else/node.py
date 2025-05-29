@@ -54,18 +54,16 @@ def run_if_else_node(node, inputs):
 
     # 预处理 inputs: list -> dict
     input_dict = {
-        item["id"]: (
-            int(float(item["value"])) if item.get("type") == "number" and float(item["value"]).is_integer()
-            else float(item["value"]) if item.get("type") == "number"
-            else item["value"]
+        inp["name"]: (
+            float(inp["value"]) if inp.get("type") == "number" else inp["value"]
         )
-        for item in inputs
+        for inp in inputs
     }
 
     for case in case_list:
         conditions = case["condition"]
         if not conditions:
-            return {"0":case.get("next_node")}
+            return {0:case.get("next_node")}
         and_or = case.get("and_or", 1)
         results = []
 
@@ -91,6 +89,6 @@ def run_if_else_node(node, inputs):
             results.append(result)
 
         if (and_or == 1 and all(results)) or (and_or == 0 and any(results)):
-            return {"0":case.get("next_node")}
+            return {0:case.get("next_node")}
 
     return None  # 所有条件都不满足
