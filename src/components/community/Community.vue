@@ -9,6 +9,7 @@ const itemsPerPage = ref(12)
 const baseImageUrl = "http://101.201.208.165"
 
 const categoryIcons: Record<string, string> = {
+  模板: 'https://api.iconify.design/material-symbols:view-module.svg',
   all: 'https://api.iconify.design/material-symbols:category.svg',
   教育学习: 'https://api.iconify.design/material-symbols:school.svg',
   法律服务: 'https://api.iconify.design/material-symbols:gavel.svg',

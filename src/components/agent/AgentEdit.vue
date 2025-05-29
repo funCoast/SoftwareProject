@@ -280,6 +280,10 @@ async function handleRemove() {
 
 // 更新智能体信息
 async function updateAgentInfo() {
+  if (agentInfo.value.status === 2) {
+    ElMessage.warning('请先下架智能体再编辑！')
+    return
+  }
   try {
     const response = await axios({
       method: 'post',

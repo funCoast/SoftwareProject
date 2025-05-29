@@ -35,6 +35,7 @@ const filteredAgents = computed(() => {
 })
 
 const categories = [
+  { value: 'template', label: '模板' },
   { value: 'education', label: '教育学习' },
   { value: 'legal', label: '法律服务' },
   { value: 'medical', label: '医疗健康' },
