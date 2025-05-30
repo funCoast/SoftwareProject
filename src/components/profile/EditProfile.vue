@@ -81,8 +81,8 @@ const handleAvatarChange: UploadProps['onChange'] = (uploadFile) => {
   if (!file) return
   
   // 验证文件大小和类型
-  if (file.size > 2 * 1024 * 1024) {
-    ElMessage.warning('图片大小不能超过2MB')
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('图片大小不能超过5MB')
     return
   }
   
