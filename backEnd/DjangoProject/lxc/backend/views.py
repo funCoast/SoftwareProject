@@ -1,3 +1,4 @@
+import ast
 import uuid
 import random
 
@@ -2872,6 +2873,16 @@ def community_agent_handle_copy(request):
                 workflow=new_workflow
             )
 
+            nodes = ast.literal_eval(workflow.workflow.nodes)
+            for node in nodes:
+                node_content = json.loads(json.dumps(node, ensure_ascii=False, indent=4))
+                if node_content["type"] == "kbRetrieval":
+                    kbs = node_content["data"]["kbs"]
+                    for kb in kbs:
+                        kb_id = kb["id"]
+                        kb = KnowledgeBase.objects.get(kb_id=kb_id)
+                        clone_knowledge_base(user, kb_id, kb.kb_name + str(timezone.now()))
+
         kbs = AgentKnowledgeEntry.objects.filter(agent=original_agent)
         for kb in kbs:
             new_kb_id = clone_knowledge_base(user, kb.kb.kb_id, kb.kb.kb_name + str(timezone.now()))
@@ -3565,7 +3576,10 @@ def process_agent_report(request):
 
     if report.is_processed:
         return JsonResponse({"code": -1, "message": "该举报已被处理"})
-
+    if result == "举报有效，已处理":
+        agent = report.agent
+        agent.status = 'private'
+        agent.save()
     report.is_processed = True
     report.process_result = result
     report.processed_by = admin
