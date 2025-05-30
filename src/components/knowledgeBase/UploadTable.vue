@@ -45,7 +45,8 @@ function uploadTable(options: UploadRequestOptions) {
       console.log(response.data.message)
       router.push('/workspace/tableBase/' + router.currentRoute.value.params.id)
     } else {
-      console.log(response.data.message)
+      dialogVisible.value = false
+      ElMessage.error(response.data.message)
     }
   }).catch(function (error) {
     console.error(error)
