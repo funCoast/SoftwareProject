@@ -177,6 +177,7 @@ function submitKB() {
 }
 
 function goToResource(resource: resource) {
+  sessionStorage.setItem('LingXi_resourceName', resource.name)
   router.push({
     path: `/workspace/${resource.type}/${resource.id}`,
     query: {

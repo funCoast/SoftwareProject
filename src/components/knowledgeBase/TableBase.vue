@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import axios from "axios"
 import router from "@/router"
 
@@ -15,8 +15,15 @@ const haveSelected = computed(() => {
   return (selectedRows.value.length > 0)
 }) // 判断是否有选中行
 const newRowIndexes = ref<number[]>([]) // 用于存储新增行的序号
+const name = ref("表格知识库")
 
-const getData = () => {
+
+onMounted(() => {
+  name.value = sessionStorage.getItem('LingXi_resourceName') as string
+  getData()
+})
+
+function getData() {
   axios({
     method: 'get',
     url: '/kb/getTables',
@@ -132,9 +139,6 @@ const deleteSelectedRows = () => {
 const handleSelectionChange = (selectedRowsData: RowData[]) => {
   selectedRows.value = selectedRowsData.map((row) => tableData.value.indexOf(row))
 }
-
-// 初始化数据
-getData()
 </script>
 
 <template>
@@ -142,7 +146,7 @@ getData()
     <!-- 顶部标题栏 -->
     <div class="topBar">
       <img src="../../assets/icons/Back.svg" alt="返回" class="backIcon" @click="router.push('/workspace/resourcelibrary')" />
-      <h2>表格知识库</h2>
+      <h2>{{ name }}</h2>
       <p class="subtitle">行数量：{{ tableData.length }}</p>
       <button class="add-btn" type="button" @click="goToUploadPage">
         添加数据

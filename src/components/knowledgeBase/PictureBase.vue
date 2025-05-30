@@ -12,8 +12,10 @@ interface Picture {
 }
 
 const pictures = ref<Picture[]>([])
+const name = ref("图像知识库")
 
 onMounted(() => {
+  name.value = sessionStorage.getItem('LingXi_resourceName') as string
   getPictures(); // 获取图像列表
 })
 
@@ -114,7 +116,7 @@ function confirmDelete() {
     <!-- 顶部标题栏 -->
     <div class="topBar">
       <img src="../../assets/icons/Back.svg" alt="返回" class="backIcon" @click="router.push('/workspace/resourcelibrary')" />
-      <h2>图像知识库</h2>
+      <h2>{{ name }}</h2>
       <p class="subtitle">图像数量：{{ pictures.length }}</p>
       <button class="add-btn" type="button" @click="goToUploadPage">
         添加图像

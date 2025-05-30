@@ -27,8 +27,11 @@ const filteredTexts = computed(() => {
     text.name.includes(searchQuery.value)
   )
 })
+const name = ref("文本知识库")
+
 
 onMounted(async () => {
+  name.value = sessionStorage.getItem('LingXi_resourceName') as string
   getTexts()  // 等待获取文本列表完成
 })
 
@@ -114,7 +117,7 @@ function confirmDelete() {
     <!-- 顶部标题栏 -->
     <div class="topBar">
       <img src="../../assets/icons/Back.svg" alt="返回" class="backIcon" @click="router.push('/workspace/resourcelibrary')">
-      <h2>文本知识库</h2>
+      <h2>{{ name }}</h2>
       <p class="subtitle">文本数量：{{ texts.length }}</p>
       <button class="add-btn" type="button" @click="goToUploadPage">
         添加文本
