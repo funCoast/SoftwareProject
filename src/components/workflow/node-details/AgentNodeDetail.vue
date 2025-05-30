@@ -28,6 +28,7 @@ interface Agent {
   name: string
   description: string
   status: 0 | 1 | 2
+  category: string
 }
 
 const props = defineProps<{
@@ -122,7 +123,7 @@ async function fetchAgents() {
     })
 
     if (response.data.code === 0) {
-      agents.value = response.data.agents
+      agents.value = response.data.agents.filter(agent => agent.status === 2)
     } else {
       ElMessage.error(response.data.message)
     }
@@ -240,6 +241,7 @@ function isNodeValid() {
       return '未知配置！'
     }
   }
+  if (props.node.data.agent_id === null) return '未配置智能体！'
   return ''
 }
 
@@ -357,11 +359,10 @@ defineExpose({
             <div class="agent-desc">{{ agents.find(a => a.id === selectedAgentId)?.description }}</div>
           </div>
           <el-tag
-              :type="getStatusType(agents.find(a => a.id === selectedAgentId)?.status)"
               size="small"
               class="status-tag"
           >
-            {{ getStatusText(agents.find(a => a.id === selectedAgentId)?.status) }}
+            {{ agents.find(a => a.id === selectedAgentId)?.category }}
           </el-tag>
           <el-button
               type="text"
@@ -486,11 +487,10 @@ defineExpose({
               <div class="agent-title">
                 <div class="agent-name">{{ agent.name }}</div>
                 <el-tag
-                    :type="getStatusType(agent.status)"
                     size="small"
                     class="status-tag"
                 >
-                  {{ getStatusText(agent.status) }}
+                  {{ agent.category }}
                 </el-tag>
               </div>
             </div>
