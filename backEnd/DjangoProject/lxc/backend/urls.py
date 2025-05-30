@@ -3,7 +3,7 @@ from backend import views
 from backend.views import FetchWorksView, FetchLikesView, FetchFavoritesView, FetchHotView, FetchFollowWorksView
 
 urlpatterns = [
-    path("", views.index, name="index"),
+    # path("", views.index, name="index"),
     path('register', views.register, name='register'),
     # User
     path('user/sendCode', views.send_code, name='send_code'),
