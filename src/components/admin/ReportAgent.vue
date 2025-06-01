@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, onMounted, computed } from 'vue'
+import {ref, onMounted, computed, reactive} from 'vue'
 import { ElMessage } from 'element-plus'
 
 const reportList = ref<{
@@ -32,19 +32,36 @@ const filteredReports = computed(() => {
 })
 
 const decisionOptions = [
-  { value: '举报有效，已处理', label: '举报有效，已处理' },
+  { value: '下架该智能体', label: '下架该智能体' },
+  { value: '封禁被举报人', label: '封禁被举报人' },
+  { value: '封禁举报人', label: '封禁举报人' },
   { value: '举报无效，驳回', label: '举报无效，驳回' },
   { value: '其他', label: '其他' }
+]
+
+const banDuration = reactive<Record<number, { value: number; unit: string }>>({})
+const durationUnits = [
+  { label: '年', value: 'year' },
+  { label: '月', value: 'month' },
+  { label: '日', value: 'day' }
 ]
 
 async function fetchReports() {
   try {
     const res = await axios.get('/admin/getAgentReports')
     if (res.data.code === 0) {
-      reportList.value = res.data.reports.map((r: any) => ({
-        ...r,
-        decision: ''  // 初始化选择框
-      }))
+      reportList.value = res.data.reports.map((r: any) => {
+        if (!banDuration[r.report_id]) {
+          banDuration[r.report_id] = {
+            value: 1,
+            unit: 'day'
+          }
+        }
+        return {
+          ...r,
+          decision: ''
+        }
+      })
     } else {
       ElMessage.error('获取举报记录失败：' + res.data.message)
     }
@@ -79,6 +96,7 @@ async function processReport(reportId: number, result: string) {
 
 onMounted(() => {
   fetchReports()
+
 })
 </script>
 
@@ -151,20 +169,58 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
-            <div v-if="!row.is_processed" class="row-op">
-              <el-select v-model="row.decision" placeholder="选择处理结果" style="width: 160px">
-                <el-option
-                  v-for="opt in decisionOptions"
-                  :key="opt.value"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </el-select>
+            <div v-if="!row.is_processed" class="row-op" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; width: 100%;">
+
+              <!-- 左侧：选择处理结果 + 封禁设置 -->
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- 处理结果下拉 -->
+                <el-select v-model="row.decision" placeholder="选择处理结果" style="width: 160px">
+                  <el-option
+                    v-for="opt in decisionOptions"
+                    :key="opt.value"
+                    :label="opt.label"
+                    :value="opt.value"
+                  />
+                </el-select>
+
+                <!-- 封禁时长 + 单位 -->
+                <div
+                  v-if="row.decision === '封禁举报人' || row.decision === '封禁被举报人'"
+                  style="display: flex; flex-direction: column; gap: 4px;"
+                >
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <span>时长</span>
+                    <el-input-number
+                      v-model="banDuration[row.report_id].value"
+                      :min="1"
+                      style="width: 100px"
+                    />
+                  </div>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <span>单位</span>
+                    <el-select
+                      v-model="banDuration[row.report_id].unit"
+                      placeholder="单位"
+                      style="width: 100px"
+                    >
+                      <el-option
+                        v-for="unit in durationUnits"
+                        :key="unit.value"
+                        :label="unit.label"
+                        :value="unit.value"
+                      />
+                    </el-select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 右侧提交按钮 -->
               <el-button
                 type="primary"
                 size="small"
                 :disabled="!row.decision"
                 @click="processReport(row.report_id, row.decision!)"
+                style="align-self: center"
               >
                 提交处理
               </el-button>
