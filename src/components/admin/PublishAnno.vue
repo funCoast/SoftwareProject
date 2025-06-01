@@ -296,6 +296,9 @@ onMounted(() => {
 <style scoped>
 .publish-anno {
   width: 100%;
+  padding: 20px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
 }
 
 .section-header {
@@ -452,6 +455,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-height: calc(100vh - 400px);
+  overflow-y: auto;
 }
 
 .notice-item {
