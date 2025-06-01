@@ -159,7 +159,9 @@ function toDocument() {
 .app-container {
   display: flex;
   height: 100vh;
-  background-color: #fdfdfd; /* 页面主背景：乳白色 */
+  background-color: #fdfdfd;
+  min-width: 0;
+  min-height: 0;
 }
 
 .side-nav {
@@ -322,11 +324,13 @@ nav ul li span {
 }
 
 .main-content {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
   background: #fdfdfd;
-  overflow-y: auto;
   padding: 24px;
   color: #333;
+  overflow: hidden; /* 防止滚动条 */
 }
 
 .admin-side-nav {
