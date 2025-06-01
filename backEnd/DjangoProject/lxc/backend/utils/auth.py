@@ -42,8 +42,30 @@ def generate_and_cache_token(user_id: int,
 
 
 def validate_token(uid: str, token: str) -> bool:
-    """检查 Token 是否属于 uid 对应集合。"""
-    return redis_client.sismember(f"token_{uid}", token)
+    """
+    兼容旧 String 与新 Set：
+    - 若键类型是 string，则比较后立即迁移为 set
+    - 若键类型是 none，则直接返回 False
+    """
+    key = f"token_{uid}"
+    rtype = redis_client.type(key)
+
+    if rtype == "set":
+        return redis_client.sismember(key, token)
+
+    if rtype == "string":
+        old = redis_client.get(key)
+        # ① 兼容校验
+        ok = (old == token)
+        # ② 自动迁移
+        redis_client.delete(key)
+        redis_client.sadd(key, old)
+        redis_client.expire(key, settings.TOKEN_EXPIRE_SECONDS)
+        return ok
+
+    # 键不存在或类型异常
+    return False
+
 
 
 def prolong_token(uid: str) -> None:
