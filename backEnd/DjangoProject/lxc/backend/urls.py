@@ -19,6 +19,7 @@ urlpatterns = [
     path('user/sendMessage',views.user_send_message, name='user_send_message'),
     path('user/updateBasicInfo', views.update_basic_info, name='update_basic_info'),
     path('user/logout', views.user_logout, name='user_logout'),
+    path('user/logoutAll', views.user_logout_all, name='user_logout_all'),
 
     # Announcement
     path('anno/add', views.announcement_add, name='announcement_add'),

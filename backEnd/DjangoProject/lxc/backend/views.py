@@ -1,7 +1,12 @@
 import ast
 import uuid
 import random
-from backend.utils.auth import generate_and_cache_token, redis_client
+from backend.utils.auth import (
+    generate_and_cache_token,
+    revoke_token,
+    revoke_all,
+    redis_client      # send_code 等功能仍要用
+)
 from django.db.models.functions.datetime import TruncDate
 from django.views import View
 from openai import OpenAI
@@ -197,7 +202,8 @@ def user_login_by_code(request):
         if ban_message:
             return JsonResponse({'code': -1, 'message': ban_message})
 
-        token = generate_and_cache_token(user.user_id)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:60]  # 可截断防爆长
+        token = generate_and_cache_token(user.user_id, device=user_agent)
 
         UserLog.objects.create(user=user, type='login')
 
@@ -242,7 +248,8 @@ def user_login_by_password(request):
         if user.password != password:
             return JsonResponse({'code': -1, 'message': '密码错误'})
 
-        token = generate_and_cache_token(user.user_id)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:60]  # 可截断防爆长
+        token = generate_and_cache_token(user.user_id, device=user_agent)
 
         UserLog.objects.create(user=user, type='login')
 
@@ -3681,8 +3688,21 @@ def cnt_info(request):
 
 @csrf_exempt
 def user_logout(request):
-    uid = request.POST.get('uid')
+    if request.method != 'POST':
+        return JsonResponse({'code': -1, 'message': '只支持 POST 请求'})
+    uid   = request.POST.get('uid')
     token = request.headers.get('token')
-    if uid:
-        redis_client.delete(f'token_{uid}')
+    if not uid or not token:
+        return JsonResponse({'code': -1, 'message': '缺少 uid 或 token'})
+    revoke_token(uid, token)          # ✦ 调工具函数
     return JsonResponse({'code': 0, 'message': '退出成功'})
+
+@csrf_exempt
+def user_logout_all(request):
+    if request.method != 'POST':
+        return JsonResponse({'code': -1, 'message': '只支持 POST 请求'})
+    uid = request.POST.get('uid')
+    if not uid:
+        return JsonResponse({'code': -1, 'message': '缺少 uid'})
+    revoke_all(uid)
+    return JsonResponse({'code': 0, 'message': '全部设备已退出'})
