@@ -5,8 +5,10 @@ from django.db import transaction
 from django.utils import timezone
 import uuid, os
 
+from typing import Optional
+
 @transaction.atomic
-def clone_knowledge_base(user, kb_id: int, new_kb_name: str | None = None) -> int:
+def clone_knowledge_base(user, kb_id: int, new_kb_name: Optional[str] = None) -> int:
     """
     将指定知识库完整克隆给“负责人”user。
     - 物理文件复制并移动到 knowledge/user_<user_id>/ 目录
