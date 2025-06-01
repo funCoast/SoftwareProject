@@ -288,7 +288,7 @@ const currentTitle = computed(() => {
 
 <style scoped>
 .home {
-  padding: 20px;
+  padding: 10px 20px 0 20px;
 }
 
 .home-container {
@@ -377,14 +377,13 @@ const currentTitle = computed(() => {
 }
 
 .notice-section {
-  width: 300px;
+  width: 350px;
   height: 750px;
   background: white;
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   position: relative;
-  overflow: hidden;
 }
 
 .notice-section::before {
@@ -396,6 +395,35 @@ const currentTitle = computed(() => {
   height: 4px;
   background: linear-gradient(90deg, #4FAFFF, #7cc5ff);
   border-radius: 16px 16px 0 0;
+}
+
+.notice-content {
+  overflow-y: auto;
+  height: calc(100% - 50px);
+  /* 自定义滚动条样式 */
+  scrollbar-width: thin;
+  scrollbar-color: #4fafffbd #f1f5f9;
+}
+
+/* Webkit 浏览器滚动条美化 */
+.notice-content::-webkit-scrollbar {
+  width: 8px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.notice-content::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #4FAFFF 60%, #7cc5ff 100%);
+  border-radius: 8px;
+  min-height: 30px;
+}
+
+.notice-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #3399ff 60%, #4FAFFF 100%);
+}
+
+.notice-content::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .notice-list {
