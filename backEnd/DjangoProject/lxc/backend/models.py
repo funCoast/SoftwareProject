@@ -138,9 +138,13 @@ class KnowledgeBase(models.Model):
         return self.kb_name
 
 
+def user_upload_path(instance, filename):
+    user_id = instance.kb.user.user_id  # 获取创建该知识库的用户ID
+    return f'knowledge/user_{user_id}/{filename}'
+
 class KnowledgeFile(models.Model):
     kb = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='files')
-    file = models.FileField(upload_to='knowledge/')
+    file = models.FileField(upload_to=user_upload_path)
     name = models.CharField(max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     SEGMENT_MODE_CHOICES = [
