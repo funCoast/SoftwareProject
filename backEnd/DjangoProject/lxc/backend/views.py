@@ -1,7 +1,7 @@
 import ast
 import uuid
 import random
-
+from backend.utils.auth import generate_and_cache_token, redis_client
 from django.db.models.functions.datetime import TruncDate
 from django.views import View
 from openai import OpenAI
@@ -52,12 +52,6 @@ from .utils.segmenter import (
 from .models import Announcement, AgentReport, Administrator
 import pandas as pd
 import requests
-
-# workflow
-
-# Redis 客户端配置
-redis_client = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0, decode_responses=True)
-
 
 def index(request):
     # request.method 请求方式，GET、POST，例如用request.GET.get("key")读取数据
@@ -203,8 +197,7 @@ def user_login_by_code(request):
         if ban_message:
             return JsonResponse({'code': -1, 'message': ban_message})
 
-        token = str(uuid.uuid4())
-        redis_client.setex(f'token_{user.user_id}', 1800, token)
+        token = generate_and_cache_token(user.user_id)
 
         UserLog.objects.create(user=user, type='login')
 
@@ -249,8 +242,7 @@ def user_login_by_password(request):
         if user.password != password:
             return JsonResponse({'code': -1, 'message': '密码错误'})
 
-        token = str(uuid.uuid4())
-        redis_client.setex(f'token_{user.user_id}', 1800, token)
+        token = generate_and_cache_token(user.user_id)
 
         UserLog.objects.create(user=user, type='login')
 
@@ -3686,3 +3678,11 @@ def cnt_info(request):
             "code": -1,
             "message": str(e)
         })
+
+@csrf_exempt
+def user_logout(request):
+    uid = request.POST.get('uid')
+    token = request.headers.get('token')
+    if uid:
+        redis_client.delete(f'token_{uid}')
+    return JsonResponse({'code': 0, 'message': '退出成功'})

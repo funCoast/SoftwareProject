@@ -38,6 +38,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['122.9.33.84', 'localhost', '127.0.0.1', '101.201.208.165']
 
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -149,6 +150,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Redis 配置
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
+REDIS_DB = 0
 
 # Email 配置（QQ邮箱）
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -166,3 +168,5 @@ if 'test' in sys.argv:
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': ':memory:',
     }
+
+MIDDLEWARE.insert(0, 'backend.middleware.TokenAuthMiddleware')
