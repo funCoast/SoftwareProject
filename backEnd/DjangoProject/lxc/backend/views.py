@@ -2869,7 +2869,7 @@ def community_agent_handle_copy(request):
                         kb_id = kb["id"]
                         kb = KnowledgeBase.objects.get(kb_id=kb_id)
                         new_kb_id = clone_knowledge_base(user, kb_id, kb.kb_name + str(timezone.now()))
-                        new_kbs.append(new_kb_id)
+                        new_kbs.append({"id": new_kb_id})
                     node_content["data"]["kbs"] = new_kbs
                 new_workflow_nodes.append(node_content)
             new_workflow.nodes = str(new_workflow_nodes)
