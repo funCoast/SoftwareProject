@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+import os
 
 from django.db.models.fields.json import JSONField
 from django.utils import timezone
@@ -139,8 +140,10 @@ class KnowledgeBase(models.Model):
 
 
 def user_upload_path(instance, filename):
-    user_id = instance.kb.user.user_id  # 获取创建该知识库的用户ID
-    return f'knowledge/user_{user_id}/{filename}'
+    user_id = instance.kb.user.user_id
+    name, ext = os.path.splitext(filename)
+    unique_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+    return f"knowledge/user_{user_id}/{unique_filename}"
 
 class KnowledgeFile(models.Model):
     kb = models.ForeignKey(KnowledgeBase, on_delete=models.CASCADE, related_name='files')
