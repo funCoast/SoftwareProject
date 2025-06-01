@@ -548,9 +548,7 @@ const handleConfirm = () => {
 
 // 处理回车键
 const handleEnter = (e: KeyboardEvent) => {
-  if (e.ctrlKey && e.shiftKey) {
-    trySendMessage()
-  } else {
+  if (e.shiftKey) {
     // 普通回车，插入换行
     const textarea = e.target as HTMLTextAreaElement
     const start = textarea.selectionStart
@@ -560,6 +558,8 @@ const handleEnter = (e: KeyboardEvent) => {
     nextTick(() => {
       textarea.selectionStart = textarea.selectionEnd = start + 1
     })
+  } else {
+    trySendMessage()
   }
 }
 
@@ -832,7 +832,7 @@ function handleWorkflowSelect(id: number) {
                   v-model="messageInput"
                   type="textarea"
                   :rows="3"
-                  placeholder="输入消息... (Ctrl+Shift+Enter 发送)"
+                  placeholder="输入消息... (Shift+Enter 换行)"
                   @keydown.enter.prevent="handleEnter"
                   resize="none"
                   class="message-input"

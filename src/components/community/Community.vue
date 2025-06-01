@@ -15,6 +15,7 @@ const categoryIcons: Record<string, string> = {
   医疗健康: 'https://api.iconify.design/material-symbols:health-and-safety.svg',
   设计创意: 'https://api.iconify.design/material-symbols:palette.svg',
   旅游出行: 'https://api.iconify.design/material-symbols:flight.svg',
+  娱乐游戏: 'https://api.iconify.design/material-symbols:videogame-asset.svg',
   内容推荐: 'https://api.iconify.design/material-symbols:explore.svg',
   其他: 'https://api.iconify.design/material-symbols:more-horiz.svg',
 }

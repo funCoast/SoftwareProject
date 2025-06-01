@@ -162,9 +162,7 @@ const toggleSearch = () => {
 
 // 处理回车键
 const handleEnter = (e: KeyboardEvent) => {
-  if (e.ctrlKey && e.shiftKey) {
-    trySendMessage()
-  } else {
+  if (e.shiftKey) {
     // 普通回车，插入换行
     const textarea = e.target as HTMLTextAreaElement
     const start = textarea.selectionStart
@@ -174,6 +172,25 @@ const handleEnter = (e: KeyboardEvent) => {
     nextTick(() => {
       textarea.selectionStart = textarea.selectionEnd = start + 1
     })
+  } else {
+    trySendMessage()
+  }
+}
+
+// 发布评论处理回车键
+function handleKeydown(event) {
+  if (event.shiftKey) {
+    // 普通回车，插入换行
+    const textarea = event.target as HTMLTextAreaElement
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    messageInput.value = messageInput.value.substring(0, start) + '\n' + messageInput.value.substring(end)
+    // 保持光标位置
+    nextTick(() => {
+      textarea.selectionStart = textarea.selectionEnd = start + 1
+    })
+  } else {
+    publishComment()
   }
 }
 
@@ -645,7 +662,7 @@ onMounted(async () => {
                 <textarea
                   class="chat-input"
                   v-model="messageInput"
-                  placeholder="输入消息... (Ctrl+Shift+Enter 发送)"
+                  placeholder="输入消息... (Shift+Enter 换行)"
                   rows="3"
                   @keydown.enter.prevent="handleEnter"
                 ></textarea>
@@ -813,11 +830,11 @@ onMounted(async () => {
         <div class="comment-publish">
           <div class="publish-content">
             <textarea
-                placeholder="写下你的评论..."
+                placeholder="写下你的评论...（shift+enter 换行）"
                 class="comment-textarea"
                 v-model="newComment"
                 rows="1"
-                @keydown.enter.prevent="publishComment"
+                @keydown.enter="handleKeydown"
             ></textarea>
             <button class="publish-btn" @click="publishComment">
               <img src="https://api.iconify.design/material-symbols:send.svg" alt="发布" class="action-icon">
