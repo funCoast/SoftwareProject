@@ -178,7 +178,7 @@ const currentTitle = computed(() => {
               <div class="notice-text">
                 <h4>{{ announcement.title }}</h4>
                 <p>{{ announcement.content }}</p>
-                <span class="notice-time">{{ moment(announcement.time).format('YYYY-MM-DD hh:mm:ss') }}</span>
+                <span class="notice-time">{{ moment(announcement.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
               </div>
             </div>
           </div>

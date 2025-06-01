@@ -169,12 +169,6 @@ onMounted(() => {
               class="search-input"
             />
           </div>
-          <!--          <button class="publish-btn">-->
-          <!--            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">-->
-          <!--              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>-->
-          <!--            </svg>-->
-          <!--            发布智能体-->
-          <!--          </button>-->
         </div>
       </div>
 
@@ -355,11 +349,13 @@ onMounted(() => {
 
 .filter-select,
 .search-box {
+  height: 34px;
   padding: 6px 10px;
   border: 1px solid #cce0f3;
   border-radius: 6px;
   background: white;
   font-size: 13px;
+  box-sizing: border-box;
 }
 
 .search-box {
@@ -373,11 +369,12 @@ onMounted(() => {
   border: none;
   outline: none;
   flex: 1;
-  padding: 6px 8px;
+  padding: 0 8px;
   font-size: 13px;
   border-radius: 4px;
   background: #f8f9fa;
   margin-left: 8px;
+  height: 100%;
 }
 
 .agent-list {
