@@ -271,7 +271,7 @@ class Message(models.Model):
     conversation = models.ForeignKey(Session, related_name='messages', on_delete=models.CASCADE)
     content = models.TextField()
     is_user = models.BooleanField()  # True为用户消息，False为AI回复
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField()
     # 新增字段：存储文件名列表（JSON 格式）
     files_name = JSONField(
         default=list,

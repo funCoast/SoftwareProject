@@ -19,7 +19,7 @@ def get_or_create_session(user, agent_id):
     )
     return session, None
 
-def save_message(session, content, is_user, files_name, thinking_chain, search):
+def save_message(session, content, is_user, files_name, thinking_chain, search, time):
     Message.objects.create(
         conversation=session,
         content=content,
@@ -27,6 +27,7 @@ def save_message(session, content, is_user, files_name, thinking_chain, search):
         files_name=files_name,
         thinking_chain=thinking_chain,
         search=search,
+        timestamp=time
     )
 
 def get_limited_session_history(session, max_messages=10):
