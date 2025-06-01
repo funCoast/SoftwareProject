@@ -5,12 +5,12 @@ from django.conf import settings
 from backend.utils.auth import redis_client
 
 EXEMPT_PATHS = {
-    '/register',
-    '/user/sendCode',
-    '/user/loginByCode',
-    '/user/loginByPassword',
-    '/static/',            # 🌟 如有静态资源
-    '/media/',             # 🌟 如有图片/文件
+    '/linksoul/register',
+    '/linksoul/user/sendCode',
+    '/linksoul/user/loginByCode',
+    '/linksoul/user/loginByPassword',
+    '/linksoul/static/',            # 🌟 如有静态资源
+    '/linksoul/media/',             # 🌟 如有图片/文件
 }
 
 class TokenAuthMiddleware(MiddlewareMixin):
