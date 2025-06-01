@@ -3,6 +3,7 @@ import { ref, onBeforeMount } from 'vue'
 import { Message, CircleCheckFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import router from '@/router'
+import { ElMessageBox } from 'element-plus'
 import './login.css'
 
 const email = ref('')
@@ -76,7 +77,9 @@ function login() {
       localStorage.setItem('LingXi_role', response.data.role)
       if(response.data.is_new_user) {
         router.push('/editProfile');
-        ElMessage.warning("初始密码为123456，请及时修改")
+        ElMessageBox.alert('初始密码为123456，请及时修改', '初次登录提示', {
+          confirmButtonText: '好的'
+        })
       } else {
         router.push('/home');
       }
