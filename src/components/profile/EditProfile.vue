@@ -18,7 +18,6 @@ const showAvatar = computed(() => {
   }
 })
 
-
 const route = useRoute()
 
 // 表单数据
