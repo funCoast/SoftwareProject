@@ -783,6 +783,8 @@ onUnmounted(() => {
 .user-manage {
   width: 100%;
   padding: 20px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
 }
 
 .header {
