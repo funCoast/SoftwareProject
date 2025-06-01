@@ -330,7 +330,7 @@ nav ul li span {
   background: #fdfdfd;
   padding: 24px;
   color: #333;
-  overflow: hidden; /* 防止滚动条 */
+  overflow: auto; /* 修改为 auto 允许滚动 */
 }
 
 .admin-side-nav {
