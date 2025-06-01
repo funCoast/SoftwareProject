@@ -3581,7 +3581,7 @@ def process_agent_report(request):
 
     if report.is_processed:
         return JsonResponse({"code": -1, "message": "该举报已被处理"})
-    if result == "举报有效，已处理":
+    if result == "下架该智能体":
         agent = report.agent
         agent.status = 'private'
         agent.save()
