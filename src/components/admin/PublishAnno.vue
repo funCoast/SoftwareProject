@@ -46,7 +46,9 @@ async function fetchAnnouncements() {
       }
     })
     if (response.data.code === 0) {
-      announcements.value = response.data.announcements
+      announcements.value = response.data.announcements.sort((a, b) => {
+        return new Date(b.time).getTime() - new Date(a.time).getTime()
+      })
     } else {
       ElMessage.error('获取公告失败：' + response.data.message)
     }
