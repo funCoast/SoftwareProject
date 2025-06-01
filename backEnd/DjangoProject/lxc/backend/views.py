@@ -1171,9 +1171,9 @@ def get_knowledge_bases(request):
             "type": kb.kb_type + "Base",
             "name": kb.kb_name,
             "description": kb.kb_description or "",
-            "icon": kb.icon or "",  # 从数据库读取 icon 路径
-            "updateTime": kb.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "createTime": kb.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "icon": kb.icon or "",
+            "updateTime": timezone.localtime(kb.updated_at).strftime("%Y-%m-%d %H:%M:%S"),
+            "createTime": timezone.localtime(kb.created_at).strftime("%Y-%m-%d %H:%M:%S"),
         })
 
     return JsonResponse({
@@ -1181,7 +1181,6 @@ def get_knowledge_bases(request):
         "message": "获取成功",
         "knowledgeBases": knowledge_bases
     })
-
 
 ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif']
 
@@ -2185,7 +2184,6 @@ def workflow_save(request):
     except Exception as e:
         return JsonResponse({"code": -1, "message": f"服务器错误：{str(e)}"})
 
-
 def workflow_fetchAll(request):
     uid = request.GET.get('uid')
     if not uid:
@@ -2213,8 +2211,8 @@ def workflow_fetchAll(request):
             "name": workflow.name,
             "description": workflow.description,
             "icon": workflow.icon_url if workflow.icon_url else "",
-            "updateTime":workflow.update_time.strftime('%Y-%m-%d %H:%M:%S'),
-            "createTime":workflow.created_time.strftime('%Y-%m-%d %H:%M:%S')
+            "updateTime": timezone.localtime(workflow.update_time).strftime('%Y-%m-%d %H:%M:%S'),
+            "createTime": timezone.localtime(workflow.created_time).strftime('%Y-%m-%d %H:%M:%S')
         })
 
     return JsonResponse({
@@ -2624,12 +2622,12 @@ def community_agent_fetch_comments(request):
         for comment in comments:
             comment_list.append({
                 "id": comment.comment_id,
-                "name": comment.user.username,  # 如果有昵称字段可以换成昵称
+                "name": comment.user.username,
                 "userId": comment.user.user_id,
                 "userAccount": comment.user.email,
                 "avatar": comment.user.avatar_url,
                 "content": comment.content,
-                "time": comment.comment_time.strftime('%Y-%m-%d %H:%M:%S'),
+                "time": timezone.localtime(comment.comment_time).strftime('%Y-%m-%d %H:%M:%S'),
             })
 
         return JsonResponse({
