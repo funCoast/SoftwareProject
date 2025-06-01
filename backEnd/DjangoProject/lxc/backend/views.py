@@ -2858,16 +2858,22 @@ def community_agent_handle_copy(request):
                 agent=copied_agent,
                 workflow=new_workflow
             )
-
+            new_workflow_nodes = []
             nodes = ast.literal_eval(workflow.workflow.nodes)
             for node in nodes:
                 node_content = json.loads(json.dumps(node, ensure_ascii=False, indent=4))
                 if node_content["type"] == "kbRetrieval":
                     kbs = node_content["data"]["kbs"]
+                    new_kbs = []
                     for kb in kbs:
                         kb_id = kb["id"]
                         kb = KnowledgeBase.objects.get(kb_id=kb_id)
-                        clone_knowledge_base(user, kb_id, kb.kb_name + str(timezone.now()))
+                        new_kb_id = clone_knowledge_base(user, kb_id, kb.kb_name + str(timezone.now()))
+                        new_kbs.append(new_kb_id)
+                    node_content["data"]["kbs"] = new_kbs
+                new_workflow_nodes.append(node_content)
+            new_workflow.nodes = str(new_workflow_nodes)
+            new_workflow.save()
 
         kbs = AgentKnowledgeEntry.objects.filter(agent=original_agent)
         for kb in kbs:
