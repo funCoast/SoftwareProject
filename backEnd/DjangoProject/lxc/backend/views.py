@@ -697,39 +697,26 @@ def announcement_delete(request):
             'announcements': []
         }, status=status.HTTP_404_NOT_FOUND)
 
-
 @api_view(['GET'])
 def announcement_list(request):
     """
     获取所有公告
     请求：GET /anno/get
     """
-    # 获取所有公告
     announcements = Announcement.objects.all()
 
-    # 如果没有公告，返回空的公告列表
-    if not announcements:
-        return Response({
-            'code': 0,
-            'message': '获取成功',
-            'announcements': []
-        })
-
-    # 构建公告列表数据
     data = [{
         'id': announcement.id,
         'title': announcement.title,
         'content': announcement.content,
-        'time': announcement.time.isoformat()
+        'time': timezone.localtime(announcement.time).strftime('%Y-%m-%d %H:%M:%S')
     } for announcement in announcements]
 
-    # 返回公告列表
     return Response({
         'code': 0,
         'message': '获取成功',
         'announcements': data
     })
-
 
 @api_view(['POST'])
 def user_update_password(request):
@@ -3523,6 +3510,7 @@ def report_agent(request):
     )
 
     return JsonResponse({"code": 0, "message": "举报成功"})
+
 def get_agent_reports(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
@@ -3545,8 +3533,8 @@ def get_agent_reports(request):
             "is_processed": r.is_processed,
             "process_result": r.process_result,
             "processed_by": r.processed_by.username if r.processed_by else "",
-            "report_time": r.report_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "processed_time": r.processed_time.strftime("%Y-%m-%d %H:%M:%S") if r.processed_time else ""
+            "report_time": localtime(r.report_time).strftime("%Y-%m-%d %H:%M:%S"),
+            "processed_time": localtime(r.processed_time).strftime("%Y-%m-%d %H:%M:%S") if r.processed_time else ""
         })
 
     return JsonResponse({
