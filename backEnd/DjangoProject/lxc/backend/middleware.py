@@ -5,7 +5,7 @@ from django.conf import settings
 
 EXEMPT_PREFIXES = (
     '/user/loginByPassword', '/user/loginByCode',
-    '/register', '/static/', '/media/',
+    '/register', '/static/', '/media/', 'user/sendCode',
 )
 
 class TokenAuthMiddleware(MiddlewareMixin):
