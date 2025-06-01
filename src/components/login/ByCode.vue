@@ -71,8 +71,9 @@ function login() {
   }).then(function (response) {
     if (response.data.code === 0) {
       // 将 token,uid 存入 localStorage
-      localStorage.setItem('LingXi_token', response.data.token);
-      localStorage.setItem('LingXi_uid', response.data.id);
+      localStorage.setItem('LingXi_token', response.data.token)
+      localStorage.setItem('LingXi_uid', response.data.id)
+      localStorage.setItem('LingXi_role', response.data.role)
       if(response.data.is_new_user) {
         router.push('/editProfile');
         ElMessage.warning("初始密码为123456，请及时修改")

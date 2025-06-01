@@ -20,7 +20,6 @@ const showAvatar = computed(() => {
 
 
 const route = useRoute()
-const fileInput = ref<HTMLInputElement | null>(null);
 
 // 表单数据
 const name = ref('')
@@ -49,10 +48,6 @@ const pwdCheck = computed(() => {
   return !(newPwd.value && confirmPwd.value && newPwd.value === confirmPwd.value)
 })
 
-// 触发文件选择
-function triggerFileInput() {
-  fileInput.value?.click()
-}
 
 function uploadAvatar() {
   const uid = localStorage.getItem('LingXi_uid') || ''

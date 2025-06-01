@@ -19,10 +19,13 @@ axios.defaults.baseURL = '/api/linksoul'
 
 // 每次请求都带上token
 axios.interceptors.request.use(function (config) {
-    console.log('url:', config.url);
     const token = localStorage.getItem('LingXi_token')
+    const uid = localStorage.getItem('LingXi_uid')
+    const role = localStorage.getItem('LingXi_role')
     if (token) {
         config.headers.token = token
+        config.headers.uid = uid
+        config.headers.role = role
     }
     return config
 }, function (error) {

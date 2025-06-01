@@ -59,17 +59,7 @@ async function fetchContacts() {
     ElMessage.error('获取联系人列表失败')
   }
 }
-function scrollToBottom() {
-  nextTick(() => {
-    const el = messageListRef.value
-    if (!el) return
 
-    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 10
-    if (isAtBottom) {
-      el.scrollTop = el.scrollHeight
-    }
-  })
-}
 // 获取与特定联系人的消息记录
 async function fetchMessages(contactId: string) {
   try {

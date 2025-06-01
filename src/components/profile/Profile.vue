@@ -262,6 +262,7 @@ function logout() {
   sessionStorage.clear()
   localStorage.removeItem('LingXi_uid')
   localStorage.removeItem('LingXi_token')
+  localStorage.removeItem('LingXi_role')
   router.push('/login')
 }
 
