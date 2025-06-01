@@ -77,7 +77,15 @@ def send_agent_message(request):
         session_history = get_limited_session_history(session, max_messages=10)
 
         # 保存用户消息
-        save_message(session, message, True, get_uploaded_filenames(files), "", can_search, localtime())
+        try:
+            save_message(session, message, True, get_uploaded_filenames(files), "", can_search, localtime())
+        except Exception as e:
+            return JsonResponse({
+                "code": -1,
+                "message": str(e),
+                "content": error,
+                "time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
+            }, status=500)
 
         response = gen_response(user_id, agent_id, message, files, can_search, session_history)
         if not ('thinking_chain' in response):
