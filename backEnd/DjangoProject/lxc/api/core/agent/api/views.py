@@ -165,7 +165,7 @@ class AgentFetchAgentMessageView(View):
                         "response": agent.opening_line,
                         "thinking_chain": "",
                     },
-                    "time": localtime(agent.publish_time).strftime("%Y-%m-%d %H:%M:%S"),
+                    "time": localtime(agent.publish_time),
                     "file": [],
                     "search": False,
                 })
