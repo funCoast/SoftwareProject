@@ -40,7 +40,8 @@ def clone_knowledge_base(user, kb_id: int, new_kb_name: str | None = None) -> in
     for old_file in old_kb.files.all():
         # 4.1 读取旧文件内容
         with open(old_file.file.path, "rb") as f:
-            dj_file = File(f, name=os.path.basename(old_file.file.name))
+            ext = os.path.splitext(old_file.file.name)[-1]
+            dj_file = File(f, name=f"{uuid.uuid4().hex[:8]}{ext}")
 
             # 4.2 先创建对象但不传 file，让 upload_to 回调根据新 user 构造路径
             new_file = KnowledgeFile(kb=new_kb,
