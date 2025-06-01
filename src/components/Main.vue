@@ -6,10 +6,10 @@
       <div class="user-section">
         <img :src="avatar" alt="avatar" class="avatar" @click="handleProfileNavigation" />
         <div class="button-group">
-          <div class="icon-button" @click="toMessage">
+          <div class="icon-button" @click="toMessage" title="私信列表">
             <img src="https://api.iconify.design/material-symbols:chat.svg" alt="私信" />
           </div>
-          <div class="icon-button" @click="toDocument">
+          <div class="icon-button" @click="toDocument" title="帮助文档">
             <img src="https://api.iconify.design/material-symbols:menu-book.svg" alt="文档" />
           </div>
         </div>
@@ -328,9 +328,9 @@ nav ul li span {
   min-width: 0;
   min-height: 0;
   background: #fdfdfd;
-  padding: 0 20px 0 20px;
+  padding: 0 20px 0 4px;
   color: #333;
-  overflow: auto; /* 修改为 auto 允许滚动 */
+  overflow: auto;
 }
 
 .admin-side-nav {
@@ -413,6 +413,6 @@ nav ul li span {
 }
 
 .main-content.with-admin-nav {
-  margin-left: 120px;
+  margin-left: 0;
 }
 </style>

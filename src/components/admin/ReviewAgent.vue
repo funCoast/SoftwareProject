@@ -202,6 +202,7 @@ onMounted(() => {
 <style scoped>
 .review-agent {
   width: 100%;
+  padding: 20px 20px 20px 4px;
 }
 
 .section-header {

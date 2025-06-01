@@ -98,7 +98,7 @@ function goBack() {
         drag
         multiple
         :http-request="uploadText" 
-        accept=".txt,.pdf,.doc,.docx,.md"
+        accept=".txt,.pdf,.docx,.md"
         :auto-upload="false"
         :on-change="handleChange"
         :on-remove="handleRemove"
@@ -109,7 +109,7 @@ function goBack() {
         </div>
         <template #tip>
           <div class="el-upload__tip">
-            支持 txt, pdf, doc, docx, md 格式文件，单个文件大小不超过 20MB
+            支持 txt, pdf, docx, md 格式文件，单个文件大小不超过 20MB
           </div>
         </template>
       </el-upload>

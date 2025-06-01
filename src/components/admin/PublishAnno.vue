@@ -296,7 +296,7 @@ onMounted(() => {
 <style scoped>
 .publish-anno {
   width: 100%;
-  padding: 20px;
+  padding: 20px 20px 20px 4px;
   height: calc(100vh - 60px);
   overflow-y: auto;
 }
