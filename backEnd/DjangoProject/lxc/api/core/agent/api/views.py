@@ -78,7 +78,7 @@ def send_agent_message(request):
 
         # 保存用户消息
         try:
-            save_message(session, message, True, get_uploaded_filenames(files), "", can_search, localtime())
+            save_message(session, message, True, get_uploaded_filenames(files), "", can_search)
         except Exception as e:
             return JsonResponse({
                 "code": -1,
@@ -97,7 +97,7 @@ def send_agent_message(request):
             }, status=500)
 
         # 保存智能体响应
-        save_message(session, response['response'], False, [], response['thinking_chain'], False, localtime())
+        save_message(session, response['response'], False, [], response['thinking_chain'], False)
 
         UserLog.objects.create(
             user=User.objects.get(user_id=user_id),
@@ -165,7 +165,7 @@ class AgentFetchAgentMessageView(View):
                         "response": agent.opening_line,
                         "thinking_chain": "",
                     },
-                    "time": agent.publish_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "time": localtime(agent.publish_time).strftime("%Y-%m-%d %H:%M:%S"),
                     "file": [],
                     "search": False,
                 })
