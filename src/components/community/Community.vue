@@ -10,13 +10,12 @@ const baseImageUrl = "http://101.201.208.165"
 
 const categoryIcons: Record<string, string> = {
   all: 'https://api.iconify.design/material-symbols:category.svg',
-  模板: 'https://api.iconify.design/material-symbols:view-module.svg',
   教育学习: 'https://api.iconify.design/material-symbols:school.svg',
   法律服务: 'https://api.iconify.design/material-symbols:gavel.svg',
   医疗健康: 'https://api.iconify.design/material-symbols:health-and-safety.svg',
   设计创意: 'https://api.iconify.design/material-symbols:palette.svg',
   旅游出行: 'https://api.iconify.design/material-symbols:flight.svg',
-  娱乐游戏: 'https://api.iconify.design/material-symbols:sports-esports.svg',
+  内容推荐: 'https://api.iconify.design/material-symbols:explore.svg',
   其他: 'https://api.iconify.design/material-symbols:more-horiz.svg',
 }
 

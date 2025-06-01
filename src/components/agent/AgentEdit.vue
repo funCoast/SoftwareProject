@@ -980,6 +980,12 @@ function handleWorkflowSelect(id: number) {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex: 4
+}
+
+.status-actions {
+  margin-left: 20px;
+  flex: 1
 }
 
 .agent-meta {
@@ -994,10 +1000,6 @@ function handleWorkflowSelect(id: number) {
 .agent-meta p {
   margin: 0;
   color: #666;
-}
-
-.status-actions {
-  margin-left: 20px;
 }
 
 .main-content {

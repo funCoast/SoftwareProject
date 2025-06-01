@@ -35,13 +35,13 @@ const filteredAgents = computed(() => {
 })
 
 const categories = [
-  { value: 'template', label: '模板' },
   { value: 'education', label: '教育学习' },
   { value: 'legal', label: '法律服务' },
   { value: 'medical', label: '医疗健康' },
   { value: 'design', label: '设计创意' },
   { value: 'travel', label: '旅游出行' },
   { value: 'entertainment', label: '娱乐游戏' },
+  { value: 'recommend', label: '内容推荐'},
   { value: 'other', label: '其他' }
 ]
 
@@ -202,6 +202,7 @@ onMounted(() => {
 <style scoped>
 .review-agent {
   width: 100%;
+  padding: 20px 20px 20px 4px;
 }
 
 .section-header {

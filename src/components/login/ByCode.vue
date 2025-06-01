@@ -77,7 +77,7 @@ function login() {
       localStorage.setItem('LingXi_role', response.data.role)
       if(response.data.is_new_user) {
         router.push('/editProfile');
-        ElMessageBox.alert('初始密码为123456，请及时修改', '初次登录提示', {
+        ElMessageBox.alert('初始密码为123456，请及时修改', '新用户提示', {
           confirmButtonText: '好的'
         })
       } else {
