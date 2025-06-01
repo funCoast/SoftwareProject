@@ -177,7 +177,7 @@ class AgentFetchAgentMessageView(View):
                         "response": msg.content,
                         "thinking_chain": msg.thinking_chain,
                     },
-                    "time": msg.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                    "time": localtime(msg.timestamp).strftime("%Y-%m-%d %H:%M:%S"),
                     "file": msg.files_name,
                     "search": msg.search,
                 })
