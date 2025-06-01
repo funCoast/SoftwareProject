@@ -35,6 +35,7 @@ def clone_knowledge_base(user, kb_id: int, new_kb_name: str | None = None) -> in
         updated_at=timezone.now()
     )
 
+
     # ---------- 4. 复制 KnowledgeFile ----------
     old_file_map: dict[int, KnowledgeFile] = {}
     for old_file in old_kb.files.all():
