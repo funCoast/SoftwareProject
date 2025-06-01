@@ -130,7 +130,7 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Shanghai'
 
-TOKEN_EXPIRE_SECONDS = 900  # 15分钟
+TOKEN_EXPIRE_SECONDS = 14400  # 4小时
 
 USE_I18N = True
 
