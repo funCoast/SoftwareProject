@@ -51,7 +51,6 @@ async function fetchUsers() {
     })
     if (response.data.code === 0) {
       users.value = response.data.users
-        .filter((user: User) => user.uid !== 3 && user.uid !== 4)
         .sort((a: User, b: User) => a.uid - b.uid)
     } else {
       ElMessage.error(response.data.message)
