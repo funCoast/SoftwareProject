@@ -2,9 +2,9 @@ import json
 import os
 import time
 import uuid
-from time import localtime
 
 from django.http import JsonResponse
+from django.utils.timezone import localtime
 from django.views import View
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
