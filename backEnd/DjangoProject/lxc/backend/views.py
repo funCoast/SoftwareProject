@@ -3523,20 +3523,24 @@ def report_agent(request):
     )
 
     return JsonResponse({"code": 0, "message": "举报成功"})
-
 def get_agent_reports(request):
     if request.method != 'GET':
         return JsonResponse({"code": -1, "message": "只支持 GET 请求"})
 
-    report_list = AgentReport.objects.select_related('reporter', 'agent').order_by('-report_time')
+    report_list = AgentReport.objects.select_related(
+        'reporter', 'agent__user', 'processed_by'
+    ).order_by('-report_time')
 
     reports = []
     for r in report_list:
         reports.append({
             "report_id": r.report_id,
-            "reporter": r.reporter.username,
+            "reporter_id": r.reporter.user_id,
+            "reporter_name": r.reporter.username,
             "agent_id": r.agent.agent_id,
             "agent_name": r.agent.agent_name,
+            "agent_owner_id": r.agent.user.user_id,
+            "agent_owner_name": r.agent.user.username,
             "reason": r.reason,
             "is_processed": r.is_processed,
             "process_result": r.process_result,
