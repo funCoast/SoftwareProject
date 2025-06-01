@@ -2872,7 +2872,7 @@ def community_agent_handle_copy(request):
                         new_kbs.append({"id": new_kb_id})
                     node_content["data"]["kbs"] = new_kbs
                 new_workflow_nodes.append(node_content)
-            new_workflow.nodes = str(new_workflow_nodes)
+            new_workflow.nodes = str(json.dumps(new_workflow_nodes, ensure_ascii=False, indent=4))
             new_workflow.save()
 
         kbs = AgentKnowledgeEntry.objects.filter(agent=original_agent)
