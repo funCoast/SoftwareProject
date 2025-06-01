@@ -3,6 +3,7 @@ import axios from 'axios'
 import { ref, computed, watch, onBeforeMount } from 'vue'
 import moment from 'moment'
 import { useRouter } from 'vue-router'
+import { ElDialog } from 'element-plus'
 
 const router = useRouter()
 
@@ -10,6 +11,10 @@ const currentAgentTab = ref<string>('hot')
 const currentPage = ref(1)
 const itemsPerPage = ref(9)
 const baseImageUrl = 'http://101.201.208.165'
+
+// 添加用于控制对话框显示的变量
+const dialogVisible = ref(false)
+const selectedAnnouncement = ref<announcement | null>(null)
 
 interface announcement {
   id: number
@@ -161,6 +166,12 @@ const currentTitle = computed(() => {
       return '智能体推荐'
   }
 })
+
+// 添加查看公告详情的方法
+function showAnnouncementDetail(announcement: announcement) {
+  selectedAnnouncement.value = announcement
+  dialogVisible.value = true
+}
 </script>
 
 <template>
@@ -173,8 +184,7 @@ const currentTitle = computed(() => {
         </div>
         <div class="notice-content">
           <div class="notice-list">
-            <div v-for="announcement in announcements" :key="announcement.id" class="notice-item">
-              <!--              <i class="fas fa-check-circle"></i>-->
+            <div v-for="announcement in announcements" :key="announcement.id" class="notice-item" @click="showAnnouncementDetail(announcement)">
               <div class="notice-text">
                 <h4>{{ announcement.title }}</h4>
                 <p>{{ announcement.content }}</p>
@@ -184,6 +194,21 @@ const currentTitle = computed(() => {
           </div>
         </div>
       </div>
+
+      <!-- 添加公告详情对话框 -->
+      <el-dialog
+        v-model="dialogVisible"
+        :title="selectedAnnouncement?.title"
+        width="50%"
+        class="announcement-dialog"
+      >
+        <div class="announcement-detail">
+          <p class="announcement-content">{{ selectedAnnouncement?.content }}</p>
+          <div class="announcement-footer">
+            <span class="announcement-time">发布时间：{{ selectedAnnouncement ? moment(selectedAnnouncement.time).format('YYYY-MM-DD HH:mm:ss') : '' }}</span>
+          </div>
+        </div>
+      </el-dialog>
 
       <!-- 右侧智能体推荐板块 -->
       <div class="agent-section">
@@ -444,6 +469,7 @@ const currentTitle = computed(() => {
   border: 1px solid rgba(79, 175, 255, 0.1);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .notice-item::before {
@@ -463,6 +489,10 @@ const currentTitle = computed(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   background-color: #ffffff;
   border-color: rgba(79, 175, 255, 0.2);
+
+  &::before {
+    opacity: 1;
+  }
 }
 
 .notice-text {
@@ -701,5 +731,45 @@ const currentTitle = computed(() => {
   color: #999;
   font-size: 25px;
   padding: 20px;
+}
+
+/* 添加公告详情对话框样式 */
+.announcement-dialog {
+  :deep(.el-dialog__header) {
+    padding: 20px;
+    margin: 0;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f8f9fa;
+  }
+
+  :deep(.el-dialog__title) {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 24px;
+  }
+}
+
+.announcement-detail {
+  .announcement-content {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #333;
+    margin: 0 0 20px 0;
+    white-space: pre-wrap;
+  }
+
+  .announcement-footer {
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+    
+    .announcement-time {
+      font-size: 13px;
+      color: #666;
+    }
+  }
 }
 </style>

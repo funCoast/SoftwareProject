@@ -320,12 +320,14 @@ onMounted(() => {
 }
 
 .content {
-    position: relative;
+  position: relative;
   flex: 1;
-  padding: 24px 36px 80px;
+  padding: 24px 36px 24px;
   overflow-y: auto;
   background: #fdfdfd;
   color: #333;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
@@ -381,6 +383,8 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
+  margin-bottom: 30px;
+  flex: 1;
 }
 
 .agent-card {
@@ -515,10 +519,8 @@ onMounted(() => {
 }
 
 .pagination {
-  position: absolute;
-  bottom: 24px; /* 距离底部的距离 */
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  margin: 0 auto;
   padding: 4px 12px;
   background: #ffffff;
   border: 1px solid #d0e6f7;
