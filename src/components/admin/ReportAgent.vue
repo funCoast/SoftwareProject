@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import axios from 'axios'
-import { ref, onMounted, computed } from 'vue'
+import {ref, onMounted, computed, reactive} from 'vue'
 import { ElMessage } from 'element-plus'
 
 const reportList = ref<{
   report_id: number
   agent_id: number
   agent_name: string
-  reporter: string
+  reporter_id: number
+  reporter_name: string
+  agent_owner_id: number
+  agent_owner_name: string
   reason: string
   is_processed: boolean
   process_result: string
@@ -25,26 +28,47 @@ const filteredReports = computed(() => {
   const query = searchQuery.value.toLowerCase()
   return reportList.value.filter(report => 
     report.agent_name.toLowerCase().includes(query) ||
-    report.reporter.toLowerCase().includes(query) ||
+    report.reporter_name.toLowerCase().includes(query) ||
     report.reason.toLowerCase().includes(query) ||
     (report.process_result && report.process_result.toLowerCase().includes(query))
   )
 })
 
 const decisionOptions = [
-  { value: '举报有效，已处理', label: '举报有效，已处理' },
+  { value: '下架该智能体', label: '下架该智能体' },
+  { value: '封禁被举报人', label: '封禁被举报人' },
+  { value: '封禁举报人', label: '封禁举报人' },
   { value: '举报无效，驳回', label: '举报无效，驳回' },
   { value: '其他', label: '其他' }
 ]
 
+const banDuration = reactive<Record<number, { value: number; unit: string }>>({})
+const durationUnits = [
+  { label: '年', value: 'year' },
+  { label: '月', value: 'month' },
+  { label: '日', value: 'day' }
+]
+const unitLabelMap: Record<string, string> = {
+  year: '年',
+  month: '月',
+  day: '日'
+}
 async function fetchReports() {
   try {
     const res = await axios.get('/admin/getAgentReports')
     if (res.data.code === 0) {
-      reportList.value = res.data.reports.map((r: any) => ({
-        ...r,
-        decision: ''  // 初始化选择框
-      }))
+      reportList.value = res.data.reports.map((r: any) => {
+        if (!banDuration[r.report_id]) {
+          banDuration[r.report_id] = {
+            value: 1,
+            unit: 'day'
+          }
+        }
+        return {
+          ...r,
+          decision: ''
+        }
+      })
     } else {
       ElMessage.error('获取举报记录失败：' + res.data.message)
     }
@@ -54,19 +78,52 @@ async function fetchReports() {
   }
 }
 
-async function processReport(reportId: number, result: string) {
+async function processReport(reportId: number, rawDecision: string) {
   try {
+    let finalDecision = rawDecision
+
+    // 是否是封禁类型
+    const isBanAction = rawDecision === '封禁举报人' || rawDecision === '封禁被举报人'
+    const duration = banDuration[reportId]
+    const timeStr = isBanAction && duration ? `${duration.value} ${unitLabelMap[duration.unit]}` : ''
+
+    // 如果是封禁，调用 banUser 接口
+    if (isBanAction) {
+      // 假设你有封禁举报人 or 被举报人的 user_id 字段，这里我们用 reporter_id 举例
+      const targetRow = reportList.value.find(r => r.report_id === reportId)
+      const uid = rawDecision === '封禁举报人' ? targetRow?.reporter_id : targetRow?.agent_owner_id
+      const banType = 'post'
+
+      if (!uid || !duration || !duration.value || !duration.unit) {
+        ElMessage.error('封禁信息不完整')
+        return
+      }
+      console.log('封禁请求参数', {
+        uid: uid,
+        type: banType,
+        time: timeStr
+      })
+      const banRes = await axios.post('/admin/banUser', {
+        uid: uid,
+        type: banType,
+        time: timeStr
+      })
+
+      if (banRes.data.code !== 0) {
+        ElMessage.error('封禁失败：' + banRes.data.message)
+        return
+      }
+
+      finalDecision += `，${timeStr}`  // 拼接展示结果
+    }
+
     const res = await axios.post('/admin/processAgentReport', {
       report_id: reportId,
       admin_id: adminId,
-      result: result
+      result: finalDecision
     })
     if (res.data.code === 0) {
-      if (result === '举报有效，已处理') {
-        ElMessage.success('下架该智能体成功！')
-      } else {
-        ElMessage.success('处理成功')
-      }
+      ElMessage.success('处理成功')
       await fetchReports()
     } else {
       ElMessage.error('处理失败：' + res.data.message)
@@ -79,6 +136,7 @@ async function processReport(reportId: number, result: string) {
 
 onMounted(() => {
   fetchReports()
+
 })
 </script>
 
@@ -131,6 +189,7 @@ onMounted(() => {
     </div>
 
     <div class="table-card">
+      <el-scrollbar height="500px">
       <el-table 
         :data="filteredReports" 
         stripe 
@@ -139,7 +198,8 @@ onMounted(() => {
       >
         <el-table-column prop="report_id" label="ID" width="60" />
         <el-table-column prop="agent_name" label="被举报智能体" />
-        <el-table-column prop="reporter" label="举报人" />
+        <el-table-column prop="reporter_name" label="举报人" />
+        <el-table-column prop="agent_owner_name" label="被举报人"/>
         <el-table-column prop="reason" label="举报理由" show-overflow-tooltip />
         <el-table-column prop="report_time" label="举报时间" width="160" />
         <el-table-column label="处理状态" width="120">
@@ -151,20 +211,58 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
-            <div v-if="!row.is_processed" class="row-op">
-              <el-select v-model="row.decision" placeholder="选择处理结果" style="width: 160px">
-                <el-option
-                  v-for="opt in decisionOptions"
-                  :key="opt.value"
-                  :label="opt.label"
-                  :value="opt.value"
-                />
-              </el-select>
+            <div v-if="!row.is_processed" class="row-op" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; width: 100%;">
+
+              <!-- 左侧：选择处理结果 + 封禁设置 -->
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- 处理结果下拉 -->
+                <el-select v-model="row.decision" placeholder="选择处理结果" style="width: 160px">
+                  <el-option
+                    v-for="opt in decisionOptions"
+                    :key="opt.value"
+                    :label="opt.label"
+                    :value="opt.value"
+                  />
+                </el-select>
+
+                <!-- 封禁时长 + 单位 -->
+                <div
+                  v-if="row.decision === '封禁举报人' || row.decision === '封禁被举报人'"
+                  style="display: flex; flex-direction: column; gap: 4px;"
+                >
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <span>时长</span>
+                    <el-input-number
+                      v-model="banDuration[row.report_id].value"
+                      :min="1"
+                      style="width: 100px"
+                    />
+                  </div>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <span>单位</span>
+                    <el-select
+                      v-model="banDuration[row.report_id].unit"
+                      placeholder="单位"
+                      style="width: 100px"
+                    >
+                      <el-option
+                        v-for="unit in durationUnits"
+                        :key="unit.value"
+                        :label="unit.label"
+                        :value="unit.value"
+                      />
+                    </el-select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 右侧提交按钮 -->
               <el-button
                 type="primary"
                 size="small"
                 :disabled="!row.decision"
                 @click="processReport(row.report_id, row.decision!)"
+                style="align-self: center"
               >
                 提交处理
               </el-button>
@@ -176,6 +274,7 @@ onMounted(() => {
           </template>
         </el-table-column>
       </el-table>
+      </el-scrollbar>>
     </div>
   </div>
 </template>
