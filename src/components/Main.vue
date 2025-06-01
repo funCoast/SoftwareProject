@@ -328,7 +328,7 @@ nav ul li span {
   min-width: 0;
   min-height: 0;
   background: #fdfdfd;
-  padding: 24px;
+  padding: 0 20px 0 20px;
   color: #333;
   overflow: auto; /* 修改为 auto 允许滚动 */
 }
