@@ -2,8 +2,7 @@ import json
 import os
 import time
 import uuid
-from email.policy import default
-from re import search
+from time import localtime
 
 from django.http import JsonResponse
 from django.views import View
@@ -11,14 +10,9 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 
 from api.core.agent.chat_bot.gen_response import gen_response_temp, gen_response
-from api.core.agent.chat_bot.llm_integration import LLMClient
-from api.core.agent.chat_bot.session import get_or_create_session, save_message, get_limited_session_history, \
-    generate_prompt_with_context
-from api.core.agent.skill.plugin_call.plugin_call import plugin_call
-from api.core.agent.skill.workflow_call import workflows_call
+from api.core.agent.chat_bot.session import get_or_create_session, save_message, get_limited_session_history
 from backend.models import User, Agent, AgentKnowledgeEntry, AgentWorkflowRelation, KnowledgeBase, Workflow, Message, \
     UserLog
-from backend.utils.queryKB import query_kb
 from lxc import settings
 
 
@@ -83,7 +77,7 @@ def send_agent_message(request):
         session_history = get_limited_session_history(session, max_messages=10)
 
         # 保存用户消息
-        save_message(session, message, True, get_uploaded_filenames(files), "", can_search)
+        save_message(session, message, True, get_uploaded_filenames(files), "", can_search, localtime())
 
         response = gen_response(user_id, agent_id, message, files, can_search, session_history)
         if not ('thinking_chain' in response):
@@ -95,7 +89,7 @@ def send_agent_message(request):
             }, status=500)
 
         # 保存智能体响应
-        save_message(session, response['response'], False, [], response['thinking_chain'], False)
+        save_message(session, response['response'], False, [], response['thinking_chain'], False, localtime())
 
         UserLog.objects.create(
             user=User.objects.get(user_id=user_id),
