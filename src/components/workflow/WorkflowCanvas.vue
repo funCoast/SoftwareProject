@@ -397,7 +397,8 @@ async function updateNodes(newNodes: WorkflowNode[]) {
 
 // 更新连接
 async function updateConnections(newConnections: Connection[]) {
-  connections.value = newConnections
+  const nodeIds = new Set(workflowNodes.value.map(node => node.id))
+  connections.value = newConnections.filter(conn => nodeIds.has(conn.sourceId) &&  nodeIds.has(conn.targetId))
   await saveWorkflow()
 }
 
