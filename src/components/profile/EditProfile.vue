@@ -173,7 +173,7 @@ function goBack() {
               @click="uploadAvatar" 
               :disabled="!newAvatar"
             >上传头像</el-button>
-            <p class="upload-hint">支持 JPG、PNG 格式，文件小于 2MB</p>
+            <p class="upload-hint">支持 JPG、PNG 格式，文件小于 5MB</p>
           </div>
         </div>
       </div>
