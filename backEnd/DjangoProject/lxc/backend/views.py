@@ -71,7 +71,8 @@ def check_user_post_status(user):
             user.save()
             return None  # 解封成功，可发布
         else:
-            return f"您当前被禁止发布，解封时间为：{user.post_expire.strftime('%Y-%m-%d %H:%M:%S')}"
+            local_expire_time = localtime(user.post_expire)
+            return f"您当前被禁止发布，解封时间为：{local_expire_time.strftime('%Y-%m-%d %H:%M:%S')}"
     return None  # 可发布
 
 def check_user_ban_status(user):
@@ -83,7 +84,8 @@ def check_user_ban_status(user):
             user.save()
             return None  # 解封成功
         else:
-            return f"账号已被封禁，解封时间为：{user.ban_expire.strftime('%Y-%m-%d %H:%M:%S')}"
+            local_expire_time = localtime(user.ban_expire)
+            return f"账号已被封禁，解封时间为：{local_expire_time.strftime('%Y-%m-%d %H:%M:%S')}"
     return None  # 没有封禁
 
 @csrf_exempt
