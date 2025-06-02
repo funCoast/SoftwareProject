@@ -486,7 +486,7 @@ onMounted(async () => {
              top: node.y + 'px',
              transform: `scale(${1/zoom})`
            }"
-           @click="handleNodeClick(node)"
+           @dblclick="handleNodeClick(node)"
            @mousedown="startDrag(node, $event)"
            @contextmenu.prevent="showContextMenu(node, $event)">
         <!-- 左侧连接点 -->
