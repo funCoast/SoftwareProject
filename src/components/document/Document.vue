@@ -238,7 +238,7 @@ function goBack() {
         <img src="https://api.iconify.design/material-symbols:arrow-back.svg" alt="返回" class="back-icon">
         <span>返回</span>
       </div>
-      <h1>使用文档</h1>
+      <h1>帮助文档</h1>
     </div>
 
     <div class="document-content">
