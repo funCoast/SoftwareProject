@@ -2,9 +2,9 @@
 const supportTable = [
   { type: '大模型', manual: true, upper: true },
   { type: '代码', manual: false, upper: true },
-  { type: '条件分支', manual: true, upper: true },
+  { type: '条件分支', manual: false, upper: true },
   { type: '问题分类器', manual: false, upper: true },
-  { type: '知识库检索', manual: false, upper: true },
+  { type: '知识库检索', manual: true, upper: true },
   { type: '天气查询', manual: true, upper: true },
   { type: '参数提取器', manual: false, upper: true },
   { type: '网页爬取', manual: true, upper: false },

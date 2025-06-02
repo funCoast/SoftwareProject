@@ -1,3 +1,12 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import image1 from '@/assets/pictures/条件分支.png'
+
+const showPreview = ref(false)
+const openPreview = () => (showPreview.value = true)
+const closePreview = () => (showPreview.value = false)
+</script>
+
 <template>
   <div class="head">
     <h2>条件分支节点</h2>
@@ -20,10 +29,16 @@
       </ul>
       <p>对于更复杂的判断逻辑，支持设置多个条件组合，并通过“且（AND）”或“或（OR）”的逻辑关系进行组合，实现更精细的分支控制。</p>
     </div>
-  </div>
 
-  <div class="section">
-    <h3>应用场景</h3>
+    <div class="section">
+      <h3>应用场景</h3>
+      <img :src="image1" alt="条件分支" style="width: 100%; margin-top: 12px; cursor: zoom-in;" @click="openPreview" />
+    </div>
+
+    <!-- 图片预览遮罩层 -->
+    <div v-if="showPreview" class="preview-overlay" @click="closePreview">
+      <img :src="image1" alt="条件分支大图" class="preview-image" />
+    </div>
   </div>
 </template>
 
@@ -64,6 +79,25 @@ ul {
 li {
   margin-bottom: 8px;
 }
+
+.preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  cursor: zoom-out;
+}
+
+.preview-image {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
 </style>
-<script setup lang="ts">
-</script>
