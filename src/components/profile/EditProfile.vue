@@ -140,7 +140,6 @@ function goBack() {
 }
   
 </script>
-
 <template>
   <div class="edit-profile-container">
     <div class="edit-header">
