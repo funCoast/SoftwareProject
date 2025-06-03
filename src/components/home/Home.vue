@@ -98,7 +98,7 @@ async function fetchAnnouncement() {
     }
   }).then(function (response) {
     if(response.data.code === 0) {
-      announcements.value = response.data.announcements.sort((a, b) => {
+      announcements.value = response.data.announcements.sort((a: announcement, b: announcement) => {
         return new Date(b.time).getTime() - new Date(a.time).getTime()
       })
     }

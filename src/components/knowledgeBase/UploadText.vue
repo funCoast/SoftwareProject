@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue"
 import type { UploadInstance, UploadRequestOptions } from 'element-plus'
+import { ElLoading } from "element-plus"
 import { UploadFilled } from "@element-plus/icons-vue"
 import axios from "axios"
 import router from "@/router"
-import { ElMessage } from "element-plus" // 新增
+
 
 const uploadRef = ref<UploadInstance>()
 const listLength = ref(0)
@@ -50,6 +51,12 @@ function uploadText(options: UploadRequestOptions) {
     formData.append("chunk_size", chunkSize.value.toString())
   }
 
+  let loadingInstance = ElLoading.service({
+    lock: true,
+    text: '正在上传，请稍候...',
+    background: 'rgba(255, 255, 255, 0.7)'
+  })
+
   axios({
     method: 'post',
     url: '/kb/uploadText',
@@ -58,6 +65,7 @@ function uploadText(options: UploadRequestOptions) {
       'Content-Type': 'multipart/form-data',
     },
   }).then(function (response) {
+    loadingInstance.close()
     if (response.data.code === 0) {
       console.log(response.data.message)
       router.push('/workspace/textBase/' + router.currentRoute.value.params.id)
@@ -65,6 +73,7 @@ function uploadText(options: UploadRequestOptions) {
       ElMessage.error("上传失败！" + response.data.message)
     }
   }).catch(function (error) {
+    loadingInstance.close()
     console.error(error)
   })
 }

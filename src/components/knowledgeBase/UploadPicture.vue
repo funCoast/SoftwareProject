@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue"
 import type { UploadInstance, UploadRequestOptions } from 'element-plus'
+import { ElLoading } from "element-plus"
 import { UploadFilled } from "@element-plus/icons-vue"
 import axios from "axios"
 import router from "@/router"
@@ -32,6 +33,12 @@ function uploadPicture(options: UploadRequestOptions) {
   formData.append("file", options.file)
   formData.append("uid", localStorage.getItem('LingXi_uid') as string)
   formData.append("kb_id", router.currentRoute.value.params.id as string)
+  
+  let loadingInstance = ElLoading.service({
+    lock: true,
+    text: '正在上传，请稍候...',
+    background: 'rgba(255, 255, 255, 0.7)'
+  })
 
   axios({
     method: 'post',
@@ -41,6 +48,7 @@ function uploadPicture(options: UploadRequestOptions) {
           'Content-Type': 'multipart/form-data',
     },
   }).then(function (response) {
+    loadingInstance.close()
     if (response.data.code === 0) {
       console.log(response.data.message)
       router.push('/workspace/pictureBase/' + router.currentRoute.value.params.id)
@@ -48,6 +56,7 @@ function uploadPicture(options: UploadRequestOptions) {
       console.log(response.data.message)
     }
   }).catch(function (error) {
+    loadingInstance.close()
     console.error(error)
   })
 }

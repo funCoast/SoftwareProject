@@ -31,10 +31,7 @@ declare module 'vue' {
     Document: typeof import('./src/components/document/Document.vue')['default']
     EditProfile: typeof import('./src/components/profile/EditProfile.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
-    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
-    ElButtonGroup: typeof import('element-plus/es')['ElButtonGroup']
-    ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElContainer: typeof import('element-plus/es')['ElContainer']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElDropdown: typeof import('element-plus/es')['ElDropdown']
@@ -51,12 +48,9 @@ declare module 'vue' {
     ElOption: typeof import('element-plus/es')['ElOption']
     ElRadio: typeof import('element-plus/es')['ElRadio']
     ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
-    ElRow: typeof import('element-plus/es')['ElRow']
-    ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
     ElSelect: typeof import('element-plus/es')['ElSelect']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
-    ElTag: typeof import('element-plus/es')['ElTag']
     ElText: typeof import('element-plus/es')['ElText']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     End: typeof import('./src/components/document/manual/workflow/nodes/End.vue')['default']
@@ -106,8 +100,5 @@ declare module 'vue' {
     WorkflowOrchestration: typeof import('./src/components/document/manual/workflow/WorkflowOrchestration.vue')['default']
     WorkflowTest: typeof import('./src/components/document/manual/workflow/WorkflowTest.vue')['default']
     Workspace: typeof import('./src/components/workspace/Workspace.vue')['default']
-  }
-  export interface ComponentCustomProperties {
-    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }
